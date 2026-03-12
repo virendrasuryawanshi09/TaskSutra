@@ -6,8 +6,6 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-connectDB();
-
 app.use(
     cors({
         origin: process.env.CLIENT_URL || "http://localhost:3000",
@@ -26,6 +24,16 @@ app.use(express.json());
 
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+
+const startServer = async () => {
+    try {
+        await connectDB();
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    } catch (error) {
+        process.exit(1);
+    }
+};
+
+startServer();

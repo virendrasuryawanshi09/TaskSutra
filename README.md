@@ -13,7 +13,7 @@
 Modern productivity apps often feel like another chore. **TaskSutra** aims to change that by introducing a "Smart" layer that handles the mental load of organization, leaving you to focus on execution.
 
 ### Key (Upcoming) Features
-- **AI-Powered Prioritization**: Dynamically re-ranks your tasks based on deadlines, habits, and estimated effort.
+- **AI-Powered Prioritization**: Dynamically re-ranks your tasks based on deadlines, habits, and estimated effort. Adding the skills of every employee so AI will assist the admin to the best employee who can complete the task effectively.
 - **Natural Language Commands**: Add tasks simply by typing: *"Remind me to review the PR tomorrow morning."*
 - **Productivity Analytics**: Insightful visualizations of your work patterns, helping you identify and eliminate bottlenecks.
 - **Premium Glassmorphic UI**: A sleek, dark-mode-first interface designed for focus and aesthetic pleasure.

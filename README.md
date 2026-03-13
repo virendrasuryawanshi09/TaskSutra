@@ -28,7 +28,7 @@ TaskSutra is being built with scalability and performance in mind:
 - **Frontend**: [React.js](https://reactjs.org/) & [Tailwind CSS](https://tailwindcss.com/) for a responsive, modern UI.
 - **Backend**: [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/) powering the robust API.
 - **Database**: [MongoDB](https://www.mongodb.com/) for flexible, document-based data storage.
-- **AI Core**: Leveraging [Google Gemini](https://ai.google.dev/) / [OpenAI](https://openai.com/) for intelligent task processing.
+- **AI Core**: Leveraging [Google Gemini](https://ai.google.dev/) / [OpenAI](https://openai.com/) for intelligent task processing. Also calculating the load on an person and assigning the task according to persons load of work and time.
 - **Authentication**: Secure, JWT-based user management.
 
 ---

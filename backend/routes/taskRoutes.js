@@ -1,5 +1,6 @@
 const express = require('express');
 const {protect, adminOnly} = require('../middlewares/authMiddleware');
+const {updateTaskTodos, getUserDashboardData , updateTaskStatus, getDashboardData, getTasks, getTaskById, createTask, updateTask, deleteTask, updateTaskChecklist} = require('../controllers/taskController');
 
 const router = express.Router();
 

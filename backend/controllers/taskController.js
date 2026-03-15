@@ -38,8 +38,8 @@ const getTasks = async (req, res) => {
                 ).length;
 
                 return {
-                   ...task._doc,
-                   completedChecklistCount: completedCount
+                    ...task._doc,
+                    completedChecklistCount: completedCount
                 };
             })
         );
@@ -93,7 +93,7 @@ const getTaskById = async (req, res) => {
             'assignedTo',
             'name email profileImageUrl'
         );
-        if(!task) {
+        if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
         res.json(task);
@@ -136,7 +136,7 @@ const createTask = async (req, res) => {
 
 const updateTask = async (req, res) => {
     try {
-          if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ message: "Invalid task ID" });
         }
         const task = await Task.findById(req.params.id);
@@ -166,6 +166,13 @@ const updateTask = async (req, res) => {
 
 const deleteTask = async (req, res) => {
     try {
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        await task.deleteOne();
+        res.json({ message: 'Task deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -194,8 +201,31 @@ const getUserDashboardData = async (req, res) => {
 
 const updateTaskStatus = async (req, res) => {
     try {
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        const isAssigned = task.assignedTo.some(
+            (userId) => userId.toString() === req.user._id.toString()
+        );
+
+        if (!isAssigned && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'You are not authorized to update this task status' });
+        }
+
+        task.status = req.body.status || task.status;
+
+        if(task.status === 'Completed') {
+            task.todoChecklist.forEach((item) => {item.completed = true});
+            task.progress = 100;
+        }
+
+        await task.save();
+        res.json({message: 'Task status updated successfully', task });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
+
     }
 };
 

@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const mongoose = require('mongoose');
 
 const getTasks = async (req, res) => {
     try {
@@ -53,19 +54,19 @@ const getTasks = async (req, res) => {
 
         // Pending tasks
         const pendingTasks = await Task.countDocuments({
-            status: 'pending',
+            status: 'Pending',
             ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
         });
 
         // In-progress tasks
         const inProgressTasks = await Task.countDocuments({
-            status: 'in-progress',
+            status: 'In-progress',
             ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
         });
 
         // Completed tasks
         const completedTasks = await Task.countDocuments({
-            status: 'completed',
+            status: 'Completed',
             ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
         });
 
@@ -253,7 +254,7 @@ const updateTaskStatus = async (req, res) => {
         task.status = req.body.status || task.status;
 
         if(task.status === 'Completed') {
-            task.todoChecklist.forEach((item) => {item.completed = true});
+            task.todoCheckList.forEach((item) => {item.completed = true});
             task.progress = 100;
         }
 

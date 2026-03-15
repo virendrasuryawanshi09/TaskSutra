@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const mongoose = require('mongoose');
 
 const getTasks = async (req, res) => {
     try {
@@ -38,8 +39,8 @@ const getTasks = async (req, res) => {
                 ).length;
 
                 return {
-                   ...task._doc,
-                   completedChecklistCount: completedCount
+                    ...task._doc,
+                    completedChecklistCount: completedCount
                 };
             })
         );
@@ -53,19 +54,19 @@ const getTasks = async (req, res) => {
 
         // Pending tasks
         const pendingTasks = await Task.countDocuments({
-            status: 'pending',
+            status: 'Pending',
             ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
         });
 
         // In-progress tasks
         const inProgressTasks = await Task.countDocuments({
-            status: 'in-progress',
+            status: 'In-progress',
             ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
         });
 
         // Completed tasks
         const completedTasks = await Task.countDocuments({
-            status: 'completed',
+            status: 'Completed',
             ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
         });
 
@@ -93,7 +94,7 @@ const getTaskById = async (req, res) => {
             'assignedTo',
             'name email profileImageUrl'
         );
-        if(!task) {
+        if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
         res.json(task);
@@ -136,6 +137,29 @@ const createTask = async (req, res) => {
 
 const updateTask = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: "Invalid task ID" });
+        }
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+        task.title = req.body.title || task.title;
+        task.description = req.body.description || task.description;
+        task.priority = req.body.priority || task.priority;
+        task.dueDate = req.body.dueDate || task.dueDate;
+        task.todoCheckList = req.body.todoCheckList || task.todoCheckList;
+        task.attachments = req.body.attachments || task.attachments;
+
+        if (req.body.assignedTo) {
+            if (!Array.isArray(req.body.assignedTo)) {
+                return res.status(400).json({ message: 'Assigned users must be an array of user IDs' });
+            }
+            task.assignedTo = req.body.assignedTo;
+        }
+        const updatedTask = await task.save();
+        res.json({ message: 'Task updated successfully', task: updatedTask });
+
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -143,6 +167,13 @@ const updateTask = async (req, res) => {
 
 const deleteTask = async (req, res) => {
     try {
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        await task.deleteOne();
+        res.json({ message: 'Task deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -150,6 +181,42 @@ const deleteTask = async (req, res) => {
 
 const updateTaskChecklist = async (req, res) => {
     try {
+        const { todoCheckList} = req.body;
+        const task = await Task.findById(req.params.id);
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if(!task.assignedTo.includes(req.user._id) && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
+        }
+
+        task.todoCheckList = todoCheckList;
+
+        const completedCount = task.todoCheckList.filter(
+            (item) => item.completed
+        ).length;
+
+        const totalItems = task.todoCheckList.length;
+
+        task.progress = totalItems === 0 ? Math.round((completedCount / totalItems) * 100) : 0;
+
+        if(task.progress === 100) {
+            task.status = 'Completed';
+        }else if(task.progress > 0) {
+            task.status = 'In-progress';
+        }else {
+            task.status = 'Pending';
+        }
+
+        await task.save();
+        const updatedTask = await Task.findById(req.params.id).populate(
+            'assignedTo',
+            'name email profileImageUrl'
+        );
+        res.json({ message: 'Task checklist updated successfully', task:updatedTask });
+        
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -171,8 +238,31 @@ const getUserDashboardData = async (req, res) => {
 
 const updateTaskStatus = async (req, res) => {
     try {
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        const isAssigned = task.assignedTo.some(
+            (userId) => userId.toString() === req.user._id.toString()
+        );
+
+        if (!isAssigned && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'You are not authorized to update this task status' });
+        }
+
+        task.status = req.body.status || task.status;
+
+        if(task.status === 'Completed') {
+            task.todoCheckList.forEach((item) => {item.completed = true});
+            task.progress = 100;
+        }
+
+        await task.save();
+        res.json({message: 'Task status updated successfully', task });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
+
     }
 };
 

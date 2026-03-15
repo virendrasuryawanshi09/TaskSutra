@@ -38,8 +38,8 @@ const getTasks = async (req, res) => {
                 ).length;
 
                 return {
-                    ...task.toObject(),
-                    completedCount
+                   ...task._doc,
+                   completedChecklistCount: completedCount
                 };
             })
         );
@@ -72,10 +72,10 @@ const getTasks = async (req, res) => {
         res.json({
             tasks,
             statusSummary: {
-                all: allTasks,
-                pending: pendingTasks,
-                inProgress: inProgressTasks,
-                completed: completedTasks,
+                allTasks,
+                pendingTasks,
+                inProgressTasks,
+                completedTasks,
             }
         });
 
@@ -89,6 +89,14 @@ const getTasks = async (req, res) => {
 
 const getTaskById = async (req, res) => {
     try {
+        const task = await Task.findById(req.params.id).populate(
+            'assignedTo',
+            'name email profileImageUrl'
+        );
+        if(!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+        res.json(task);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

@@ -1,9 +1,80 @@
-import React from 'react'
-
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import AuthLayout from "../../components/layouts/AuthLayout";
+import Input from "../../components/input/input.jsx"; 
+import { validateEmail } from "../../utils/helper";
 const Login = () => {
-  return (
-    <div>Login</div>
-  )
-}
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
 
-export default Login
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+   if(!validateEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if(!password) {
+      setError("Please enter your password.");
+      return;
+    }
+    
+    setError("");
+  };
+
+  return (
+    <AuthLayout>
+
+      <form onSubmit={handleLogin}>
+
+        {/* EMAIL */}
+        <Input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="text"
+          label="Email"
+        />
+
+        {/* PASSWORD */}
+        <Input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+          label="Password"
+        />
+
+        {/* ERROR */}
+        {error && (
+          <p className="text-sm text-red-500 mb-4">{error}</p>
+        )}
+
+        {/* BUTTON */}
+        <button
+          type="submit"
+          className="w-full py-[14px] rounded-[10px] bg-[#1F6F78] text-white text-[15px] font-medium transition-all hover:bg-[#195A62] hover:-translate-y-[1px] active:scale-[0.98]"
+        >
+          Login
+        </button>
+
+        {/* FOOTER */}
+        <div className="mt-5 text-[13px] text-[#6F6E69]">
+          Don’t have an account?{" "}
+          <span
+            className="font-medium cursor-pointer"
+            onClick={() => navigate("/signup")}
+          >
+            Sign up
+          </span>
+        </div>
+
+      </form>
+
+    </AuthLayout>
+  );
+};
+
+export default Login;

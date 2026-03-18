@@ -1,33 +1,33 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AuthLayout from "../../components/layouts/AuthLayout";
-import Input from "../../components/input/input.jsx"; 
+import Input from "../../components/input/input.jsx";
 import { validateEmail } from "../../utils/helper";
+import { Link } from "react-router-dom";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
 
-  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-   if(!validateEmail(email)) {
+    if (!validateEmail(email)) {
       setError("Please enter a valid email address.");
       return;
     }
 
-    if(!password) {
+    if (!password) {
       setError("Please enter your password.");
       return;
     }
-    
+
     setError("");
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout title="Sign in">
+
 
       <form onSubmit={handleLogin}>
 
@@ -63,12 +63,12 @@ const Login = () => {
         {/* FOOTER */}
         <div className="mt-5 text-[13px] text-[#6F6E69]">
           Don’t have an account?{" "}
-          <span
-            className="font-medium cursor-pointer"
-            onClick={() => navigate("/signup")}
+          <Link
+            to="/signup"
+            className="font-medium text-[#1F6F78] hover:underline"
           >
             Sign up
-          </span>
+          </Link>
         </div>
 
       </form>

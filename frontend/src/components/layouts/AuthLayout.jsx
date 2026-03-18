@@ -1,6 +1,6 @@
 import React from "react";
 
-const AuthLayout = ({ children }) => {
+const AuthLayout = ({ children, title }) => {
   return (
     <div className="min-h-screen bg-[#F5F4F1] text-[#1F1F1D]">
 
@@ -11,7 +11,7 @@ const AuthLayout = ({ children }) => {
 
         {/* LEFT */}
         <div className="max-w-[460px]">
-          <div className="text-[24px] font-bold mb-[46px] tracking-[-0.3px] ">
+          <div className="text-[24px] font-bold mb-[46px] tracking-[-0.3px]">
             TaskSutra
           </div>
 
@@ -23,7 +23,7 @@ const AuthLayout = ({ children }) => {
             </span>
           </div>
 
-          <p className="mt-6 text-[15px] text-[#6F6E69] leading-[1.6] text-[15px]">
+          <p className="mt-6 text-[15px] text-[#6F6E69] leading-[1.6]">
             A focused task management system designed for clarity, speed, and better execution.
           </p>
         </div>
@@ -32,7 +32,7 @@ const AuthLayout = ({ children }) => {
         <div className="flex justify-start">
           <div className="w-full max-w-[340px]">
             <div className="text-[20px] font-semibold mb-[25px]">
-              Sign in
+              {title}
             </div>
 
             {children}

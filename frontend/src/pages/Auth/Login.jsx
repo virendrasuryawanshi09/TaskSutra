@@ -2,13 +2,16 @@ import React, { useState } from "react";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
 import { validateEmail } from "../../utils/helper";
-import { Link } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstance.js"
+import { Link, useNavigate } from "react-router-dom";
+import axiosInstance from "../../utils/axiosInstance.js";
+import { API_PATHS } from "../../utils/apiPaths";
+
 const Login = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
-
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -26,35 +29,35 @@ const Login = () => {
     setError("");
 
     try {
-      const response = await axiosInstance.post(API_PATHS_AUTH.LOGIN, {
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
         email,
-        password
+        password,
       });
 
       const { token, role } = response.data;
 
-      if (role == "admin") {
-        Navigate("/admin/dashboard");
+  
+      localStorage.setItem("token", token);
+
+      if (role === "admin") {
+        navigate("/admin/dashboard");
       } else {
         navigate("/user/dashboard");
       }
 
     } catch (error) {
-      if(error.response && error.response.data.message) {
+      if (error.response && error.response.data.message) {
         setError(error.response.data.message);
-      }else {
-        setError("Something went erong. Please try again.")
+      } else {
+        setError("Something went wrong. Please try again.");
       }
     }
   };
 
   return (
     <AuthLayout title="Sign in">
-
-
       <form onSubmit={handleLogin}>
 
-        {/* EMAIL */}
         <Input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -62,7 +65,6 @@ const Login = () => {
           label="Email"
         />
 
-        {/* PASSWORD */}
         <Input
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -70,12 +72,10 @@ const Login = () => {
           label="Password"
         />
 
-        {/* ERROR */}
         {error && (
           <p className="text-sm text-red-500 mb-4">{error}</p>
         )}
 
-        {/* BUTTON */}
         <button
           type="submit"
           className="w-full py-[14px] rounded-[10px] bg-[#1F6F78] text-white text-[15px] font-medium transition-all hover:bg-[#195A62] hover:-translate-y-[1px] active:scale-[0.98]"
@@ -83,7 +83,6 @@ const Login = () => {
           Login
         </button>
 
-        {/* FOOTER */}
         <div className="mt-5 text-[13px] text-[#6F6E69]">
           Don’t have an account?{" "}
           <Link
@@ -95,7 +94,6 @@ const Login = () => {
         </div>
 
       </form>
-
     </AuthLayout>
   );
 };

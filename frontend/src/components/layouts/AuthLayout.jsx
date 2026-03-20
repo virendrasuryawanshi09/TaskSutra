@@ -7,7 +7,7 @@ const AuthLayout = ({ children, title }) => {
       <div className="max-w-[1100px] mx-auto grid md:grid-cols-[1.2fr_1fr] gap-[80px] min-h-screen items-center px-10 relative">
 
         {/* Divider */}
-        <div className="hidden md:block absolute left-1/2 top-[20%] bottom-[20%] w-px bg-[#E2E0DB]" />
+        <div className="hidden md:block absolute left-1/2 top-[20%] bottom-[20%] w-px bg-[#D1CEC7]" />
 
         {/* LEFT */}
         <div className="max-w-[460px]">
@@ -24,7 +24,7 @@ const AuthLayout = ({ children, title }) => {
           </div>
 
           <p className="mt-6 text-[15px] text-[#6F6E69] leading-[1.6]">
-            A focused task management system designed for clarity, speed, and better execution.
+            An AI-powered task management system designed for clarity, speed, and better execution.
           </p>
         </div>
 

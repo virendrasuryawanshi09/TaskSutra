@@ -18,9 +18,9 @@ const Input = ({ value, onChange, type, label }) => {
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         className="
-          w-full border-b border-[#E2E0DB] bg-transparent py-2 text-sm outline-none
-          focus:border-[#1F6F78]
-        "
+          w-full border-b border-[#E2E0DB] bg-transparent py-3 text-sm outline-none
+          focus:border-[#1F6F78] transition-all duration-200
+          "
       />
 
       <label
@@ -39,8 +39,8 @@ const Input = ({ value, onChange, type, label }) => {
         <div
           className="absolute right-0 top-2 cursor-pointer text-[#6F6E69]"
           onClick={() => setShowPassword((prev) => !prev)}
-            >
-            {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
+        >
+          {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}
         </div>
       )}
     </div>

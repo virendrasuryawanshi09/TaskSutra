@@ -12,11 +12,23 @@ const reportRoutes = require("./routes/reportRoutes");
 const app = express();
 
 app.use(
-    cors({
-        origin: process.env.CLIENT_URL || "http://localhost:3000",
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-    })
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (Postman, mobile apps)
+      if (!origin) return callback(null, true);
+
+      // allow all localhost ports
+      if (origin.startsWith("http://localhost")) {
+        return callback(null, true);
+      }
+
+      // block others
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
 );
 
 app.use(express.json());

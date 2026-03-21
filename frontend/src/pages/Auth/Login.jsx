@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
 import { validateEmail } from "../../utils/helper";
@@ -12,6 +13,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -27,6 +29,7 @@ const Login = () => {
     }
 
     setError("");
+    setLoading(true);
 
     try {
       const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
@@ -36,8 +39,9 @@ const Login = () => {
 
       const { token, role } = response.data;
 
-  
       localStorage.setItem("token", token);
+
+      toast.success("Login successful");
 
       if (role === "admin") {
         navigate("/admin/dashboard");
@@ -46,11 +50,15 @@ const Login = () => {
       }
 
     } catch (error) {
-      if (error.response && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      const message =
+        error.response?.data?.message || "Login failed. Please try again.";
+
+      setError(message);
+
+      toast.error(message);
+
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,9 +86,17 @@ const Login = () => {
 
         <button
           type="submit"
-          className="w-full py-[14px] rounded-[10px] bg-[#1F6F78] text-white text-[15px] font-medium transition-all hover:bg-[#195A62] hover:-translate-y-[1px] active:scale-[0.98]"
+          disabled={loading}
+          className="
+            w-full py-[15px] rounded-[12px] 
+            bg-[#1F6F78] text-white text-[15px] font-medium
+            transition-all duration-200
+            hover:bg-[#195A62] hover:-translate-y-[1px]
+            active:scale-[0.97]
+            disabled:opacity-70 disabled:cursor-not-allowed
+          "
         >
-          Login
+          {loading ? "Signing in..." : "Login"}
         </button>
 
         <div className="mt-5 text-[13px] text-[#6F6E69]">

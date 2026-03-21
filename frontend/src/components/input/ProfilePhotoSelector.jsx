@@ -68,9 +68,13 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
         onClick={onChooseFile}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
-        className="relative w-24 h-24 rounded-full border border-gray-300 bg-gray-100 flex items-center justify-center cursor-pointer group transition-all duration-200 hover:shadow-md"
+        className="
+    relative w-24 h-24 rounded-full border border-gray-300 bg-gray-100 
+    flex items-center justify-center cursor-pointer group
+    transition-all duration-300 ease-out
+    hover:shadow-md hover:scale-[1.03]
+  "
       >
-
         {/* INNER IMAGE WRAPPER (clip here instead) */}
         <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
           {previewUrl ? (
@@ -93,7 +97,7 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
         {previewUrl && (
           <button
             type="button"
-            
+
             onClick={(e) => {
               e.stopPropagation();
               handleRemoveImage();

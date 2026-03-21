@@ -4,7 +4,7 @@ import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
 import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
-import toast from "react-hot-toast"; // ✅ ADDED
+import toast from "react-hot-toast"; 
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ const SignUp = () => {
 
     if (!fullName || !email || !password) {
       setError("Please fill all required fields.");
-      toast.error("Please complete all required fields."); // 🔥 ELITE VALIDATION
+      toast.error("Please complete all required fields."); 
       return;
     }
 
@@ -35,7 +35,7 @@ const SignUp = () => {
     setError("");
     setLoading(true);
 
-    // 🔥 ELITE LOADING TOAST
+  
     const toastId = toast.loading("Creating your account...");
 
     try {
@@ -51,7 +51,7 @@ const SignUp = () => {
 
       toast.dismiss(toastId);
 
-      // 🔥 ELITE SUCCESS
+
       toast.success("Account created. You can now sign in.");
 
       navigate("/login");
@@ -61,7 +61,7 @@ const SignUp = () => {
 
       setError("Something went wrong. Please try again.");
 
-      // 🔥 ELITE ERROR
+  
       toast.error("Unable to create account. Please try again.");
 
     } finally {

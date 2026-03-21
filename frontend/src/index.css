@@ -2,6 +2,38 @@
 
 @import "tailwindcss";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+:root {
+  --bg: #F5F4F1;
+  --bg-soft: #ECEAE6;
+  --surface: #FFFFFF;
+  --border: #E2E0DB;
+
+  --text: #1F1F1D;
+  --text-muted: #6F6E69;
+
+  --accent: #1F6F78;
+  --accent-hover: #195A62;
+}
+
+
+.dark {
+  --bg: #1E1F1D;
+  --bg-soft: #2A2B28;
+  --surface: #262724;
+  --border: #3A3B37;
+
+  --text: #E8E6E3;
+  --text-muted: #A1A19A;
+
+  --accent: #3AA6B0;
+  --accent-hover: #2F8E97;
+}
+
 @theme {
   --font-display: "Poppins", "sans-serif";
   --breakpoint-sm: 1920px;

@@ -89,9 +89,9 @@ const Login = () => {
           disabled={loading}
           className="
             w-full py-[15px] rounded-[12px] 
-            bg-[#1F6F78] text-white text-[15px] font-medium
+            bg-[var(--accent)] text-white text-[15px] font-medium
             transition-all duration-200
-            hover:bg-[#195A62] hover:-translate-y-[1px]
+            hover:bg-[var(--accent-hover)] hover:-translate-y-[1px]
             active:scale-[0.97]
             disabled:opacity-70 disabled:cursor-not-allowed
           "
@@ -99,18 +99,17 @@ const Login = () => {
           {loading ? "Signing in..." : "Login"}
         </button>
 
-        <div className="mt-5 text-[13px] text-[#6F6E69]">
+        <div className="mt-5 text-[13px] text-[var(--text-muted)]">
           Don’t have an account?{" "}
           <Link
             to="/signup"
-            className="font-medium text-[#1F6F78] hover:underline"
+            className="font-medium text-[var(--accent)] hover:underline"
           >
             Sign up
           </Link>
         </div>
-
-      </form>
-    </AuthLayout>
+    </form>
+    </AuthLayout >
   );
 };
 

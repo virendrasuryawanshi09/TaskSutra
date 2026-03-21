@@ -51,13 +51,9 @@ const SignUp = () => {
     <AuthLayout>
 
       <div>
-        <h3 className="text-[20px] font-semibold mb-2">
+        <h3 className="text-[20px] font-semibold mb-4">
           Create an account
         </h3>
-
-        <p className="text-sm text-[#6F6E69] mb-6">
-          Join us today by entering your details below.
-        </p>
 
         <form onSubmit={handleSignUp}>
 

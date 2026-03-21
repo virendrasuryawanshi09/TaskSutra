@@ -1,5 +1,6 @@
 import React from "react";
 
+
 const AuthLayout = ({ children, title }) => {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
@@ -35,8 +36,9 @@ const AuthLayout = ({ children, title }) => {
             <div className="text-[20px] font-semibold mb-[25px]">
               {title}
             </div>
-
-            {children}
+            <div className="auth-fade">
+              {children}
+            </div>
 
           </div>
         </div>

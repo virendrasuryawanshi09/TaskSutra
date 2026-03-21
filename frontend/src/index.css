@@ -34,6 +34,20 @@
   --accent-hover: #2F8E97;
 }
 
+.auth-fade {
+  animation: authFade 0.70s ease;
+}
+
+@keyframes authFade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 @theme {
   --font-display: "Poppins", "sans-serif";
   --breakpoint-sm: 1920px;

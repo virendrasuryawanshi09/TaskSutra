@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
 import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
-import { Link } from "react-router-dom";
+import toast from "react-hot-toast"; // ✅ ADDED
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -15,61 +15,82 @@ const SignUp = () => {
   const [password, setPassword] = useState("");
   const [adminInviteToken, setAdminInviteToken] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); 
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    if (!fullName) {
-      setError("Please enter your full name.");
+    if (!fullName || !email || !password) {
+      setError("Please fill all required fields.");
+      toast.error("Please complete all required fields."); // 🔥 ELITE VALIDATION
       return;
     }
 
     if (!validateEmail(email)) {
       setError("Please enter a valid email address.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please enter your password.");
+      toast.error("Please enter a valid email address.");
       return;
     }
 
     setError("");
+    setLoading(true);
 
-    console.log({
-      fullName,
-      email,
-      password,
-      profilePic,
-      adminInviteToken,
-    });
+    // 🔥 ELITE LOADING TOAST
+    const toastId = toast.loading("Creating your account...");
 
-    // 👉 Later: API call here
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      console.log({
+        fullName,
+        email,
+        password,
+        profilePic,
+        adminInviteToken,
+      });
+
+      toast.dismiss(toastId);
+
+      // 🔥 ELITE SUCCESS
+      toast.success("Account created. You can now sign in.");
+
+      navigate("/login");
+
+    } catch (err) {
+      toast.dismiss(toastId);
+
+      setError("Something went wrong. Please try again.");
+
+      // 🔥 ELITE ERROR
+      toast.error("Unable to create account. Please try again.");
+
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <AuthLayout>
 
-      <div>
+      <div className="w-full max-w-[360px] mx-auto">
+
         <h3 className="text-[20px] font-semibold mb-2">
           Create an account
         </h3>
 
-        <p className="text-sm text-[#6F6E69] mb-6">
+        <p className="text-sm text-[var(--text-muted)] mb-6 leading-[1.5]">
           Join us today by entering your details below.
         </p>
 
         <form onSubmit={handleSignUp}>
 
-          {/* PROFILE PHOTO */}
-          <div className="mb-6">
+          <div className="mb-6 flex justify-center">
             <ProfilePhotoSelector
               image={profilePic}
               setImage={setProfilePic}
             />
           </div>
 
-          {/* FULL NAME */}
           <Input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
@@ -77,7 +98,6 @@ const SignUp = () => {
             label="Full Name"
           />
 
-          {/* EMAIL */}
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -85,7 +105,6 @@ const SignUp = () => {
             label="Email"
           />
 
-          {/* PASSWORD */}
           <Input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -93,7 +112,6 @@ const SignUp = () => {
             label="Password"
           />
 
-          {/* ADMIN TOKEN (OPTIONAL) */}
           <Input
             value={adminInviteToken}
             onChange={(e) => setAdminInviteToken(e.target.value)}
@@ -101,31 +119,36 @@ const SignUp = () => {
             label="Admin Invite Token (Optional)"
           />
 
-          {/* ERROR */}
           {error && (
-            <p className="text-sm text-red-500 mt-2 mb-2">
+            <p className="text-sm text-red-500 mt-2 mb-3">
               {error}
             </p>
           )}
 
-          {/* BUTTON */}
           <button
             type="submit"
-            className="w-full py-[14px] mt-4 rounded-[10px] bg-[#1F6F78] text-white text-[15px] font-medium transition-all hover:bg-[#195A62] hover:-translate-y-[1px] active:scale-[0.98]"
+            disabled={loading}
+            className="
+              w-full py-[15px] mt-3 rounded-[12px]
+              bg-[var(--accent)] text-white text-[15px] font-medium
+              transition-all duration-200
+              hover:bg-[var(--accent-hover)] hover:-translate-y-[1px]
+              active:scale-[0.97]
+              disabled:opacity-70 disabled:cursor-not-allowed
+            "
           >
-            Create Account
+            {loading ? "Creating account..." : "Create Account"}
           </button>
 
-          {/* FOOTER */}
-        <div className="mt-5 text-[13px] text-[#6F6E69]">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="font-medium text-[#1F6F78] hover:underline"
-          >
-            Sign in
-          </Link>
-        </div>
+          <div className="mt-5 text-[13px] text-[var(--text-muted)] text-center">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-[var(--accent)] hover:underline"
+            >
+              Sign in
+            </Link>
+          </div>
 
         </form>
       </div>

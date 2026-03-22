@@ -4,6 +4,8 @@ import { LuUser, LuUpload, LuTrash } from "react-icons/lu";
 const ProfilePhotoSelector = ({ image, setImage }) => {
   const inputRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const displayImage =
+    previewUrl || (typeof image === "string" && image.trim() ? image : null);
 
   // HANDLE IMAGE CHANGE
   const handleImageChange = (event) => {
@@ -22,7 +24,7 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
   // CLEANUP MEMORY
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
     };
@@ -77,9 +79,9 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
       >
         {/* INNER IMAGE WRAPPER (clip here instead) */}
         <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-          {previewUrl ? (
+          {displayImage ? (
             <img
-              src={previewUrl}
+              src={displayImage}
               alt="Profile"
               className="w-full h-full object-cover"
             />
@@ -94,7 +96,7 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
         </div>
 
         {/* REMOVE BUTTON (now works perfectly) */}
-        {previewUrl && (
+        {displayImage && (
           <button
             type="button"
 
@@ -116,7 +118,7 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
         className="flex items-center gap-2 text-sm font-medium text-teal-700 hover:text-teal-800 transition"
       >
         <LuUpload size={16} />
-        {previewUrl ? "Change Photo" : "Upload Photo"}
+        {displayImage ? "Change Photo" : "Upload Photo"}
       </button>
 
     </div>

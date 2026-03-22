@@ -6,18 +6,19 @@ import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
 import toast from "react-hot-toast"; 
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
+import useUserAuth from "../../hooks/useUserAuth.jsx";
 import uploadImage from "../../utils/uploadImage.js";
 import {
   getDashboardRoute,
   getErrorMessage,
   normalizeEmail,
-  persistAuthSession,
   validateEmail,
 } from "../../utils/helper.js";
 
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const { updateUserContext } = useUserAuth();
 
   const [profilePic, setProfilePic] = useState(null);
   const [fullName, setFullName] = useState("");
@@ -76,7 +77,13 @@ const SignUp = () => {
         throw new Error("Invalid server response");
       }
 
-      persistAuthSession({ token, user });
+      updateUserContext({
+        token,
+        user: {
+          ...user,
+          role,
+        },
+      });
 
       toast.success(`Welcome ${user.name || "User"}!`, {
         id: toastId,

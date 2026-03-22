@@ -5,16 +5,17 @@ import Input from "../../components/input/input.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
+import useUserAuth from "../../hooks/useUserAuth.jsx";
 import {
   getDashboardRoute,
   getErrorMessage,
   normalizeEmail,
-  persistAuthSession,
   validateEmail,
 } from "../../utils/helper.js";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { updateUserContext } = useUserAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,7 +57,13 @@ const Login = () => {
         throw new Error("Invalid server response");
       }
 
-      persistAuthSession({ token, user });
+      updateUserContext({
+        token,
+        user: {
+          ...user,
+          role,
+        },
+      });
 
       toast.success("Login successful.", { id: toastId });
       navigate(getDashboardRoute(role));

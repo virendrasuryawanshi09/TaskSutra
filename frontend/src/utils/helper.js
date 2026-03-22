@@ -14,12 +14,19 @@ export const getDashboardRoute = (role) => {
   return role === "admin" ? "/admin/dashboard" : "/user/dashboard";
 };
 
-export const persistAuthSession = ({ token, user }) => {
+export const persistAuthSession = ({ token, user, role }) => {
+  const normalizedUser = user
+    ? {
+        ...user,
+        role: role || user.role || "member",
+      }
+    : null;
+
   if (token) {
     localStorage.setItem("token", token);
   }
 
-  if (user) {
-    localStorage.setItem("user", JSON.stringify(user));
+  if (normalizedUser) {
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
   }
 };

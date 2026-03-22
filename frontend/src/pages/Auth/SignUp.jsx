@@ -2,11 +2,17 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
-import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
 import toast from "react-hot-toast"; 
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
+import {
+  getDashboardRoute,
+  getErrorMessage,
+  normalizeEmail,
+  persistAuthSession,
+  validateEmail,
+} from "../../utils/helper.js";
 
 
 const SignUp = () => {
@@ -19,22 +25,27 @@ const SignUp = () => {
   const [adminInviteToken, setAdminInviteToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false); 
+  
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
     if (loading) return;
 
-    if (!fullName.trim() || !email.trim() || !password.trim()) {
-      const msg = "All fields are required.";
-      setError(msg);
-      return toast.error(msg);
+    const trimmedName = fullName.trim();
+    const normalizedEmail = normalizeEmail(email);
+    const trimmedInviteToken = adminInviteToken.trim();
+
+    if (!trimmedName || !normalizedEmail || !password.trim()) {
+      const message = "Name, email, and password are required.";
+      setError(message);
+      return toast.error(message);
     }
 
-    if (!validateEmail(email)) {
-      const msg = "Enter a valid email address.";
-      setError(msg);
-      return toast.error(msg);
+    if (!validateEmail(normalizedEmail)) {
+      const message = "Please enter a valid email address.";
+      setError(message);
+      return toast.error(message);
     }
 
     setError("");
@@ -63,11 +74,11 @@ const SignUp = () => {
       }
 
       const { data } = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
-        name: fullName.trim(),
-        email: email.trim().toLowerCase(),
+        name: trimmedName,
+        email: normalizedEmail,
         password,
         profileImageUrl,
-        adminInviteToken: adminInviteToken.trim() || undefined,
+        adminInviteToken: trimmedInviteToken || undefined,
       });
 
       const { token, role, ...user } = data;
@@ -76,21 +87,20 @@ const SignUp = () => {
         throw new Error("Invalid server response");
       }
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      persistAuthSession({ token, user });
 
       toast.success(`Welcome ${user.name || "User"}!`, {
         id: toastId,
       });
 
-      navigate(role === "admin" ? "/admin/dashboard" : "/user/dashboard");
+      navigate(getDashboardRoute(role));
     } catch (err) {
       console.error("Signup Error:", err);
 
-      const message =
-        err?.response?.data?.message ||
-        err.message ||
-        "Unable to create account. Please try again.";
+      const message = getErrorMessage(
+        err,
+        "Unable to create account. Please try again."
+      );
 
       setError(message);
 
@@ -129,7 +139,7 @@ const SignUp = () => {
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            type="text"
+            type="email"
             label="Email"
           />
 

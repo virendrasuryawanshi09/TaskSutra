@@ -5,6 +5,9 @@ import Input from "../../components/input/input.jsx";
 import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
 import toast from "react-hot-toast"; 
+import axiosInstance from "../../utils/axiosInstance.js";
+import { API_PATHS } from "../../utils/apiPaths.js";
+
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -20,50 +23,80 @@ const SignUp = () => {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    if (!fullName || !email || !password) {
-      setError("Please fill all required fields.");
-      toast.error("Please complete all required fields."); 
-      return;
+    if (loading) return;
+
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      const msg = "All fields are required.";
+      setError(msg);
+      return toast.error(msg);
     }
 
     if (!validateEmail(email)) {
-      setError("Please enter a valid email address.");
-      toast.error("Please enter a valid email address.");
-      return;
+      const msg = "Enter a valid email address.";
+      setError(msg);
+      return toast.error(msg);
     }
 
     setError("");
     setLoading(true);
 
-  
     const toastId = toast.loading("Creating your account...");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      let profileImageUrl;
 
-      console.log({
-        fullName,
-        email,
+      if (profilePic) {
+        const formData = new FormData();
+        formData.append("image", profilePic);
+
+        const uploadResponse = await axiosInstance.post(
+          API_PATHS.IMAGE.UPLOAD_IMAGE,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        profileImageUrl = uploadResponse.data?.imageUrl;
+      }
+
+      const { data } = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
         password,
-        profilePic,
-        adminInviteToken,
+        profileImageUrl,
+        adminInviteToken: adminInviteToken.trim() || undefined,
       });
 
-      toast.dismiss(toastId);
+      const { token, role, ...user } = data;
 
+      if (!token) {
+        throw new Error("Invalid server response");
+      }
 
-      toast.success("Account created. You can now sign in.");
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
-      navigate("/login");
+      toast.success(`Welcome ${user.name || "User"}!`, {
+        id: toastId,
+      });
 
+      navigate(role === "admin" ? "/admin/dashboard" : "/user/dashboard");
     } catch (err) {
-      toast.dismiss(toastId);
+      console.error("Signup Error:", err);
 
-      setError("Something went wrong. Please try again.");
+      const message =
+        err?.response?.data?.message ||
+        err.message ||
+        "Unable to create account. Please try again.";
 
-  
-      toast.error("Unable to create account. Please try again.");
+      setError(message);
 
+      toast.error(message, {
+        id: toastId,
+      });
     } finally {
       setLoading(false);
     }

@@ -2,61 +2,78 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
-import { validateEmail } from "../../utils/helper";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance.js";
-import { API_PATHS } from "../../utils/apiPaths";
+import { API_PATHS } from "../../utils/apiPaths.js";
+import useUserAuth from "../../hooks/useUserAuth.jsx";
+import {
+  getDashboardRoute,
+  getErrorMessage,
+  normalizeEmail,
+  validateEmail,
+} from "../../utils/helper.js";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { updateUserContext } = useUserAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!validateEmail(email)) {
-      setError("Please enter a valid email address.");
-      return;
+    if (loading) return;
+
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail || !password.trim()) {
+      const message = "Email and password are required.";
+      setError(message);
+      return toast.error(message);
     }
 
-    if (!password) {
-      setError("Please enter your password.");
-      return;
+    if (!validateEmail(normalizedEmail)) {
+      const message = "Please enter a valid email address.";
+      setError(message);
+      return toast.error(message);
     }
 
     setError("");
     setLoading(true);
+    const toastId = toast.loading("Signing you in...");
 
     try {
-      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
-        email,
+      const { data } = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
+        email: normalizedEmail,
         password,
       });
 
-      const { token, role } = response.data;
+      const { token, role, ...user } = data;
 
-      localStorage.setItem("token", token);
-
-      toast.success("Login successful");
-
-      if (role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
-        navigate("/user/dashboard");
+      if (!token) {
+        throw new Error("Invalid server response");
       }
 
+      updateUserContext({
+        token,
+        user: {
+          ...user,
+          role,
+        },
+      });
+
+      toast.success("Login successful.", { id: toastId });
+      navigate(getDashboardRoute(role));
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Login failed. Please try again.";
-
+      const message = getErrorMessage(
+        error,
+        "Login failed. Please try again."
+      );
       setError(message);
-
-      toast.error(message);
-
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -69,7 +86,7 @@ const Login = () => {
         <Input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          type="text"
+          type="email"
           label="Email"
         />
 
@@ -96,7 +113,7 @@ const Login = () => {
             disabled:opacity-70 disabled:cursor-not-allowed
           "
         >
-          {loading ? "Signing in..." : "Login"}
+          {loading ? "Signing in..." : "Sign In"}
         </button>
 
         <div className="mt-5 text-[13px] text-[var(--text-muted)]">

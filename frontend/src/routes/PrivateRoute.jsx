@@ -1,8 +1,21 @@
-import React from 'react'
-import {Outlet} from 'react-router-dom'
+import React from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import useUserAuth from "../hooks/useUserAuth.jsx";
+import { getDashboardRoute } from "../utils/helper.js";
 
-const PrivateRoute = ({allowedRoles}) => {
-  return <Outlet />
-}
+const PrivateRoute = ({ allowedRoles = [] }) => {
+  const location = useLocation();
+  const { isAuthenticated, role } = useUserAuth();
 
-export default PrivateRoute
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    return <Navigate to={getDashboardRoute(role)} replace />;
+  }
+
+  return <Outlet />;
+};
+
+export default PrivateRoute;

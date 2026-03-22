@@ -72,15 +72,10 @@ const SignUp = () => {
   return (
     <AuthLayout>
 
-      <div className="w-full max-w-[360px] mx-auto">
-
-        <h3 className="text-[20px] font-semibold mb-2">
+      <div>
+        <h3 className="text-[20px] font-semibold mb-4">
           Create an account
         </h3>
-
-        <p className="text-sm text-[var(--text-muted)] mb-6 leading-[1.5]">
-          Join us today by entering your details below.
-        </p>
 
         <form onSubmit={handleSignUp}>
 

@@ -14,21 +14,25 @@ const Input = ({ value, onChange, type, label }) => {
       <input
         type={isPassword ? (showPassword ? "text" : "password") : type}
         value={value}
-        onChange={(e) => onChange(e)}
+        onChange={onChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         className="
-          w-full border-b border-[#E2E0DB] bg-transparent py-3 text-sm outline-none
-          focus:border-[#1F6F78] transition-all duration-200
-          "
+          w-full border-b bg-transparent py-3 text-sm outline-none
+          border-[var(--border)]
+          text-[var(--text)]
+          focus:border-[var(--accent)]
+          transition-all duration-200
+        "
       />
 
       <label
         className={`
           absolute left-0 transition-all duration-200 pointer-events-none
-          ${isActive
-            ? "-top-2.5 text-[11px] text-[#1F6F78]"
-            : "top-2 text-[13px] text-[#6F6E69]"
+          ${
+            isActive
+              ? "-top-2.5 text-[11px] text-[var(--accent)]"
+              : "top-2 text-[13px] text-[var(--text-muted)]"
           }
         `}
       >
@@ -37,7 +41,7 @@ const Input = ({ value, onChange, type, label }) => {
 
       {isPassword && (
         <div
-          className="absolute right-0 top-2 cursor-pointer text-[#6F6E69]"
+          className="absolute right-0 top-2 cursor-pointer text-[var(--text-muted)]"
           onClick={() => setShowPassword((prev) => !prev)}
         >
           {showPassword ? <FaRegEye /> : <FaRegEyeSlash />}

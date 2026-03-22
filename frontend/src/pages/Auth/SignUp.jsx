@@ -6,6 +6,7 @@ import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
 import toast from "react-hot-toast"; 
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
+import uploadImage from "../../utils/uploadImage.js";
 import {
   getDashboardRoute,
   getErrorMessage,
@@ -57,20 +58,8 @@ const SignUp = () => {
       let profileImageUrl;
 
       if (profilePic) {
-        const formData = new FormData();
-        formData.append("image", profilePic);
-
-        const uploadResponse = await axiosInstance.post(
-          API_PATHS.IMAGE.UPLOAD_IMAGE,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        profileImageUrl = uploadResponse.data?.imageUrl;
+        const uploadResponse = await uploadImage(profilePic);
+        profileImageUrl = uploadResponse?.imageUrl|| "";
       }
 
       const { data } = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {

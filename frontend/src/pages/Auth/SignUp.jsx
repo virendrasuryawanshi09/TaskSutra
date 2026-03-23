@@ -2,12 +2,23 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
-import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/input/ProfilePhotoSelector";
 import toast from "react-hot-toast"; 
+import axiosInstance from "../../utils/axiosInstance.js";
+import { API_PATHS } from "../../utils/apiPaths.js";
+import useUserAuth from "../../hooks/useUserAuth.jsx";
+import uploadImage from "../../utils/uploadImage.js";
+import {
+  getDashboardRoute,
+  getErrorMessage,
+  normalizeEmail,
+  validateEmail,
+} from "../../utils/helper.js";
+
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const { updateUserContext } = useUserAuth();
 
   const [profilePic, setProfilePic] = useState(null);
   const [fullName, setFullName] = useState("");
@@ -16,54 +27,82 @@ const SignUp = () => {
   const [adminInviteToken, setAdminInviteToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false); 
+  
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    if (!fullName || !email || !password) {
-      setError("Please fill all required fields.");
-      toast.error("Please complete all required fields."); 
-      return;
+    if (loading) return;
+
+    const trimmedName = fullName.trim();
+    const normalizedEmail = normalizeEmail(email);
+    const trimmedInviteToken = adminInviteToken.trim();
+
+    if (!trimmedName || !normalizedEmail || !password.trim()) {
+      const message = "Name, email, and password are required.";
+      setError(message);
+      return toast.error(message);
     }
 
-    if (!validateEmail(email)) {
-      setError("Please enter a valid email address.");
-      toast.error("Please enter a valid email address.");
-      return;
+    if (!validateEmail(normalizedEmail)) {
+      const message = "Please enter a valid email address.";
+      setError(message);
+      return toast.error(message);
     }
 
     setError("");
     setLoading(true);
 
-  
     const toastId = toast.loading("Creating your account...");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      let profileImageUrl;
 
-      console.log({
-        fullName,
-        email,
+      if (profilePic) {
+        const uploadResponse = await uploadImage(profilePic);
+        profileImageUrl = uploadResponse?.imageUrl|| "";
+      }
+
+      const { data } = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
+        name: trimmedName,
+        email: normalizedEmail,
         password,
-        profilePic,
-        adminInviteToken,
+        profileImageUrl,
+        adminInviteToken: trimmedInviteToken || undefined,
       });
 
-      toast.dismiss(toastId);
+      const { token, role, ...user } = data;
 
+      if (!token) {
+        throw new Error("Invalid server response");
+      }
 
-      toast.success("Account created. You can now sign in.");
+      updateUserContext({
+        token,
+        user: {
+          ...user,
+          role,
+        },
+      });
 
-      navigate("/login");
+      toast.success(`Welcome ${user.name || "User"}!`, {
+        id: toastId,
+      });
 
+      navigate(getDashboardRoute(role));
     } catch (err) {
-      toast.dismiss(toastId);
+      console.error("Signup Error:", err);
 
-      setError("Something went wrong. Please try again.");
+      const message = getErrorMessage(
+        err,
+        "Unable to create account. Please try again."
+      );
 
-  
-      toast.error("Unable to create account. Please try again.");
+      setError(message);
 
+      toast.error(message, {
+        id: toastId,
+      });
     } finally {
       setLoading(false);
     }
@@ -96,7 +135,7 @@ const SignUp = () => {
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            type="text"
+            type="email"
             label="Email"
           />
 

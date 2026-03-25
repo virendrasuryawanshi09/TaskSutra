@@ -32,9 +32,35 @@ const SideMenu = ({ activeMenu }) => {
   }, [user]);
 
   return (
-    <div>
-      SideMenu
+    <div className="">
+      <div className="">
+        <img
+          src={user?.profileImageUrl || ""}
+          alt="Profile Image"
+          className=''
+        />
+      </div>
+
+      {user?.role === "admin" && (
+        <div className="">
+          Admin
+        </div>
+      )}
+
+      <h5 className="">
+        {user?.name || ""}
+      </h5>
+
+      <p className="">{user?.email || ""}</p>
     </div>
+
+    {SideMenuData.map({item, index} =>
+      <button 
+        key={`menu_${index}`}
+        className="">
+        
+        </button>
+    )}
   );
 };
 

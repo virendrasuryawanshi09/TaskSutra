@@ -1,66 +1,133 @@
-import React, { useContext, useEffect, useState } from 'react'
-import { UserContext } from '../../context/UserContextState'
-import { useNavigate } from 'react-router-dom';
-import { SIDE_MENU_DATA , SIDE_MENU_USER_DATA} from "../../utils/data"
+import React, { useContext } from "react";
+import { motion } from "framer-motion";
+import { UserContext } from "../../context/UserContextState";
+import { useNavigate, useLocation } from "react-router-dom";
+import { SIDE_MENU_DATA, SIDE_MENU_USER_DATA } from "../../utils/data";
+import { HiOutlineX } from "react-icons/hi";
 
-const SideMenu = ({ activeMenu }) => {
-  const { user, clearuser } = useContext(UserContext);
-  const [sideMenu, setSideMenu] = useState([]);
-
+const SideMenu = () => {
+  const { user, clearUser } = useContext(UserContext);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const sideMenuData = user
+    ? user.role === "admin"
+      ? SIDE_MENU_DATA
+      : SIDE_MENU_USER_DATA
+    : [];
 
   const handleClick = (route) => {
     if (route === "logout") {
-      handleLogout();
-      return;
+      localStorage.clear();
+      clearUser();
+      navigate("/login");
+    } else {
+      navigate(route);
     }
-    navigate(route);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    clearuser();
-    navigate("/login");
-  };
-
-  useEffect(() => {
-    if (user) {
-      setSideMenuData(
-        user.role === 'admin' ? SIDE_MENU_DATA : SIDE_MENU_USER_DATA
-      );
-    }
-  }, [user]);
 
   return (
-    <div className="">
-      <div className="">
-        <img
-          src={user?.profileImageUrl || ""}
-          alt="Profile Image"
-          className=''
-        />
+    <div className="w-[260px] h-full min-h-screen bg-[var(--surface)] border-r border-[var(--border)] p-4 flex flex-col">
+
+      {/* 🔥 TOP BAR (LOGO + CLOSE) */}
+      <div className="flex items-center justify-between mb-6">
+
+        {/* LOGO */}
+        <h2 className=" lg:hidden text-[16px] font-bold tracking-tight">
+          Task<span className="text-[var(--accent)]">Sutra</span>
+        </h2>
+
+        {/* CLOSE BUTTON (MOBILE ONLY) */}
+        <button
+          onClick={() => window.dispatchEvent(new Event("closeSidebar"))}
+          className="lg:hidden p-2 rounded-lg hover:bg-[var(--bg-soft)] transition"
+        >
+          <HiOutlineX className="text-[20px]" />
+        </button>
       </div>
 
-      {user?.role === "admin" && (
-        <div className="">
-          Admin
+      {/* PROFILE */}
+      <motion.div
+        whileHover={{ scale: 1.02 }}
+        className="flex flex-col items-center text-center mb-8"
+      >
+        {/* IMAGE */}
+        <img
+          src={user?.profileImageUrl || "https://via.placeholder.com/100"}
+          className="
+      w-16 h-16 rounded-full mb-3
+      object-cover
+      border border-[var(--border)]
+    "
+        />
+
+        {/* ROLE */}
+        {user?.role === "admin" && (
+          <span className="text-[11px] text-[var(--accent)] font-medium mb-1">
+            Admin
+          </span>
+        )}
+
+        {/* NAME */}
+        <div className="text-sm font-semibold">
+          {user?.name || "User"}
         </div>
-      )}
 
-      <h5 className="">
-        {user?.name || ""}
-      </h5>
+        {/* EMAIL */}
+        <div className="text-xs text-[var(--text-muted)] mt-1">
+          {user?.email || ""}
+        </div>
+      </motion.div>
 
-      <p className="">{user?.email || ""}</p>
+      {/* MENU */}
+      <div className="flex flex-col gap-1">
+        {sideMenuData.map((item, index) => {
+          const isActive = location.pathname.startsWith(item.path);
+
+          return (
+            <motion.button
+              key={index}
+              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: isActive ? 1 : 1.02 }}
+              onClick={() => handleClick(item.path)}
+              className={`
+                group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
+                text-sm transition-all duration-200
+
+                ${isActive
+                  ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]"
+                }
+              `}
+            >
+              {/* ACTIVE INDICATOR */}
+              {isActive && (
+                <motion.div
+                  layoutId="activeIndicator"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r bg-[var(--accent)]"
+                />
+              )}
+
+              {/* ICON */}
+              <div
+                className={`
+                  w-8 h-8 flex items-center justify-center rounded-lg transition
+                  ${isActive
+                    ? "bg-[var(--accent-soft)]"
+                    : "bg-[var(--bg-soft)] group-hover:scale-105"
+                  }
+                `}
+              >
+                <item.icon className="text-[16px]" />
+              </div>
+
+              {item.label}
+            </motion.button>
+          );
+        })}
+      </div>
     </div>
-
-    {SideMenuData.map({item, index} =>
-      <button 
-        key={`menu_${index}`}
-        className="">
-        
-        </button>
-    )}
   );
 };
 

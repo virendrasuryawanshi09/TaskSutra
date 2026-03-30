@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import moment from 'moment';
+import { addThousandSeparator } from '../../utils/helper';
+import InfoCard from '../../components/Cards/InfoCard';
+import { HiOutlineClipboardList } from 'react-icons/hi';
+
 
 const Dashboard = () => {
 
@@ -47,7 +51,12 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mt-5">
-          
+          <InfoCard 
+            title="Total Tasks"
+            icon={<HiOutlineClipboardList />}
+            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.All || 0)}
+            color="#1F6F78"
+            />
         </div>
       </div>
     </DashboardLayout>

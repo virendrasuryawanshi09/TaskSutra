@@ -7,7 +7,7 @@ import { API_PATHS } from '../../utils/apiPaths';
 import moment from 'moment';
 import { addThousandSeparator } from '../../utils/helper';
 import InfoCard from '../../components/Cards/InfoCard';
-import { HiOutlineClipboardList } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
 
 
 const Dashboard = () => {
@@ -52,10 +52,30 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mt-5">
           <InfoCard 
-            title="Total Tasks"
+            label="Total Tasks"
             icon={<HiOutlineClipboardList />}
             value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.All || 0)}
-            color="#1F6F78"
+            color="#4F46E5"
+            />
+
+            <InfoCard 
+            label="Pending Tasks"
+            icon={<HiOutlineClock />}
+            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.Pending || 0)}
+            color="#D97706"
+            />
+
+            <InfoCard 
+            label="InProgress Tasks"
+            icon={<HiOutlineCheckCircle />}
+            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.InProgress || 0)}
+            color="#059669"
+            />
+            <InfoCard 
+            label="Completed Tasks"
+            icon={<HiOutlineRefresh />}
+            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.Completed || 0)}
+            color="#2563EB"
             />
         </div>
       </div>

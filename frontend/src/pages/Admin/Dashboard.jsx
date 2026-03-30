@@ -8,6 +8,8 @@ import moment from 'moment';
 import { addThousandSeparator } from '../../utils/helper';
 import InfoCard from '../../components/Cards/InfoCard';
 import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
+import { LuArrowRight } from 'react-icons/lu';
+import TaskListTable from '../../components/TaskListTable';
 
 
 const Dashboard = () => {
@@ -33,50 +35,106 @@ const Dashboard = () => {
     }
   };
 
+  const onSeeMore = () => {
+    navigate("/admin/tasks");
+  };
+
   // ✅ CORRECT PLACE
   useEffect(() => {
     getDashboardData();
   }, []);
 
+  if (!dashboardData) {
+    return (
+      <DashboardLayout activeMenu="Dashboard">
+        <div className="p-6 text-[var(--text-muted)]">
+          Loading dashboard...
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout activeMenu="Dashboard">
-      <div className="card my-5">
+      <div className="my-6 p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
         <div>
           <div className="col-span-3">
-            <h2 className="text-xl md:text-2xl">Good Morning! {user?.name}</h2>
-            <p className="text-xl md:text-[13px] text-gray-400 mt-1.5">
+            <h2 className="text-2xl md:text-3xl font-semibold text-[var(--text)] tracking-tight">
+              Good Morning, {user?.name}
+            </h2>
+
+            <p className="text-sm text-[var(--text-muted)] mt-1">
               {moment().format("dddd, MMMM Do YYYY")}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mt-5">
-          <InfoCard 
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-6">
+          <InfoCard
             label="Total Tasks"
             icon={<HiOutlineClipboardList />}
             value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.All || 0)}
             color="#4F46E5"
-            />
+          />
 
-            <InfoCard 
+          <InfoCard
             label="Pending Tasks"
             icon={<HiOutlineClock />}
             value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.Pending || 0)}
             color="#D97706"
-            />
+          />
 
-            <InfoCard 
+          <InfoCard
             label="InProgress Tasks"
-            icon={<HiOutlineCheckCircle />}
+            icon={<HiOutlineRefresh />}
             value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.InProgress || 0)}
             color="#059669"
-            />
-            <InfoCard 
+          />
+          <InfoCard
             label="Completed Tasks"
-            icon={<HiOutlineRefresh />}
+            icon={<HiOutlineCheckCircle />}
             value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.Completed || 0)}
             color="#2563EB"
-            />
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+        <div className="md:col-span-2">
+
+          <div className="relative group rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10">
+
+            <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all duration-300 p-5">
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+
+                <div>
+                  <h5 className="text-lg font-semibold text-[var(--text)]">
+                    Recent Tasks
+                  </h5>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Track your latest activity
+                  </p>
+                </div>
+
+                <button
+                  className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition"
+                  onClick={onSeeMore}
+                >
+                  View All
+                  <LuArrowRight className="text-base transition-transform duration-200 group-hover:translate-x-1" />
+                </button>
+
+              </div>
+
+              <div className="h-px bg-[var(--border)] mb-4"></div>
+
+              <TaskListTable tableData={dashboardData?.recentTasks || []} />
+
+            </div>
+          </div>
+
         </div>
       </div>
     </DashboardLayout>

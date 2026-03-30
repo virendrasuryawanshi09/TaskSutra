@@ -4,20 +4,19 @@ const InfoCard = ({ icon, label, title, value, color = "#1F6F78" }) => {
   const resolvedLabel = label || title || "Untitled";
 
   return (
-    <div className="relative group overflow-hidden rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10 hover:from-white/60 hover:to-white/20 transition-all duration-300">
+    <div className="relative group overflow-hidden rounded-2xl p-[1px]">
 
-      {/* Glass Card */}
-      <div className="flex items-center gap-4 p-5 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm group-hover:shadow-lg transition-all duration-300">
+      {/* Border Layer */}
+      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition duration-300"
+        style={{ background: `${color}20` }}
+      ></div>
 
-        {/* Glow Effect */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 blur-2xl"
-          style={{ background: `${color}30` }}
-        ></div>
+      {/* Card */}
+      <div className="relative flex items-center gap-4 p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm group-hover:shadow-lg transition-all duration-300">
 
         {/* Icon */}
         <div
-          className="relative flex items-center justify-center w-12 h-12 rounded-xl shadow-inner"
+          className="flex items-center justify-center w-12 h-12 rounded-xl"
           style={{ backgroundColor: `${color}15` }}
         >
           <div
@@ -30,11 +29,11 @@ const InfoCard = ({ icon, label, title, value, color = "#1F6F78" }) => {
 
         {/* Text */}
         <div className="flex flex-col">
-          <span className="text-xs tracking-wide text-gray-500 uppercase">
+          <span className="text-xs tracking-wide text-[var(--text-muted)] uppercase">
             {resolvedLabel}
           </span>
 
-          <span className="text-xl font-bold text-gray-900 tracking-tight">
+          <span className="text-xl font-bold text-[var(--text)] tracking-tight">
             {value}
           </span>
         </div>

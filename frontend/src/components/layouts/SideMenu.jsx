@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { UserContext } from "../../context/UserContextState";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -9,12 +9,18 @@ const SideMenu = () => {
   const { user, clearUser } = useContext(UserContext);
   const navigate = useNavigate();
   const location = useLocation();
+  const [imageError, setImageError] = useState(false);
 
   const sideMenuData = user
     ? user.role === "admin"
       ? SIDE_MENU_DATA
       : SIDE_MENU_USER_DATA
     : [];
+
+  const userInitial = useMemo(() => {
+    const name = user?.name?.trim();
+    return name ? name.charAt(0).toUpperCase() : "U";
+  }, [user?.name]);
 
   const handleClick = (route) => {
     if (route === "logout") {
@@ -53,14 +59,29 @@ const SideMenu = () => {
         className="flex flex-col items-center text-center mb-8"
       >
         {/* IMAGE */}
-        <img
-          src={user?.profileImageUrl || "https://via.placeholder.com/100"}
-          className="
-      w-16 h-16 rounded-full mb-3
-      object-cover
-      border border-[var(--border)]
-    "
-        />
+        {user?.profileImageUrl && !imageError ? (
+          <img
+            src={user.profileImageUrl}
+            alt={user?.name || "User"}
+            onError={() => setImageError(true)}
+            className="
+              w-16 h-16 rounded-full mb-3
+              object-cover
+              border border-[var(--border)]
+            "
+          />
+        ) : (
+          <div
+            className="
+              w-16 h-16 rounded-full mb-3
+              border border-[var(--border)]
+              bg-[var(--bg-soft)] text-[var(--accent)]
+              flex items-center justify-center text-lg font-semibold
+            "
+          >
+            {userInitial}
+          </div>
+        )}
 
         {/* ROLE */}
         {user?.role === "admin" && (

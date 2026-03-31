@@ -10,6 +10,14 @@ import InfoCard from '../../components/Cards/InfoCard';
 import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
 import { LuArrowRight } from 'react-icons/lu';
 import TaskListTable from '../../components/TaskListTable';
+import CustomPieChart from '../../components/Charts/CustomPieChart';
+
+
+const COLORS = {
+  Pending: "#D97706",
+  "In Progress": "#2F7A84",
+  Completed: "#4C7F6A",
+};
 
 
 const Dashboard = () => {
@@ -21,6 +29,26 @@ const Dashboard = () => {
   const [pieChartData, setPieChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
 
+  const prepareChartData = (data) => {
+    const taskDistribution = data?.taskDistribution || {};
+    const taskPriorityLevels = data?.taskPriorityLevels || {};
+
+    const taskDistributionData = [
+      { name: "Pending", value: taskDistribution?.Pending || 0 },
+      { name: "In Progress", value: taskDistribution?.InProgress || 0 },
+      { name: "Completed", value: taskDistribution?.Completed || 0 },
+    ];
+
+    setPieChartData(taskDistributionData);
+
+    const priorityLevelData = [
+      { priority: "High", count: taskPriorityLevels?.High || 0 },
+      { priority: "Medium", count: taskPriorityLevels?.Medium || 0 },
+      { priority: "Low", count: taskPriorityLevels?.Low || 0 },
+    ];
+    setBarChartData(priorityLevelData);
+  };
+
   const getDashboardData = async () => {
     try {
       const response = await axiosInstance.get(
@@ -29,6 +57,7 @@ const Dashboard = () => {
 
       if (response.data) {
         setDashboardData(response.data);
+        prepareChartData(response.data?.charts || null);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -100,6 +129,21 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+
+
+        <div>
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <h5 className="font-medium">Task Distribution</h5>
+            </div>
+
+            <CustomPieChart
+              data={pieChartData}
+              colors={COLORS}
+            />
+          </div>
+        </div>
+
         <div className="md:col-span-2">
 
           <div className="relative group rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10">

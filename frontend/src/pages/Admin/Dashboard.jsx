@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [pieChartData, setPieChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
 
+
   const prepareChartData = (data) => {
     const taskDistribution = data?.taskDistribution || {};
     const taskPriorityLevels = data?.taskPriorityLevels || {};

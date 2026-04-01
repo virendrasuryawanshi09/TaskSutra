@@ -29,6 +29,14 @@ const Dashboard = () => {
   const [pieChartData, setPieChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
 
+  const currentHour = moment().hour();
+  const greeting =
+    currentHour < 12
+      ? "Good Morning"
+      : currentHour < 17
+        ? "Good Afternoon"
+        : "Good Evening";
+
   const prepareChartData = (data) => {
     const taskDistribution = data?.taskDistribution || {};
     const taskPriorityLevels = data?.taskPriorityLevels || {};
@@ -118,9 +126,10 @@ const Dashboard = () => {
         <div>
           <div className="col-span-3">
             <h2 className="text-2xl md:text-3xl font-semibold text-[var(--text)] tracking-tight">
-              Good Morning, {user?.name}
+              {greeting}, {user?.name}
             </h2>
 
+            <p className="text-sm text-[var(--accent)] mt-1">Let’s turn your goals into progress.</p>
             <p className="text-sm text-[var(--text-muted)] mt-1">
               {moment().format("dddd, MMMM Do YYYY")}
             </p>

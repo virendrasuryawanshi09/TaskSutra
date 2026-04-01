@@ -27,6 +27,9 @@ input:-webkit-autofill:active {
 
   --accent: #1F6F78;
   --accent-hover: #195A62;
+  --scroll-track: rgba(31, 31, 29, 0.06);
+  --scroll-thumb: rgba(31, 111, 120, 0.34);
+  --scroll-thumb-hover: rgba(31, 111, 120, 0.5);
 }
 
 
@@ -41,6 +44,66 @@ input:-webkit-autofill:active {
 
   --accent: #3AA6B0;
   --accent-hover: #2F8E97;
+  --scroll-track: rgba(255, 255, 255, 0.08);
+  --scroll-thumb: rgba(58, 166, 176, 0.36);
+  --scroll-thumb-hover: rgba(58, 166, 176, 0.54);
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+body {
+  overflow-y: scroll;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scroll-thumb), var(--accent));
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scroll-thumb-hover), var(--accent-hover));
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body {
+    scroll-behavior: auto;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .auth-fade {

@@ -36,7 +36,6 @@ const SideMenu = () => {
   return (
     <div className="flex h-full min-h-full w-[260px] flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] p-4">
 
-      {/* 🔥 TOP BAR (LOGO + CLOSE) */}
       <div className="mb-2 flex items-center justify-between lg:hidden">
 
         {/* LOGO */}
@@ -105,6 +104,7 @@ const SideMenu = () => {
       <div className="flex flex-1 flex-col gap-1 pb-4">
         {sideMenuData.map((item, index) => {
           const isActive = location.pathname.startsWith(item.path);
+          const isLogout = item.path === "logout";
 
           return (
             <motion.button
@@ -118,7 +118,9 @@ const SideMenu = () => {
 
                 ${isActive
                   ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]"
+                  : isLogout
+                    ? "text-[var(--text-muted)] hover:bg-[rgba(220,38,38,0.08)] hover:text-[#B42318]"
+                    : "text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]"
                 }
               `}
             >
@@ -136,7 +138,9 @@ const SideMenu = () => {
                   w-8 h-8 flex items-center justify-center rounded-lg transition
                   ${isActive
                     ? "bg-[var(--accent-soft)]"
-                    : "bg-[var(--bg-soft)] group-hover:scale-105"
+                    : isLogout
+                      ? "bg-[var(--bg-soft)] group-hover:scale-105 group-hover:bg-[rgba(220,38,38,0.12)]"
+                      : "bg-[var(--bg-soft)] group-hover:scale-105"
                   }
                 `}
               >

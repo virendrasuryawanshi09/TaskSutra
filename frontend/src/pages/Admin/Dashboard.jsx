@@ -123,7 +123,7 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout activeMenu="Dashboard">
-      <div className="my-6 p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
+      <div className="my-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:my-6 sm:p-5">
         <div>
           <div className="col-span-3">
             <h2 className="text-2xl md:text-3xl font-semibold text-[var(--text)] tracking-tight">
@@ -137,7 +137,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-6">
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 md:grid-cols-4 md:gap-6">
           <InfoCard
             label="Total Tasks"
             icon={<HiOutlineClipboardList />}
@@ -214,7 +214,7 @@ const Dashboard = () => {
                 </div>
 
                 <button
-                  className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition"
+                  className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition cursor-pointer"
                   onClick={onSeeMore}
                 >
                   View All

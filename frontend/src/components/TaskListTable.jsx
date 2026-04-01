@@ -5,14 +5,24 @@ import { useNavigate } from 'react-router-dom';
 const TaskListTable = ({ tableData }) => {
     const navigate = useNavigate();
 
+    const normalizeStatus = (status) => {
+        const normalizedValue = String(status || '').trim().toLowerCase();
+
+        if (normalizedValue === 'completed') return 'Completed';
+        if (['in progress', 'in-progress', 'inprogress'].includes(normalizedValue)) {
+            return 'In Progress';
+        }
+        return 'Pending';
+    };
+
     const getStatusBadge = (status) => {
-        switch (status) {
+        switch (normalizeStatus(status)) {
             case 'Completed':
-                return 'bg-[rgba(76,127,106,0.15)] text-[#4C7F6A]';
+                return 'border border-[rgba(76,127,106,0.18)] bg-[rgba(76,127,106,0.16)] text-[#4C7F6A] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]';
             case 'In Progress':
-                return 'bg-[var(--accent-soft)] text-[var(--accent)]';
+                return 'border border-[rgba(47,122,132,0.18)] bg-[rgba(47,122,132,0.16)] text-[#2F7A84] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]';
             case 'Pending':
-                return 'bg-[rgba(194,139,44,0.15)] text-[#C28B2C]';
+                return 'border border-[rgba(194,139,44,0.18)] bg-[rgba(194,139,44,0.16)] text-[#C28B2C] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]';
             default:
                 return 'bg-[var(--bg-soft)] text-[var(--text-muted)]';
         }
@@ -32,7 +42,7 @@ const TaskListTable = ({ tableData }) => {
     };
 
     const getStatusDot = (status) => {
-        switch (status) {
+        switch (normalizeStatus(status)) {
             case 'Completed':
                 return 'bg-[#4C7F6A]';
             case 'In Progress':
@@ -44,79 +54,117 @@ const TaskListTable = ({ tableData }) => {
         }
     };
 
+    const formatStatus = (status) => normalizeStatus(status);
+
+    const formatCreatedDate = (task) => {
+        const taskDate = task.createdAt || task.createdOn;
+        return taskDate ? moment(taskDate).format('DD MMM YYYY') : '--';
+    };
+
     return (
-        <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-
-            <table className="w-full text-sm table-fixed">
-
-                {/* HEADER */}
-                <thead className="bg-[var(--bg-soft)] sticky top-0 z-10">
-                    <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wide">
-                        <th className="py-3 px-4 font-medium w-[40%]">Task</th>
-                        <th className="py-3 px-4 font-medium w-[20%]">Status</th>
-                        <th className="py-3 px-4 font-medium w-[20%]">Priority</th>
-                        <th className="py-3 px-4 font-medium w-[20%] text-right">Created On</th>
-                    </tr>
-                </thead>
-
-                {/* BODY */}
-                <tbody>
-                    {tableData.map((task) => (
-                        <tr
-                            key={task.id}
-                            onClick={() => navigate(`/admin/tasks/${task.id}`)}
-                            className="border-t border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)] 
-              hover:bg-[var(--bg-soft)] hover:scale-[1.01] cursor-pointer transition-all duration-200"
-                        >
-
-                            {/* TASK */}
-                            <td className="py-3 px-4 font-medium text-[var(--text)]">
+        <>
+            <div className="space-y-3 md:hidden">
+                {tableData.map((task) => (
+                    <button
+                        key={task._id || task.id}
+                        onClick={() => navigate(`/admin/tasks/${task._id || task.id}`)}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 text-left shadow-sm transition-transform duration-200 active:scale-[0.99]"
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
-
-                                    {/* Status Dot */}
-                                    <div className={`w-2 h-2 rounded-full ${getStatusDot(task.status)}`}></div>
-
-                                    {task.title}
+                                    <div className={`h-2.5 w-2.5 rounded-full ${getStatusDot(task.status)}`}></div>
+                                    <p className="text-[15px] font-semibold leading-6 text-[var(--text)] break-words">
+                                        {task.title}
+                                    </p>
                                 </div>
-                            </td>
+                                <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                                    Created {formatCreatedDate(task)}
+                                </p>
+                            </div>
+                        </div>
 
-                            {/* STATUS */}
-                            <td className="py-3 px-4">
-                                <span
-                                    className={`px-2.5 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${getStatusBadge(task.status)}`}
-                                >
-                                    {task.status}
-                                </span>
-                            </td>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadge(task.status)}`}>
+                                {formatStatus(task.status)}
+                            </span>
+                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getPriorityBadge(task.priority)}`}>
+                                {task.priority}
+                            </span>
+                        </div>
+                    </button>
+                ))}
 
-                            {/* PRIORITY */}
-                            <td className="py-3 px-4">
-                                <span
-                                    className={`px-2.5 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${getPriorityBadge(task.priority)}`}
-                                >
-                                    {task.priority}
-                                </span>
-                            </td>
+                {tableData.length === 0 && (
+                    <div className="rounded-2xl border border-[var(--border)] py-12 text-center text-sm text-[var(--text-muted)]">
+                        No recent tasks found
+                    </div>
+                )}
+            </div>
 
-                            {/* DATE */}
-                            <td className="py-3 px-4 text-right text-[var(--text-muted)]">
-                                {moment(task.createdOn).format('DD MMM YYYY')}
-                            </td>
+            <div className="hidden overflow-hidden rounded-2xl border border-[var(--border)] md:block">
 
+                <table className="w-full table-fixed text-sm">
+
+                    <thead className="sticky top-0 z-10 bg-[var(--bg-soft)]">
+                        <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
+                            <th className="w-[40%] px-4 py-4 font-medium">Task</th>
+                            <th className="w-[20%] px-4 py-4 font-medium">Status</th>
+                            <th className="w-[20%] px-4 py-4 font-medium">Priority</th>
+                            <th className="w-[20%] px-4 py-4 text-right font-medium">Created On</th>
                         </tr>
-                    ))}
-                </tbody>
+                    </thead>
 
-            </table>
+                    <tbody>
+                        {tableData.map((task) => (
+                            <tr
+                                key={task._id || task.id}
+                                onClick={() => navigate(`/admin/tasks/${task._id || task.id}`)}
+                                className="border-t border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)] 
+              hover:bg-[var(--bg-soft)] hover:scale-[1.01] cursor-pointer transition-all duration-200"
+                            >
 
-            {/* EMPTY STATE */}
-            {tableData.length === 0 && (
-                <div className="text-center py-12 text-[var(--text-muted)] text-sm">
-                    No recent tasks found
-                </div>
-            )}
+                                <td className="px-4 py-4 font-medium text-[var(--text)]">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-2.5 w-2.5 rounded-full ${getStatusDot(task.status)}`}></div>
 
-        </div>
+                                        <span className="truncate">{task.title}</span>
+                                    </div>
+                                </td>
+
+                                <td className="px-4 py-4">
+                                    <span
+                                        className={`rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm ${getStatusBadge(task.status)}`}
+                                    >
+                                        {formatStatus(task.status)}
+                                    </span>
+                                </td>
+
+                                <td className="px-4 py-4">
+                                    <span
+                                        className={`rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm ${getPriorityBadge(task.priority)}`}
+                                    >
+                                        {task.priority}
+                                    </span>
+                                </td>
+
+                                <td className="px-4 py-4 text-right text-[var(--text-muted)]">
+                                    {formatCreatedDate(task)}
+                                </td>
+
+                            </tr>
+                        ))}
+                    </tbody>
+
+                </table>
+
+                {tableData.length === 0 && (
+                    <div className="py-12 text-center text-sm text-[var(--text-muted)]">
+                        No recent tasks found
+                    </div>
+                )}
+            </div>
+        </>
     );
 };
 

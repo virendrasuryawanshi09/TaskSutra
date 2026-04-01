@@ -12,15 +12,15 @@ const DashboardLayout = ({ children }) => {
       <Navbar />
 
       {user && (
-        <div className="flex">
+        <div className="flex w-full items-start">
 
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block h-screen">
+          <div className="hidden lg:block lg:sticky lg:top-0 lg:h-screen lg:flex-shrink-0">
             <SideMenu />
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 p-4 md:p-6 lg:p-8">
+          <div className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
             {children}
           </div>
 

@@ -34,10 +34,10 @@ const SideMenu = () => {
 
 
   return (
-    <div className="w-[260px] h-full min-h-screen bg-[var(--surface)] border-r border-[var(--border)] p-4 flex flex-col">
+    <div className="flex h-full min-h-[calc(100vh-73px)] w-[260px] flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] p-4">
 
       {/* 🔥 TOP BAR (LOGO + CLOSE) */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-2 flex items-center justify-between lg:hidden">
 
         {/* LOGO */}
         <h2 className=" lg:hidden text-[16px] font-bold tracking-tight">
@@ -56,7 +56,7 @@ const SideMenu = () => {
       {/* PROFILE */}
       <motion.div
         whileHover={{ scale: 1.02 }}
-        className="flex flex-col items-center text-center mb-8"
+        className="mb-8 flex flex-col items-center text-center lg:pt-2"
       >
         {/* IMAGE */}
         {user?.profileImageUrl && !imageError ? (
@@ -102,7 +102,7 @@ const SideMenu = () => {
       </motion.div>
 
       {/* MENU */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-1 flex-col gap-1 pb-4">
         {sideMenuData.map((item, index) => {
           const isActive = location.pathname.startsWith(item.path);
 

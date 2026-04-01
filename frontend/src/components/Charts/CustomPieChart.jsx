@@ -14,18 +14,19 @@ const CustomPieChart = ({ data, colors }) => {
   const [activeIndex, setActiveIndex] = useState(null);
 
   return (
-    <div className="pt-2">
-      <ResponsiveContainer width="100%" height={280}>
+    <div className="pt-3">
+      <div className="mx-auto h-[250px] w-full max-w-[320px] sm:h-[290px] sm:max-w-[380px] lg:h-[320px] lg:max-w-none">
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
             data={data}
             dataKey="count"
             nameKey="status"
             cx="50%"
-            cy="50%"
-            innerRadius={85}
-            outerRadius={115}
-            paddingAngle={3}
+            cy="46%"
+            innerRadius="54%"
+            outerRadius="78%"
+            paddingAngle={4}
             onMouseEnter={(_, index) => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
           >
@@ -49,6 +50,7 @@ const CustomPieChart = ({ data, colors }) => {
           <Legend content={<CustomLegend />} />
         </PieChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 };

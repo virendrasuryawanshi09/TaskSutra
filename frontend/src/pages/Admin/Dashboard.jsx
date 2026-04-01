@@ -192,7 +192,7 @@ const Dashboard = () => {
                 </div>
 
                 <button
-                  className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition"
+                  className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition cursor-pointer"
                   onClick={onSeeMore}
                 >
                   View All

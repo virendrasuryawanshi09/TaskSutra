@@ -13,11 +13,11 @@ import TaskListTable from '../../components/TaskListTable';
 import CustomPieChart from '../../components/Charts/CustomPieChart';
 
 
-const COLORS = {
-  Pending: "#D97706",
-  "In Progress": "#2F7A84",
-  Completed: "#4C7F6A",
-};
+const COLORS = [
+  "#D97706", // Pending
+  "#2F7A84", // In Progress
+  "#4C7F6A", // Completed
+];
 
 
 const Dashboard = () => {
@@ -35,9 +35,9 @@ const Dashboard = () => {
     const taskPriorityLevels = data?.taskPriorityLevels || {};
 
     const taskDistributionData = [
-      { name: "Pending", value: taskDistribution?.Pending || 0 },
-      { name: "In Progress", value: taskDistribution?.InProgress || 0 },
-      { name: "Completed", value: taskDistribution?.Completed || 0 },
+      { status: "Pending", count: taskDistribution?.Pending || 0 },
+      { status: "In Progress", count: taskDistribution?.InProgress || 0 },
+      { status: "Completed", count: taskDistribution?.Completed || 0 },
     ];
 
     setPieChartData(taskDistributionData);
@@ -133,7 +133,7 @@ const Dashboard = () => {
 
 
         <div>
-          <div className="card">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
             <div className="flex items-center justify-between">
               <h5 className="font-medium">Task Distribution</h5>
             </div>

@@ -15,7 +15,7 @@ const DashboardLayout = ({ children }) => {
         <div className="flex w-full items-start">
 
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block lg:sticky lg:top-0 lg:h-screen lg:flex-shrink-0">
+          <div className="hidden lg:block lg:h-[calc(100vh-4rem)] lg:flex-shrink-0 lg:sticky lg:top-16">
             <SideMenu />
           </div>
 

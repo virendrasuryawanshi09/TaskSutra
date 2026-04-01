@@ -19,7 +19,7 @@ const Navbar = () => {
         };
     }, []);
     return (
-        <div className="w-full flex items-center justify-between px-6 py-3 bg-[var(--surface)]/80 backdrop-blur-md border-b border-[var(--border)] sticky top-0 z-40">
+        <div className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/80 px-6 backdrop-blur-md">
 
             <div className="flex items-center gap-3">
 

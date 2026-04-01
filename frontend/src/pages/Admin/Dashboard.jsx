@@ -29,15 +29,28 @@ const Dashboard = () => {
   const [pieChartData, setPieChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
 
-
   const prepareChartData = (data) => {
     const taskDistribution = data?.taskDistribution || {};
     const taskPriorityLevels = data?.taskPriorityLevels || {};
+    const totalTasks = Number(taskDistribution?.All || 0);
+    const pendingTasks = Number(taskDistribution?.Pending || 0);
+    const completedTasks = Number(taskDistribution?.Completed || 0);
+    const rawInProgressCount = Number(
+      taskDistribution?.InProgress ??
+      taskDistribution?.["In Progress"] ??
+      taskDistribution?.["In-progress"] ??
+      0
+    );
+    const derivedInProgressCount = Math.max(
+      0,
+      totalTasks - pendingTasks - completedTasks
+    );
+    const inProgressCount = rawInProgressCount || derivedInProgressCount;
 
     const taskDistributionData = [
-      { status: "Pending", count: taskDistribution?.Pending || 0 },
-      { status: "In Progress", count: taskDistribution?.InProgress || 0 },
-      { status: "Completed", count: taskDistribution?.Completed || 0 },
+      { status: "Pending", count: pendingTasks },
+      { status: "In Progress", count: inProgressCount },
+      { status: "Completed", count: completedTasks },
     ];
 
     setPieChartData(taskDistributionData);
@@ -84,6 +97,21 @@ const Dashboard = () => {
     );
   }
 
+  const taskDistribution = dashboardData?.charts?.taskDistribution || {};
+  const totalTasks = Number(taskDistribution?.All || 0);
+  const pendingTasks = Number(taskDistribution?.Pending || 0);
+  const completedTasks = Number(taskDistribution?.Completed || 0);
+  const rawInProgressCount = Number(
+    taskDistribution?.InProgress ??
+    taskDistribution?.["In Progress"] ??
+    taskDistribution?.["In-progress"] ??
+    0
+  );
+  const inProgressCount = rawInProgressCount || Math.max(
+    0,
+    totalTasks - pendingTasks - completedTasks
+  );
+
   return (
     <DashboardLayout activeMenu="Dashboard">
       <div className="my-6 p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
@@ -103,27 +131,27 @@ const Dashboard = () => {
           <InfoCard
             label="Total Tasks"
             icon={<HiOutlineClipboardList />}
-            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.All || 0)}
+            value={addThousandSeparator(totalTasks)}
             color="#4F46E5"
           />
 
           <InfoCard
             label="Pending Tasks"
             icon={<HiOutlineClock />}
-            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.Pending || 0)}
+            value={addThousandSeparator(pendingTasks)}
             color="#D97706"
           />
 
           <InfoCard
-            label="InProgress Tasks"
+            label="In Progress Tasks"
             icon={<HiOutlineRefresh />}
-            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.InProgress || 0)}
+            value={addThousandSeparator(inProgressCount)}
             color="#059669"
           />
           <InfoCard
             label="Completed Tasks"
             icon={<HiOutlineCheckCircle />}
-            value={addThousandSeparator(dashboardData?.charts?.taskDistribution?.Completed || 0)}
+            value={addThousandSeparator(completedTasks)}
             color="#2563EB"
           />
         </div>

@@ -14,19 +14,7 @@ const CustomPieChart = ({ data, colors }) => {
   const [activeIndex, setActiveIndex] = useState(null);
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 transition-all duration-300 hover:shadow-xl">
-
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-sm font-semibold text-[var(--text)]">
-          Task Distribution
-        </h3>
-        <span className="text-xs text-[var(--text-muted)]">
-          Overview
-        </span>
-      </div>
-
-      {/* Chart */}
+    <div className="pt-2">
       <ResponsiveContainer width="100%" height={280}>
         <PieChart>
           <Pie

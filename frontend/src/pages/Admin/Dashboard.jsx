@@ -11,6 +11,7 @@ import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutline
 import { LuArrowRight } from 'react-icons/lu';
 import TaskListTable from '../../components/TaskListTable';
 import CustomPieChart from '../../components/Charts/CustomPieChart';
+import CustomBarChart from '../../components/Charts/CustomBarChart';
 
 
 const COLORS = [

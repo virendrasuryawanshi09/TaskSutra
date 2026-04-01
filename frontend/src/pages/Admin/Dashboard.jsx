@@ -182,6 +182,18 @@ const Dashboard = () => {
           </div>
         </div>
 
+        <div>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+            <div className="flex items-center justify-between">
+              <h5 className="font-medium">Task Priority Levels</h5>
+            </div>
+
+            <CustomBarChart
+              data={barChartData}
+            />
+          </div>
+        </div>
+
         <div className="md:col-span-2">
 
           <div className="relative group rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10">

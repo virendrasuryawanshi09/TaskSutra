@@ -1,83 +1,146 @@
-import React from 'react'
+import React from "react";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-  Cell
+  Cell,
+  CartesianGrid,
+  LabelList,
 } from "recharts";
 
 const CustomBarChart = ({ data }) => {
 
-  const getBarColor = (entry) => {
-    switch (entry?.priority) {
-      case 'Low':
-        return '#4C7F6A';
+  const getGradientId = (priority) => {
+    return `gradient-${priority}`;
+  };
 
-      case 'Medium':
-        return '#2F7A84';
-
-      case 'High':
-        return '#D97706';
-
+  const getColors = (priority) => {
+    switch (priority) {
+      case "Low":
+        return ["#4C7F6A", "#6FAF96"];
+      case "Medium":
+        return ["#2F7A84", "#4FB3BF"];
+      case "High":
+        return ["#D97706", "#F59E0B"];
       default:
-        return '#8884d8';
+        return ["#8884d8", "#A5B4FC"];
     }
   };
 
+  // ✅ PREMIUM TOOLTIP
   const CustomTooltip = ({ active, payload }) => {
-    if(active && payload && payload.length) {
+    if (active && payload && payload.length) {
       return (
-        <div className="">
-          <p className="">
+        <div className="bg-[var(--surface)] border border-[var(--border)] px-3 py-2 rounded-lg shadow-lg backdrop-blur-md">
+          <p className="text-xs text-[var(--text-muted)]">
             {payload[0].payload.priority}
           </p>
-          <p className="">
-            Count: {" "}
-            <span className="">
-              {payload[0].payload.count}
-            </span>
+          <p className="text-sm font-semibold text-[var(--text)]">
+            {payload[0].payload.count} Tasks
           </p>
         </div>
-      )
+      );
     }
     return null;
+  };
+
+  // ✅ EMPTY STATE
+  if (!data || data.every(item => item.count === 0)) {
+    return (
+      <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-muted)]">
+        No priority data available
+      </div>
+    );
   }
+
   return (
-    <div className="">
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <CartesianGrid stroke='none' />
+    <div className="w-full h-[300px]">
+      <ResponsiveContainer>
+        <BarChart
+          data={data}
+          margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
+        >
+
+          {/* 🔥 GRADIENT DEFINITIONS */}
+          <defs>
+            {data.map((entry) => {
+              const [start, end] = getColors(entry.priority);
+              return (
+                <linearGradient
+                  key={entry.priority}
+                  id={getGradientId(entry.priority)}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop offset="0%" stopColor={start} />
+                  <stop offset="100%" stopColor={end} />
+                </linearGradient>
+              );
+            })}
+          </defs>
+
+          {/* GRID */}
+          <CartesianGrid
+            stroke="var(--border)"
+            strokeDasharray="3 3"
+            vertical={false}
+          />
+
+          {/* AXIS */}
           <XAxis
-            dataKey='priority'
-            tick={{ fill: '#000', fontSize: 12 }}
+            dataKey="priority"
+            tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
           />
+
           <YAxis
-            tick={{ fill: '#000', fontSize: 12 }}
+            tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
           />
 
-          <Tooltip content={CustomTooltip} cursor={{ fill: "transparent"}} />
+          {/* TOOLTIP */}
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
 
-          <Bar 
+          {/* BARS */}
+          <Bar
             dataKey="count"
-            nameKey="priority"
-            fill="#8884d8"
             radius={[10, 10, 0, 0]}
-            activeDot={{r: 8, fill: "yellow"}}
-            activeStyle={{fill: "green"}}
+            animationDuration={800}
           >
+            {/* VALUE LABELS */}
+            <LabelList
+              dataKey="count"
+              position="top"
+              style={{
+                fill: "var(--text)",
+                fontSize: 12,
+                fontWeight: 500,
+              }}
+            />
+
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getBarColor(entry)} />
+              <Cell
+                key={`cell-${index}`}
+                fill={`url(#${getGradientId(entry.priority)})`}
+                style={{
+                  transition: "all 0.3s ease",
+                  cursor: "pointer",
+                }}
+              />
             ))}
           </Bar>
+
         </BarChart>
       </ResponsiveContainer>
     </div>
-  )
-}
+  );
+};
 
-export default CustomBarChart
+export default CustomBarChart;

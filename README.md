@@ -4,7 +4,7 @@ TaskSutra is a full-stack task management platform built for teams that need cle
 
 Instead of treating task tracking as a basic CRUD app, this project focuses on the operational side of teamwork: role-based access, task distribution, progress tracking, analytics dashboards, and exportable reports.
 
-![TaskSutra UI Preview](./frontend/src/assets/images/ui.png)
+
 
 ## Why This Project Stands Out
 

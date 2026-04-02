@@ -1,22 +1,29 @@
 import React from "react";
 
-const CustomLegend = ({ payload }) => {
+const CustomLegend = ({ payload, colors }) => {
+  if (!payload) return null;
+
   return (
-    <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-2 sm:mt-5">
-      {payload.map((entry, index) => (
-        <div
-          key={`item-${index}`}
-          className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] sm:text-xs"
-        >
-          <span
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: entry.color }}
-          ></span>
-          <span className="font-medium tracking-[0.01em]">
-            {entry.payload?.status}
-          </span>
-        </div>
-      ))}
+    <div className="flex justify-center gap-6 mt-4 flex-wrap">
+      {payload.map((entry, index) => {
+        const color = colors[index]; // ✅ FIX
+
+        return (
+          <div
+            key={index}
+            className="flex items-center gap-2 text-xs text-[var(--text-muted)]"
+          >
+            <span
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+
+            <span className="font-medium">
+              {entry.value || entry.payload?.status}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };

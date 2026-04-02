@@ -49,7 +49,33 @@ const CustomBarChart = ({ data }) => {
   }
   return (
     <div className="">
-      <ResponsiveContainer 
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid stroke='none' />
+          <XAxis
+            dataKey='priority'
+            tick={{ fill: '#000', fontSize: 12 }}
+          />
+          <YAxis
+            tick={{ fill: '#000', fontSize: 12 }}
+          />
+
+          <Tooltip content={CustomTooltip} cursor={{ fill: "transparent"}} />
+
+          <Bar 
+            dataKey="count"
+            nameKey="priority"
+            fill="#8884d8"
+            radius={[10, 10, 0, 0]}
+            activeDot={{r: 8, fill: "yellow"}}
+            activeStyle={{fill: "green"}}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={getBarColor(entry)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   )
 }

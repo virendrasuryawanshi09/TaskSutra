@@ -3,10 +3,28 @@ import React from "react";
 const CustomLegend = ({ payload, colors }) => {
   if (!payload) return null;
 
+  const colorByStatus = {
+    Pending: colors?.[0] || "#D97706",
+    "In Progress": colors?.[1] || "#2F7A84",
+    "InProgress": colors?.[1] || "#2F7A84",
+    Completed: colors?.[2] || "#4C7F6A",
+  };
+
+  const orderedStatuses = ["Pending", "In Progress", "Completed"];
+  const normalizedPayload = payload
+    .map((entry) => ({
+      ...entry,
+      status: entry.value || entry.payload?.status,
+    }))
+    .sort(
+      (a, b) =>
+        orderedStatuses.indexOf(a.status) - orderedStatuses.indexOf(b.status)
+    );
+
   return (
     <div className="flex justify-center gap-6 mt-4 flex-wrap">
-      {payload.map((entry, index) => {
-        const color = colors[index]; // ✅ FIX
+      {normalizedPayload.map((entry, index) => {
+        const color = colorByStatus[entry.status] || entry.color;
 
         return (
           <div
@@ -19,7 +37,7 @@ const CustomLegend = ({ payload, colors }) => {
             />
 
             <span className="font-medium">
-              {entry.value || entry.payload?.status}
+              {entry.status}
             </span>
           </div>
         );

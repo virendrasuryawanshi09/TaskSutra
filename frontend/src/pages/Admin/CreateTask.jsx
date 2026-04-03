@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 import DashboardLayout from '../../components/Layouts/DashboardLayout';
 import { PRIORITY_DATA } from '../../utils/data';
 import axiosInstance from '../../utils/axiosInstance';
@@ -43,26 +43,58 @@ const CreateTask = () => {
       title: "",
       description: "",
       priority: "Low",
-      dueDate:null,
+      dueDate: null,
       assignedTo: [],
       todoCheckList: [],
       attachments: [],
     });
   };
 
-  const createTask = async () => {};
+  const createTask = async () => { };
 
-  const updateTask = async () => {};
+  const updateTask = async () => { };
 
-  const handleSubmit = async () => {};
+  const handleSubmit = async () => { };
 
-  const getTaskDetailsByID = async () => {};
+  const getTaskDetailsByID = async () => { };
 
-  const deleteTask = async () => {};
+  const deleteTask = async () => { };
 
   return (
     <DashboardLayout activeMenu="Create Task">
+      <div className="">
+        <div className="">
+          <div className="">
+            <div className="">
+              <h2 className="">
+                {taskId ? "Update Task" : "Create Task"}
+              </h2>
 
+              {taskId && (
+                <button
+                  className=""
+                  onClick={() => setOpenDeleteAlert(true)} >
+
+                  <LuTrash2 className="" /> Delete
+                </button>
+              )}
+            </div>
+            <div className="">
+              <label htmlFor="" className="">
+                Task Title
+              </label>
+
+              <input
+                placeholder="Create APP UI"
+                className=""
+                type="text"
+                value={taskData.title}
+                onChange={(target) => handleValueChange("title", target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </DashboardLayout>
   )
 }

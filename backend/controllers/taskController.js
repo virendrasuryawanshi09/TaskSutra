@@ -1,6 +1,18 @@
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
 
+const getTodoChecklist = (task) => {
+    if (Array.isArray(task?.todoChecklist)) {
+        return task.todoChecklist;
+    }
+
+    if (Array.isArray(task?.todoCheckList)) {
+        return task.todoCheckList;
+    }
+
+    return [];
+};
+
 const getTasks = async (req, res) => {
     try {
 
@@ -34,7 +46,7 @@ const getTasks = async (req, res) => {
         // Add completed checklist count
         tasks = await Promise.all(
             tasks.map(async (task) => {
-                const completedCount = task.todoCheckList.filter(
+                const completedCount = getTodoChecklist(task).filter(
                     (item) => item.completed
                 ).length;
 
@@ -125,7 +137,7 @@ const createTask = async (req, res) => {
             dueDate,
             assignedTo,
             createdBy: req.user._id,
-            todoCheckList,
+            todoChecklist: Array.isArray(todoCheckList) ? todoCheckList : [],
             attachments,
         });
         res.status(201).json({ message: 'Task created successfully', task });
@@ -148,7 +160,9 @@ const updateTask = async (req, res) => {
         task.description = req.body.description || task.description;
         task.priority = req.body.priority || task.priority;
         task.dueDate = req.body.dueDate || task.dueDate;
-        task.todoCheckList = req.body.todoCheckList || task.todoCheckList;
+        if (Array.isArray(req.body.todoCheckList)) {
+            task.todoChecklist = req.body.todoCheckList;
+        }
         task.attachments = req.body.attachments || task.attachments;
 
         if (req.body.assignedTo) {
@@ -192,15 +206,15 @@ const updateTaskChecklist = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
         }
 
-        task.todoCheckList = todoCheckList;
+        task.todoChecklist = Array.isArray(todoCheckList) ? todoCheckList : [];
 
-        const completedCount = task.todoCheckList.filter(
+        const completedCount = getTodoChecklist(task).filter(
             (item) => item.completed
         ).length;
 
-        const totalItems = task.todoCheckList.length;
+        const totalItems = getTodoChecklist(task).length;
 
-        task.progress = totalItems === 0 ? Math.round((completedCount / totalItems) * 100) : 0;
+        task.progress = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
 
         if (task.progress === 100) {
             task.status = 'Completed';
@@ -381,7 +395,11 @@ const updateTaskStatus = async (req, res) => {
         task.status = req.body.status || task.status;
 
         if (task.status === 'Completed') {
-            task.todoCheckList.forEach((item) => { item.completed = true });
+            task.todoChecklist = getTodoChecklist(task).map((item) => ({
+                ...item.toObject?.(),
+                ...item,
+                completed: true,
+            }));
             task.progress = 100;
         }
 

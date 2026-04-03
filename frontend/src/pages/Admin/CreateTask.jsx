@@ -193,7 +193,7 @@ const CreateTask = () => {
               <h2 className="text-xl font-semibold text-[var(--text)] tracking-tight">
                 {taskId ? "Update Task" : "Create Task"}
               </h2>
-              <p className="text-xs text-[var(--text-muted)] mt-1">
+              <p className="text-xs text-[var(--accent-hover)] mt-1">
                 Manage your tasks efficiently
               </p>
             </div>
@@ -398,7 +398,7 @@ const CreateTask = () => {
                         handleValueChange("dueDate", parsedDate.format("YYYY-MM-DD"));
                       }
                     }}
-                    popperPlacement="bottom-start"
+                    popperPlacement="bottom-end"
                     calendarClassName="tasksutra-datepicker"
                     popperClassName="tasksutra-datepicker-popper"
                     wrapperClassName="block w-full"

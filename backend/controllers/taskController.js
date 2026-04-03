@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
+const MAX_RECENT_TASKS = 8;
 
 const getTodoChecklist = (task) => {
     if (Array.isArray(task?.todoChecklist)) {
@@ -281,8 +282,8 @@ const getDashboardData = async (req, res) => {
         }, {});
 
         const recentTasks = await Task.find()
-        .sort({createdAt: -1})
-        .limit(20)
+        .sort({ createdAt: -1 })
+        .limit(MAX_RECENT_TASKS)
         .select("title status priority dueDate createdAt");
 
         res.status(200).json({
@@ -355,8 +356,8 @@ const getUserDashboardData = async (req, res) => {
         }, {});
 
         const recentTasks = await Task.find({ assignedTo: userId })
-        .sort({createdAt: -1})
-        .limit(20)
+        .sort({ createdAt: -1 })
+        .limit(MAX_RECENT_TASKS)
         .select("title status priority dueDate createdAt");
         
         res.status(200).json({

@@ -1,71 +1,14 @@
-import React, { Fragment, forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import React, { useState } from "react";
 import DashboardLayout from "../../components/Layouts/DashboardLayout";
+import SelectDropdown from "../../components/input/SelectDropdown"
 import { PRIORITY_DATA } from "../../utils/data";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
-import moment from "moment";
 import { LuTrash2 } from "react-icons/lu";
-import { HiCalendarDays, HiCheck, HiChevronUpDown } from "react-icons/hi2";
-import { Transition } from "@headlessui/react";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
-
-const PriorityButton = ({ value }) => {
-  const priorityColor =
-    value === "Low" ? "text-green-500" : value === "Medium" ? "text-blue-500" : "text-orange-500";
-
-  return (
-    <span className={`font-medium ${priorityColor}`}>
-      {value}
-    </span>
-  );
-};
-
-const DateInputButton = forwardRef(
-  ({ value, onChange, onBlur, onIconClick, placeholder = "dd-mm-yyyy" }, ref) => (
-    <div className="relative w-full">
-      <input
-        ref={ref}
-        type="text"
-        value={value || ""}
-        onChange={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        className="
-          w-full
-          min-h-[42px]
-          bg-[var(--bg-soft)]
-          border border-[var(--border)]
-          rounded-lg
-          px-3 py-2 pr-10
-          text-sm text-[var(--text)]
-          placeholder:text-[var(--text-muted)]
-          outline-none
-          transition-all duration-200
-          focus:border-[var(--accent)]
-          focus:bg-transparent
-          focus:shadow-[0_0_0_1px_var(--accent)]
-        "
-      />
-
-      <button
-        type="button"
-        onClick={onIconClick}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
-        tabIndex={-1}
-        aria-label="Open calendar"
-      >
-        <HiCalendarDays className="h-4 w-4" />
-      </button>
-    </div>
-  )
-);
-
-DateInputButton.displayName = "DateInputButton";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -86,19 +29,6 @@ const CreateTask = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [isPriorityOpen, setIsPriorityOpen] = useState(false);
-  const [priorityMenuStyle, setPriorityMenuStyle] = useState({});
-  const priorityButtonRef = useRef(null);
-  const priorityMenuRef = useRef(null);
-
-  const selectedDate = useMemo(() => {
-    if (!taskData.dueDate) return null;
-
-    const parsedDate = moment(taskData.dueDate, ["YYYY-MM-DD", "DD-MM-YYYY"], true);
-    return parsedDate.isValid() ? parsedDate.toDate() : null;
-  }, [taskData.dueDate]);
-
   const handleValueChange = (key, value) => {
     setTaskData((prevData) => ({
       ...prevData,
@@ -127,53 +57,6 @@ const CreateTask = () => {
   const getTaskDetailsByID = async () => {};
 
   const deleteTask = async () => {};
-
-  useEffect(() => {
-    if (!isPriorityOpen) return;
-
-    const updatePriorityMenuPosition = () => {
-      if (!priorityButtonRef.current) return;
-      const rect = priorityButtonRef.current.getBoundingClientRect();
-
-      setPriorityMenuStyle({
-        position: "fixed",
-        top: rect.bottom + 8,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 90,
-      });
-    };
-
-    const handlePointerDown = (event) => {
-      if (
-        priorityButtonRef.current?.contains(event.target) ||
-        priorityMenuRef.current?.contains(event.target)
-      ) {
-        return;
-      }
-
-      setIsPriorityOpen(false);
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setIsPriorityOpen(false);
-      }
-    };
-
-    updatePriorityMenuPosition();
-    window.addEventListener("resize", updatePriorityMenuPosition);
-    window.addEventListener("scroll", updatePriorityMenuPosition, true);
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      window.removeEventListener("resize", updatePriorityMenuPosition);
-      window.removeEventListener("scroll", updatePriorityMenuPosition, true);
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isPriorityOpen]);
 
   return (
     <DashboardLayout activeMenu="Create Task">
@@ -281,129 +164,45 @@ const CreateTask = () => {
                 Task Settings
               </h3>
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
                 <div>
-                  <label className="block text-xs text-[var(--text-muted)] mb-1">
-                    Priority
-                  </label>
-
-                  <div className="relative">
-                    <button
-                      ref={priorityButtonRef}
-                      type="button"
-                      onClick={() => setIsPriorityOpen((prev) => !prev)}
-                      className="
-                        w-full
-                        bg-[var(--bg-soft)]
-                        border border-[var(--border)]
-                        rounded-lg
-                        px-3 py-2
-                        text-sm text-left
-                        outline-none
-
-                        transition-all duration-200
-                        focus:border-[var(--accent)]
-                        focus:shadow-[0_0_0_1px_var(--accent)]
-                      "
-                    >
-                      <PriorityButton value={taskData.priority} />
-
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                        <HiChevronUpDown className="w-4 h-4" />
-                      </span>
-                    </button>
-
-                    {typeof document !== "undefined" &&
-                      createPortal(
-                        <Transition
-                          as={Fragment}
-                          show={isPriorityOpen}
-                          enter="transition duration-200 ease-out"
-                          enterFrom="opacity-0 scale-95"
-                          enterTo="opacity-100 scale-100"
-                          leave="transition duration-200 ease-out"
-                          leaveFrom="opacity-100 scale-100"
-                          leaveTo="opacity-0 scale-95"
-                        >
-                          <div
-                            ref={priorityMenuRef}
-                            style={priorityMenuStyle}
-                            className="
-                              overflow-hidden rounded-lg border border-[var(--border)]
-                              bg-[var(--surface)] p-1 shadow-[0_10px_30px_rgba(15,23,42,0.10)]
-                              outline-none
-                            "
-                          >
-                            {PRIORITY_DATA.map((item) => {
-                              const selected = taskData.priority === item.label;
-
-                              return (
-                                <button
-                                  key={item.label}
-                                  type="button"
-                                  onClick={() => {
-                                    handleValueChange("priority", item.label);
-                                    setIsPriorityOpen(false);
-                                  }}
-                                  className={`
-                                    flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left text-sm
-                                    transition-colors duration-200 hover:bg-[var(--bg-soft)]
-                                    ${selected ? "bg-[var(--bg-soft)] text-[var(--text)]" : "text-[var(--text)]"}
-                                  `}
-                                >
-                                  <span>{item.label}</span>
-                                  {selected && <HiCheck className="h-4 w-4 text-[var(--accent)]" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </Transition>,
-                        document.body
-                      )}
-                  </div>
+                  <SelectDropdown
+                    label="Priority"
+                    options={PRIORITY_DATA}
+                    value={taskData.priority}
+                    onChange={(selectedValue) => handleValueChange("priority", selectedValue)}
+                  />
                 </div>
 
-                <div className="group">
-                  <label className="block text-xs text-[var(--text-muted)] mb-1">
-                    Due Date
-                  </label>
+                <SelectDropdown
+                  type="date"
+                  label="Due Date"
+                  value={taskData.dueDate}
+                  onChange={(selectedValue) => handleValueChange("dueDate", selectedValue)}
+                />
 
-                  <DatePicker
-                    open={isDatePickerOpen}
-                    selected={selectedDate}
-                    onChange={(date) =>
-                      {
-                        handleValueChange("dueDate", date ? moment(date).format("YYYY-MM-DD") : null);
-                        setIsDatePickerOpen(false);
-                      }
-                    }
-                    onClickOutside={() => setIsDatePickerOpen(false)}
-                    onSelect={() => setIsDatePickerOpen(false)}
-                    onChangeRaw={(event) => {
-                      handleValueChange("dueDate", event.target.value);
-                    }}
-                    onInputClick={(event) => {
-                      event.preventDefault();
-                    }}
-                    preventOpenOnFocus
-                    dateFormat="dd-MM-yyyy"
-                    customInput={
-                      <DateInputButton onIconClick={() => setIsDatePickerOpen((prev) => !prev)} />
-                    }
-                    onBlur={() => {
-                      if (!taskData.dueDate) return;
+                <div
+                  className="
+                    rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]
+                    px-4 py-3 transition-all duration-200 hover:border-[var(--text-muted)]
+                  "
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <label className="block text-xs text-[var(--text-muted)] mb-1">
+                        Assign To
+                      </label>
+                      <p className="text-sm text-[var(--text)]">
+                        {taskData.assignedTo.length > 0
+                          ? `${taskData.assignedTo.length} member${taskData.assignedTo.length > 1 ? "s" : ""} selected`
+                          : "No team members selected yet"}
+                      </p>
+                    </div>
 
-                      const parsedDate = moment(taskData.dueDate, ["DD-MM-YYYY", "YYYY-MM-DD"], true);
-                      if (parsedDate.isValid()) {
-                        handleValueChange("dueDate", parsedDate.format("YYYY-MM-DD"));
-                      }
-                    }}
-                    popperPlacement="bottom-end"
-                    calendarClassName="tasksutra-datepicker"
-                    popperClassName="tasksutra-datepicker-popper"
-                    wrapperClassName="block w-full"
-                    showPopperArrow={false}
-                  />
+                    <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] border border-[var(--border)]">
+                      Team
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

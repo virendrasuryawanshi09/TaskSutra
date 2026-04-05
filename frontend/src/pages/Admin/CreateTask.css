@@ -1,0 +1,93 @@
+.tasksutra-datepicker-popper {
+  z-index: 70;
+}
+
+.tasksutra-datepicker-popper[data-placement^="bottom"] {
+  padding-top: 8px;
+}
+
+.tasksutra-datepicker {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1) !important;
+  font-family: inherit !important;
+}
+
+.tasksutra-datepicker .react-datepicker__triangle {
+  display: none !important;
+}
+
+.tasksutra-datepicker .react-datepicker__header {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 6px 6px 10px !important;
+}
+
+.tasksutra-datepicker .react-datepicker__current-month {
+  color: var(--text) !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 6px !important;
+}
+
+.tasksutra-datepicker .react-datepicker__day-name {
+  color: var(--text-muted) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.12rem !important;
+}
+
+.tasksutra-datepicker .react-datepicker__month {
+  margin: 0.35rem 0 0 !important;
+}
+
+.tasksutra-datepicker .react-datepicker__week {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tasksutra-datepicker .react-datepicker__day {
+  color: var(--text) !important;
+  border-radius: 8px !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.12rem !important;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.tasksutra-datepicker .react-datepicker__day:hover {
+  background: var(--bg-soft) !important;
+}
+
+.tasksutra-datepicker .react-datepicker__day--keyboard-selected {
+  background: rgba(31, 111, 120, 0.12) !important;
+  color: var(--text) !important;
+}
+
+.tasksutra-datepicker .react-datepicker__day--selected,
+.tasksutra-datepicker .react-datepicker__day--selected:hover {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px rgba(31, 111, 120, 0.2) !important;
+}
+
+.tasksutra-datepicker .react-datepicker__day--outside-month {
+  color: color-mix(in srgb, var(--text-muted) 70%, transparent) !important;
+}
+
+.tasksutra-datepicker .react-datepicker__navigation {
+  top: 10px !important;
+}
+
+.tasksutra-datepicker .react-datepicker__navigation-icon::before {
+  border-color: var(--text-muted) !important;
+  border-width: 1.5px 1.5px 0 0 !important;
+}
+
+.tasksutra-datepicker .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+  border-color: var(--text) !important;
+}

@@ -122,7 +122,6 @@ body {
 }
 @theme {
   --font-display: "Poppins", "sans-serif";
-  --breakpoint-sm: 1920px;
   --color-primary: "#1368EC";
 }
 

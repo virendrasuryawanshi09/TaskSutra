@@ -34,7 +34,7 @@ const SideMenu = () => {
 
 
   return (
-    <div className="flex h-full min-h-full w-[260px] flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] p-4">
+    <div className="flex h-full min-h-[calc(100vh-4rem)] w-full flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]">
 
       <div className="mb-2 flex items-center justify-between lg:hidden">
 

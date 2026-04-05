@@ -12,10 +12,10 @@ const DashboardLayout = ({ children }) => {
       <Navbar />
 
       {user && (
-        <div className="flex w-full items-start">
+        <div className="flex min-h-[calc(100vh-4rem)] w-full items-stretch">
 
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block lg:h-[calc(100vh-4rem)] lg:flex-shrink-0 lg:sticky lg:top-16">
+          <div className="hidden lg:block lg:w-[260px] lg:flex-shrink-0 lg:border-r lg:border-[var(--border)] lg:bg-[var(--surface)]">
             <SideMenu />
           </div>
 

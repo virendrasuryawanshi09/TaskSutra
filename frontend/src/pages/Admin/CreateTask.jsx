@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { LuTrash2 } from "react-icons/lu";
 import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
+import SelectUsers from "../../components/input/SelectUsers";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -192,11 +193,10 @@ const CreateTask = () => {
                       <label className="block text-xs text-[var(--text-muted)] mb-1">
                         Assign To
                       </label>
-                      <p className="text-sm text-[var(--text)]">
-                        {taskData.assignedTo.length > 0
-                          ? `${taskData.assignedTo.length} member${taskData.assignedTo.length > 1 ? "s" : ""} selected`
-                          : "No team members selected yet"}
-                      </p>
+                      <SelectUsers
+                        selectedUsers={taskData.assignedTo}
+                        setSelectedUsers={(users) => handleValueChange("assignedTo", users)}  
+                        />
                     </div>
 
                     <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] border border-[var(--border)]">

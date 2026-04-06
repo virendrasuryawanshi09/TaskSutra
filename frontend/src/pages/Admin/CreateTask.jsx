@@ -60,203 +60,183 @@ const CreateTask = () => {
   const deleteTask = async () => {};
 
   return (
-    <DashboardLayout activeMenu="Create Task">
-      <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
-        <div
-          className="
-            bg-[var(--surface)]
-            border border-[var(--border)]
-            rounded-2xl p-4 md:p-6
-            shadow-sm
-            hover:shadow-md
-            transition-all duration-300
-          "
-        >
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[var(--text)] tracking-tight">
-                {taskId ? "Update Task" : "Create Task"}
-              </h2>
-              <p className="text-xs text-[var(--accent-hover)] mt-1">
-                Manage your tasks efficiently
-              </p>
-            </div>
-
-            {taskId && (
-              <button
-                onClick={() => setOpenDeleteAlert(true)}
-                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition"
-              >
-                <LuTrash2 className="text-lg" />
-                Delete
-              </button>
-            )}
+  <DashboardLayout activeMenu="Create Task">
+    <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
+      <div
+        className="
+          bg-[var(--surface)]
+          border border-[var(--border)]
+          rounded-2xl p-4 md:p-6
+          shadow-sm
+          hover:shadow-md
+          transition-all duration-300
+        "
+      >
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--text)] tracking-tight">
+              {taskId ? "Update Task" : "Create Task"}
+            </h2>
+            <p className="text-xs text-[var(--accent-hover)] mt-1">
+              Manage your tasks efficiently
+            </p>
           </div>
 
-          <div className="space-y-8">
-            <div className="space-y-5">
-              <h3 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
-                Basic Information
-              </h3>
+          {taskId && (
+            <button
+              onClick={() => setOpenDeleteAlert(true)}
+              className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition"
+            >
+              <LuTrash2 className="text-lg" />
+              Delete
+            </button>
+          )}
+        </div>
 
-              <div className="group">
-                <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  Task Title
-                </label>
+        <div className="space-y-8">
+          {/* BASIC */}
+          <div className="space-y-5">
+            <h3 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
+              Basic Information
+            </h3>
 
-                <input
-                  type="text"
-                  value={taskData.title}
-                  onChange={(e) => handleValueChange("title", e.target.value)}
-                  placeholder="Create app UI"
-                  className="
-                    w-full
-                    bg-[var(--bg-soft)]
-                    border border-[var(--border)]
-                    rounded-lg
-                    px-3 py-2
-                    text-sm text-[var(--text)]
-                    placeholder:text-[var(--text-muted)]
-                    outline-none
+            <div className="group">
+              <label className="block text-xs text-[var(--text-muted)] mb-1">
+                Task Title
+              </label>
 
-                    transition-all duration-200 ease-in-out
-                    focus:border-[var(--accent)]
-                    focus:shadow-[0_0_0_1px_var(--accent)]
-                    focus:bg-transparent
-
-                    group-hover:border-[var(--text-muted)]
-                  "
-                />
-              </div>
-
-              <div className="group">
-                <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  Description
-                </label>
-
-                <textarea
-                  rows={4}
-                  value={taskData.description}
-                  onChange={(e) => handleValueChange("description", e.target.value)}
-                  placeholder="Write task details..."
-                  className="
-                    w-full
-                    bg-[var(--bg-soft)]
-                    border border-[var(--border)]
-                    rounded-lg
-                    px-3 py-2
-                    text-sm text-[var(--text)]
-                    placeholder:text-[var(--text-muted)]
-                    outline-none resize-none
-
-                    transition-all duration-200 ease-in-out
-                    focus:border-[var(--accent)]
-                    focus:shadow-[0_0_0_1px_var(--accent)]
-                    focus:bg-transparent
-
-                    group-hover:border-[var(--text-muted)]
-                  "
-                />
-              </div>
-            </div>
-
-            <div className="space-y-5 pt-5 border-t border-[var(--border)]">
-              <h3 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
-                Task Settings
-              </h3>
-
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-                <div>
-                  <SelectDropdown
-                    label="Priority"
-                    options={PRIORITY_DATA}
-                    value={taskData.priority}
-                    onChange={(selectedValue) => handleValueChange("priority", selectedValue)}
-                  />
-                </div>
-
-                <SelectDropdown
-                  type="date"
-                  label="Due Date"
-                  value={taskData.dueDate}
-                  onChange={(selectedValue) => handleValueChange("dueDate", selectedValue)}
-                />
-
-                <div
-                  className="
-                    rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]
-                    px-4 py-3 transition-all duration-200 hover:border-[var(--text-muted)]
-                  "
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <label className="block text-xs text-[var(--text-muted)] mb-1">
-                        Assign To
-                      </label>
-                      <SelectUsers
-                        selectedUsers={taskData.assignedTo}
-                        setSelectedUsers={(users) => handleValueChange("assignedTo", users)}  
-                        />
-                    </div>
-
-                    <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] border border-[var(--border)]">
-                      Team
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 pt-5 border-t border-[var(--border)] md:flex-row md:justify-end">
-              <button
-                onClick={clearData}
+              <input
+                type="text"
+                value={taskData.title}
+                onChange={(e) => handleValueChange("title", e.target.value)}
+                placeholder="Create app UI"
                 className="
-                  w-full px-4 py-2
-                  text-sm
-                  cursor-pointer
-                  rounded-lg
+                  w-full
+                  bg-[var(--bg-soft)]
                   border border-[var(--border)]
-                  text-[var(--text-muted)]
-
-                  hover:bg-[var(--bg-soft)]
-                  hover:text-[var(--text)]
-
-                  transition-all duration-200
-                  md:w-auto
-                "
-              >
-                Clear
-              </button>
-
-              <button
-                onClick={handleSubmit}
-                className="
-                  w-full px-5 py-2
-                  text-sm font-medium
-                  cursor-pointer
                   rounded-lg
-
-                  bg-[var(--accent)]
-                  text-white
-
-                  shadow-sm
-                  hover:bg-[var(--accent-hover)]
-                  hover:shadow-md
-                  hover:scale-[1.02]
-                  active:scale-[0.98]
-
-                  transition-all duration-200
-                  md:w-auto
+                  px-3 py-2
+                  text-sm text-[var(--text)]
+                  placeholder:text-[var(--text-muted)]
+                  outline-none
+                  transition-all duration-200 ease-in-out
+                  focus:border-[var(--accent)]
+                  focus:shadow-[0_0_0_1px_var(--accent)]
+                  focus:bg-transparent
+                  group-hover:border-[var(--text-muted)]
                 "
-              >
-                {taskId ? "Update Task" : "Create Task"}
-              </button>
+              />
             </div>
+
+            <div className="group">
+              <label className="block text-xs text-[var(--text-muted)] mb-1">
+                Description
+              </label>
+
+              <textarea
+                rows={4}
+                value={taskData.description}
+                onChange={(e) => handleValueChange("description", e.target.value)}
+                placeholder="Write task details..."
+                className="
+                  w-full
+                  bg-[var(--bg-soft)]
+                  border border-[var(--border)]
+                  rounded-lg
+                  px-3 py-2
+                  text-sm text-[var(--text)]
+                  placeholder:text-[var(--text-muted)]
+                  outline-none resize-none
+                  transition-all duration-200 ease-in-out
+                  focus:border-[var(--accent)]
+                  focus:shadow-[0_0_0_1px_var(--accent)]
+                  focus:bg-transparent
+                  group-hover:border-[var(--text-muted)]
+                "
+              />
+            </div>
+          </div>
+
+          {/* SETTINGS */}
+          <div className="space-y-5 pt-5 border-t border-[var(--border)]">
+            <h3 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
+              Task Settings
+            </h3>
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+              {/* PRIORITY */}
+              <SelectDropdown
+                label="Priority"
+                options={PRIORITY_DATA}
+                value={taskData.priority}
+                onChange={(val) => handleValueChange("priority", val)}
+              />
+
+              {/* DATE */}
+              <SelectDropdown
+                type="date"
+                label="Due Date"
+                value={taskData.dueDate}
+                onChange={(val) => handleValueChange("dueDate", val)}
+              />
+
+              {/* 🔥 NEW ELITE ASSIGN */}
+              <div className="space-y-1">
+                <label className="block text-xs text-[var(--text-muted)]">
+                  Assign To
+                </label>
+
+                <SelectUsers
+                  selectedUsers={taskData.assignedTo}
+                  setSelectedUsers={(users) =>
+                    handleValueChange("assignedTo", users)
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ACTIONS */}
+          <div className="flex flex-col-reverse gap-3 pt-5 border-t border-[var(--border)] md:flex-row md:justify-end">
+            <button
+              onClick={clearData}
+              className="
+                w-full px-4 py-2 text-sm cursor-pointer
+                rounded-lg border border-[var(--border)]
+                text-[var(--text-muted)]
+                hover:bg-[var(--bg-soft)]
+                hover:text-[var(--text)]
+                transition-all duration-200
+                md:w-auto
+              "
+            >
+              Clear
+            </button>
+
+            <button
+              onClick={handleSubmit}
+              className="
+                w-full px-5 py-2 text-sm font-medium cursor-pointer
+                rounded-lg
+                bg-[var(--accent)]
+                text-white
+                shadow-sm
+                hover:bg-[var(--accent-hover)]
+                hover:shadow-md
+                hover:scale-[1.02]
+                active:scale-[0.98]
+                transition-all duration-200
+                md:w-auto
+              "
+            >
+              {taskId ? "Update Task" : "Create Task"}
+            </button>
           </div>
         </div>
       </div>
-    </DashboardLayout>
-  );
+    </div>
+  </DashboardLayout>
+);
 };
 
 export default CreateTask;

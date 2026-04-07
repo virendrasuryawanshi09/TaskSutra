@@ -11,6 +11,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
 import SelectUsers from "../../components/input/SelectUsers";
 import TodoListInput from "../../components/input/TodoListInput";
+import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -212,6 +213,35 @@ const CreateTask = () => {
                     handleValueChange("todoCheckList", value)
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs text-[var(--text-muted)] tracking-wide">
+                  Attachments
+                </label>
+
+                <div
+                  className="
+                    bg-[var(--bg-soft)]
+                    border border-[var(--border)]
+                    rounded-xl
+                    px-3 py-3
+
+                    transition-all duration-200
+                    hover:border-[var(--text-muted)]
+                  "
+                >
+                  <AddAttachmentsInput
+                    attachments={taskData.attachments}
+                    setAttachments={(valueOrUpdater) =>
+                      handleValueChange(
+                        "attachments",
+                        typeof valueOrUpdater === "function"
+                          ? valueOrUpdater(taskData.attachments || [])
+                          : valueOrUpdater
+                      )
+                    }
+                  />
+                </div>
               </div>
             </div>
             {/* ACTIONS */}

@@ -29,7 +29,7 @@ const getUsers = async (req, res) => {
             };
         }));
 
-        res.json(userswithTaskCounts);
+        res.json(userWithTaskCounts);
     }catch(error) {
         res.status(500).json({message: "Server error", error: error.message});
     }

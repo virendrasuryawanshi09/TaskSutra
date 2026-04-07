@@ -30,6 +30,7 @@ const CreateTask = () => {
 
   const [currentTask, setCurrentTask] = useState(null);
   const [error, setError] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const handleValueChange = (key, value) => {
@@ -55,12 +56,34 @@ const CreateTask = () => {
     setLoading(true);
     try {
       const todolist = taskData.todoCheckList?.map((item) =>({
-        text: item,
+        text: item.text,
         completed: false,
       }));
 
+      let uploadedAttachmentUrls = [];
+      for (const file of taskData.attachments || []) {
+        if (typeof file === "string") {
+          uploadedAttachmentUrls.push(file);
+        } else {
+          try {
+            const formData = new FormData();
+            formData.append("image", file);
+            const uploadResponse = await axiosInstance.post(API_PATHS.IMAGE.UPLOAD_IMAGE, formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+            uploadedAttachmentUrls.push(uploadResponse.data.imageUrl);
+          } catch (err) {
+            console.error("Failed to upload file:", err);
+            toast.error("Failed to upload: " + file.name);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
         ...taskData,
+        attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
         todoCheckList:todolist,
       });
@@ -69,9 +92,10 @@ const CreateTask = () => {
 
       clearData();
 
-    }catch(error) {
+    } catch (error) {
       console.error("Error creating task:", error);
-    }finally {
+      toast.error(error.response?.data?.message || "Failed to create task. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
@@ -79,29 +103,29 @@ const CreateTask = () => {
   const updateTask = async () => { };
 
   const handleSubmit = async () => { 
-    setError(null);
+    setError("");
 
     if(!taskData.title.trim()) {
-      setError("Title is required.")
+      setError("Title is required.");
       return;
     }
     if(!taskData.description.trim()) {
-      setError("Description is required");
+      setError("Description is required.");
       return;
     }
 
     if(!taskData.dueDate) {
-      setError("DueDate is required");
+      setError("DueDate is required.");
       return;
     }
 
     if(taskData.todoCheckList?.length === 0) {
-      setError("Add atleast one todo task");
+      setError("Add at least one todo task.");
       return;
     }
 
     if(taskData.assignedTo?.length === 0) {
-      setError("Task not assigned to any member");
+      setError("Task not assigned to any member.");
       return;
     }
 
@@ -300,6 +324,10 @@ const CreateTask = () => {
                 </div>
               </div>
             </div>
+            {error && (
+              <p className="text-sm text-red-500 mt-4">{error}</p>
+            )}
+
             {/* ACTIONS */}
             <div className="flex flex-col-reverse gap-3 pt-5 border-t border-[var(--border)] md:flex-row md:justify-end">
               <button

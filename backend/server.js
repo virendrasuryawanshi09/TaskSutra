@@ -17,8 +17,11 @@ app.use(
       // allow requests with no origin (Postman, mobile apps)
       if (!origin) return callback(null, true);
 
-      // allow all localhost ports
-      if (origin.startsWith("http://localhost")) {
+      // allow local development origins on any port
+      if (
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1")
+      ) {
         return callback(null, true);
       }
 

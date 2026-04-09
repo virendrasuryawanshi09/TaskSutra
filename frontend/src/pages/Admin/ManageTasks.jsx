@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/Layouts/DashboardLayout';
-import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import { LuFileSpreadsheet } from 'react-icons/lu';
 import TaskStatusTabs from '../../components/TaskStatusTabs';
+import TaskCard from '../../components/Charts/TaskCard';
+import { useNavigate } from 'react-router-dom';
 
 const ManageTasks = () => {
   const [allTasks, setAllTasks] = useState([]);
@@ -12,6 +13,10 @@ const ManageTasks = () => {
   const [filterStatus, setFilterStatus] = useState('All');
 
   const navigate = useNavigate();
+
+  const handleClick = (task) => {
+    navigate(`/admin/create-task`, { state: task._id });
+  };
 
   const getAllTasks = async () => {
     try {
@@ -37,11 +42,9 @@ const ManageTasks = () => {
         { label: 'Completed', count: statusSummary.completedTasks || 0 },
       ]);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.error(error);
     }
   };
-
-  const handleDownloadReport = async () => {};
 
   useEffect(() => {
     getAllTasks();
@@ -49,31 +52,30 @@ const ManageTasks = () => {
 
   return (
     <DashboardLayout activeMenu="Manage Tasks">
-      <div
-        className="
+      <div className="
         relative
         w-full
         sm:max-w-6xl sm:mx-auto
-        px-3 sm:px-4
-        py-6 sm:py-10
-      "
-      >
+        px-4 sm:px-6
+        py-8 sm:py-12
+      ">
+
         {/* 🔥 BACKGROUND GLOW */}
-        <div className="absolute inset-0 -z-10 opacity-30 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
 
         {/* 🔥 HEADER */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
+
           <div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-[var(--text)] tracking-tight">
-              My Tasks
-            </h2>
-            <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1">
-              Manage and monitor your workflow efficiently
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text)]">
+              Tasks
+            </h1>
+            <p className="text-sm text-[var(--text-muted)] mt-1">
+              Manage your workflow efficiently
             </p>
           </div>
 
           <button
-            onClick={handleDownloadReport}
             className="
               w-full sm:w-auto
               flex items-center justify-center gap-2
@@ -90,49 +92,65 @@ const ManageTasks = () => {
               transition-all duration-200
             "
           >
-            <LuFileSpreadsheet className="text-base" />
+            <LuFileSpreadsheet />
             Export
           </button>
+
         </div>
 
-        {/* 🔥 MAIN PANEL */}
-        <div
-          className="
-          w-full
-          bg-[var(--surface)]
-          border border-[var(--border)]
-          rounded-2xl
+        {/* 🔥 TABS */}
+        <div className="mb-6 overflow-x-auto -mx-2 px-2">
+          <TaskStatusTabs
+            tabs={tabs}
+            activeTab={filterStatus}
+            setActiveTab={setFilterStatus}
+          />
+        </div>
 
-          px-3 sm:px-6 py-4 sm:py-6
+        {/* 🔥 DIVIDER (SUBTLE PREMIUM TOUCH) */}
+        <div className="h-px bg-[var(--border)] mb-6 opacity-60" />
 
-          shadow-[0_8px_25px_rgba(0,0,0,0.05)]
-          backdrop-blur-sm
-        "
-        >
-          <div className="space-y-5 sm:space-y-6">
-            {/* 🔥 TABS */}
-            <div className="overflow-x-auto -mx-2 px-2">
-              <TaskStatusTabs
-                tabs={tabs}
-                activeTab={filterStatus}
-                setActiveTab={setFilterStatus}
-              />
-            </div>
-
-            {/* 🔥 CONTENT */}
-            <div
-              className="
-              min-h-[220px] sm:min-h-[280px]
-              flex items-center justify-center
-              text-center sm:text-left
-            "
-            >
-              <p className="text-sm text-[var(--text-muted)]">
-                Your tasks will appear here
-              </p>
-            </div>
+        {/* 🔥 CONTENT */}
+        {allTasks.length === 0 ? (
+          <div className="
+            flex flex-col items-center justify-center
+            min-h-[260px]
+            text-center
+          ">
+            <p className="text-sm text-[var(--text-muted)]">
+              No tasks found
+            </p>
           </div>
-        </div>
+        ) : (
+
+          <div className="
+            grid grid-cols-1
+            sm:grid-cols-2
+            lg:grid-cols-3
+            gap-4 sm:gap-5 lg:gap-6
+          ">
+
+            {allTasks.map((item) => (
+              <TaskCard
+                key={item._id}
+                title={item.title}
+                description={item.description}
+                priority={item.priority}
+                status={item.status}
+                progress={item.progress}
+                createdAt={item.createdAt}
+                dueDate={item.dueDate}
+                assignedTo={item.assignedTo?.map((u) => u.profileImageUrl)}
+                attachmentCount={item.attachments?.length || 0}
+                completedTodoCount={item.completedTodoCount || 0}
+                todoChecklist={item.todoChecklist || []}
+                onClick={() => handleClick(item)}
+              />
+            ))}
+
+          </div>
+        )}
+
       </div>
     </DashboardLayout>
   );

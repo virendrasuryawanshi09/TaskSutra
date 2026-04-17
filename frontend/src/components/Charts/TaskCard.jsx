@@ -9,6 +9,7 @@ const TaskCard = ({
   priority,
   status,
   progress = 0,
+  createdAt,
   dueDate,
   assignedTo = [],
   attachmentCount = 0,
@@ -22,92 +23,101 @@ const TaskCard = ({
       case "Completed":
         return "text-green-500";
       case "In Progress":
-        return "text-cyan-500";
+        return "text-cyan-400";
       default:
         return "text-[var(--text-muted)]";
     }
   };
 
-  const getPriorityGlow = () => {
+  const getPriorityDot = () => {
     switch (priority) {
       case "High":
-        return "shadow-[0_0_0_1px_rgba(249,115,22,0.4)]";
+        return "bg-orange-500";
       case "Medium":
-        return "shadow-[0_0_0_1px_rgba(59,130,246,0.4)]";
+        return "bg-blue-500";
       case "Low":
-        return "shadow-[0_0_0_1px_rgba(34,197,94,0.4)]";
+        return "bg-green-500";
       default:
-        return "";
+        return "bg-gray-400";
     }
   };
 
-  const getProgressGradient = () => {
+  const getProgressColor = () => {
     switch (status) {
       case "Completed":
-        return "from-green-400 to-green-600";
+        return "bg-green-500";
       case "In Progress":
-        return "from-cyan-400 to-cyan-600";
+        return "bg-cyan-400";
       default:
-        return "from-gray-400 to-gray-500";
+        return "bg-gray-400";
     }
   };
+
+  const formatDate = (d) =>
+    d && moment(d).isValid() ? moment(d).format("MMM DD") : null;
+
+  const created = formatDate(createdAt);
+  const due = formatDate(dueDate);
 
   return (
     <div
       onClick={onClick}
-      className={`
-        group cursor-pointer relative
+      className="
+  group cursor-pointer
 
-        bg-[var(--surface)]
-        border border-[var(--border)]
-        rounded-2xl p-4
+  bg-[var(--surface)]
+  rounded-xl px-4 py-4
 
-        hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)]
-        hover:-translate-y-[4px]
+  transition-all duration-200 ease-out
 
-        transition-all duration-300
-        ${getPriorityGlow()}
-      `}
+  hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)]
+  hover:-translate-y-[2px]
+
+  active:scale-[0.99]
+"
     >
 
-      {/* 🔥 HEADER */}
-      <div className="flex items-center justify-between mb-3">
-        <span className={`text-xs font-medium ${getStatusColor()}`}>
-          {status}
+      {/* 🔥 TOP META */}
+      <div className="flex items-center justify-between mb-2 text-xs">
+
+        <div className="flex items-center gap-2">
+
+          <span className={`${getStatusColor()} font-medium`}>
+            {status}
+          </span>
+
+          <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDot()}`} />
+
+        </div>
+
+        <span className="text-[var(--text-muted)]">
+          Due : {due || "—"}
         </span>
 
-        <span className="text-xs text-[var(--text-muted)]">
-          {moment(dueDate).format("MMM DD")}
-        </span>
       </div>
 
       {/* 🔥 TITLE */}
-      <h3 className="text-sm font-semibold text-[var(--text)] leading-snug">
+      <h3 className="
+        text-[15px] font-medium text-[var(--text)]
+        leading-snug tracking-tight
+      ">
         {title}
       </h3>
 
       {/* 🔥 DESCRIPTION */}
-      <p className="text-xs text-[var(--text-muted)] mt-1 line-clamp-2">
+      <p className="
+        text-[13px] text-[var(--text-muted)]
+        mt-1 line-clamp-2
+      ">
         {description}
       </p>
 
       {/* 🔥 PROGRESS */}
-      <div className="mt-4">
+      <div className="mt-3">
 
-        <div className="flex justify-between text-[11px] text-[var(--text-muted)] mb-1">
-          <span>
-            {completedTodoCount} / {todoChecklist?.length || 0}
-          </span>
-          <span>{progress}%</span>
-        </div>
-
-        <div className="h-1.5 bg-[var(--bg-soft)] rounded-full overflow-hidden">
+        <div className="h-[3px] bg-[var(--bg-soft)] rounded-full overflow-hidden">
           <div
-            className={`
-              h-full rounded-full
-              bg-gradient-to-r ${getProgressGradient()}
-              transition-all duration-500
-            `}
+            className={`h-full ${getProgressColor()} transition-all duration-500`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -115,19 +125,25 @@ const TaskCard = ({
       </div>
 
       {/* 🔥 FOOTER */}
-      <div className="flex items-center justify-between mt-4">
+      <div className="flex items-center justify-between mt-3 text-[12px] text-[var(--text-muted)]">
 
-        {/* LEFT */}
-        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+        <div className="flex items-center gap-3">
+
           {attachmentCount > 0 && (
             <div className="flex items-center gap-1">
               <LuPaperclip />
               {attachmentCount}
             </div>
           )}
+
+          {created && (
+            <span className="hidden sm:inline">
+              {created}
+            </span>
+          )}
+
         </div>
 
-        {/* RIGHT (FIXED AVATAR) */}
         <AvatarGroup avatars={assignedTo} />
 
       </div>

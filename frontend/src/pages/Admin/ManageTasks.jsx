@@ -15,7 +15,7 @@ const ManageTasks = () => {
   const navigate = useNavigate();
 
   const handleClick = (task) => {
-    navigate(`/admin/create-task`, { state: task._id });
+    navigate(`/admin/create-task`, { state: { taskId: task._id } });
   };
 
   const getAllTasks = async () => {
@@ -24,8 +24,8 @@ const ManageTasks = () => {
         filterStatus === 'All'
           ? ''
           : filterStatus === 'In Progress'
-          ? 'In-progress'
-          : filterStatus;
+            ? 'In-progress'
+            : filterStatus;
 
       const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS, {
         params: { status: apiStatus },
@@ -60,7 +60,7 @@ const ManageTasks = () => {
         py-8 sm:py-12
       ">
 
-        {/* 🔥 BACKGROUND GLOW */}
+
         <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
 
         {/* 🔥 HEADER */}
@@ -140,7 +140,13 @@ const ManageTasks = () => {
                 progress={item.progress}
                 createdAt={item.createdAt}
                 dueDate={item.dueDate}
-                assignedTo={item.assignedTo?.map((u) => u.profileImageUrl)}
+
+                
+                assignedTo={item.assignedTo?.map((u) => ({
+                  image: u.profileImageUrl,
+                  name: u.name || u.email || "User"
+                }))}
+
                 attachmentCount={item.attachments?.length || 0}
                 completedTodoCount={item.completedTodoCount || 0}
                 todoChecklist={item.todoChecklist || []}

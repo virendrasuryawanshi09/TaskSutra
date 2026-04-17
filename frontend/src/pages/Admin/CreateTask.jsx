@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "../../components/Layouts/DashboardLayout";
 import SelectDropdown from "../../components/input/SelectDropdown"
 import { PRIORITY_DATA } from "../../utils/data";
@@ -30,6 +30,16 @@ const CreateTask = () => {
 
   const [currentTask, setCurrentTask] = useState(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const [loading, setLoading] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const handleValueChange = (key, value) => {
@@ -51,11 +61,90 @@ const CreateTask = () => {
     });
   };
 
-  const createTask = async () => { };
+  const createTask = async () => {
+    setLoading(true);
+    try {
+      const todolist = taskData.todoCheckList?.map((item) =>({
+        text: item.text,
+        completed: false,
+      }));
+
+      let uploadedAttachmentUrls = [];
+      for (const file of taskData.attachments || []) {
+        if (typeof file === "string") {
+          uploadedAttachmentUrls.push(file);
+        } else {
+          try {
+            const formData = new FormData();
+            formData.append("image", file);
+            const uploadResponse = await axiosInstance.post(API_PATHS.IMAGE.UPLOAD_IMAGE, formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+            uploadedAttachmentUrls.push(uploadResponse.data.imageUrl);
+          } catch (err) {
+            console.error("Failed to upload file:", err);
+            toast.error("Failed to upload: " + file.name);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
+        ...taskData,
+        attachments: uploadedAttachmentUrls,
+        dueDate: new Date(taskData.dueDate).toISOString(),
+        todoCheckList:todolist,
+      });
+
+      toast.success("Task Created Successfully.");
+
+      clearData();
+
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast.error(error.response?.data?.message || "Failed to create task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateTask = async () => { };
 
-  const handleSubmit = async () => { };
+  const handleSubmit = async () => { 
+    setError("");
+
+    if(!taskData.title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    if(!taskData.description.trim()) {
+      setError("Description is required.");
+      return;
+    }
+
+    if(!taskData.dueDate) {
+      setError("DueDate is required.");
+      return;
+    }
+
+    if(taskData.todoCheckList?.length === 0) {
+      setError("Add at least one todo task.");
+      return;
+    }
+
+    if(taskData.assignedTo?.length === 0) {
+      setError("Task not assigned to any member.");
+      return;
+    }
+
+    if(taskId) {
+      updateTask();
+      return;
+    }
+
+    createTask();
+  };
 
   const getTaskDetailsByID = async () => { };
 
@@ -244,6 +333,10 @@ const CreateTask = () => {
                 </div>
               </div>
             </div>
+            {error && (
+              <p className="text-sm text-red-500 mt-4">{error}</p>
+            )}
+
             {/* ACTIONS */}
             <div className="flex flex-col-reverse gap-3 pt-5 border-t border-[var(--border)] md:flex-row md:justify-end">
               <button

@@ -15,7 +15,7 @@ const ManageTasks = () => {
   const navigate = useNavigate();
 
   const handleClick = (task) => {
-    navigate(`/admin/create-task`, { state: task._id });
+    navigate(`/admin/create-task`, { state: { taskId: task._id } });
   };
 
   const getAllTasks = async () => {

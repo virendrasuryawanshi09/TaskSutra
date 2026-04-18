@@ -13,6 +13,7 @@ import "./CreateTask.css";
 import SelectUsers from "../../components/input/SelectUsers";
 import TodoListInput from "../../components/input/TodoListInput";
 import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
+import DeleteAlert from "../../components/DeleteAlert";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -229,7 +230,22 @@ const CreateTask = () => {
     }
   };
 
-  const deleteTask = async () => { };
+  const deleteTask = async () => {
+    if (!taskId) return;
+
+    setLoading(true);
+    try {
+      await axiosInstance.delete(API_PATHS.TASKS.DELETE_TASK(taskId));
+      toast.success("Task Deleted Successfully.");
+      setOpenDeleteAlert(false);
+      navigate("/admin/tasks");
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error(error.response?.data?.message || "Failed to delete task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (taskId) {
@@ -265,7 +281,7 @@ const CreateTask = () => {
             {taskId && (
               <button
                 onClick={() => setOpenDeleteAlert(true)}
-                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition"
+                className="flex cursor-pointer items-center gap-2 text-sm text-red-500 transition hover:text-red-600"
               >
                 <LuTrash2 className="text-lg" />
                 Delete
@@ -466,6 +482,12 @@ const CreateTask = () => {
           </div>
         </div>
       </div>
+      <DeleteAlert
+        open={openDeleteAlert}
+        loading={loading}
+        onClose={() => setOpenDeleteAlert(false)}
+        onConfirm={deleteTask}
+      />
     </DashboardLayout>
   );
 };

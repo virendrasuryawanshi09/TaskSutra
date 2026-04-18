@@ -5,17 +5,21 @@ import { PRIORITY_DATA } from "../../utils/data";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import toast from "react-hot-toast";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { LuTrash2 } from "react-icons/lu";
+import moment from "moment";
 import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
 import SelectUsers from "../../components/input/SelectUsers";
 import TodoListInput from "../../components/input/TodoListInput";
 import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
+import DeleteAlert from "../../components/DeleteAlert";
 
 const CreateTask = () => {
   const location = useLocation();
-  const { taskId } = location.state || {};
+  const { id: routeTaskId } = useParams();
+  const { taskId: stateTaskId } = location.state || {};
+  const taskId = stateTaskId || routeTaskId;
   const navigate = useNavigate();
 
   const [taskData, setTaskData] = useState({
@@ -61,40 +65,73 @@ const CreateTask = () => {
     });
   };
 
+  const uploadAttachments = async (attachments = []) => {
+    const uploadedAttachmentUrls = [];
+
+    for (const file of attachments) {
+      if (typeof file === "string") {
+        uploadedAttachmentUrls.push(file);
+        continue;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const uploadResponse = await axiosInstance.post(
+          API_PATHS.IMAGE.UPLOAD_IMAGE,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        uploadedAttachmentUrls.push(uploadResponse.data.imageUrl);
+      } catch (err) {
+        console.error("Failed to upload file:", err);
+        toast.error("Failed to upload: " + file.name);
+        throw err;
+      }
+    }
+
+    return uploadedAttachmentUrls;
+  };
+
+  const buildTodoChecklistPayload = (todoItems = [], previousTodoItems = []) =>
+    todoItems.map((item) => {
+      if (typeof item === "string") {
+        const matchedTask = previousTodoItems.find((task) => task.text === item);
+        return {
+          text: item.trim(),
+          completed: matchedTask ? matchedTask.completed : false,
+        };
+      }
+
+      const normalizedText = item?.text?.trim() || "";
+      const matchedTask = previousTodoItems.find((task) => task.text === normalizedText);
+
+      return {
+        text: normalizedText,
+        completed:
+          typeof item?.completed === "boolean"
+            ? item.completed
+            : matchedTask
+              ? matchedTask.completed
+              : false,
+      };
+    }).filter((item) => item.text);
+
   const createTask = async () => {
     setLoading(true);
     try {
-      const todolist = taskData.todoCheckList?.map((item) =>({
-        text: item.text,
-        completed: false,
-      }));
+      const todolist = buildTodoChecklistPayload(taskData.todoCheckList);
+      const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-      let uploadedAttachmentUrls = [];
-      for (const file of taskData.attachments || []) {
-        if (typeof file === "string") {
-          uploadedAttachmentUrls.push(file);
-        } else {
-          try {
-            const formData = new FormData();
-            formData.append("image", file);
-            const uploadResponse = await axiosInstance.post(API_PATHS.IMAGE.UPLOAD_IMAGE, formData, {
-              headers: { "Content-Type": "multipart/form-data" },
-            });
-            uploadedAttachmentUrls.push(uploadResponse.data.imageUrl);
-          } catch (err) {
-            console.error("Failed to upload file:", err);
-            toast.error("Failed to upload: " + file.name);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
+      await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
-        todoCheckList:todolist,
+        todoCheckList: todolist,
       });
 
       toast.success("Task Created Successfully.");
@@ -109,36 +146,58 @@ const CreateTask = () => {
     }
   };
 
-  const updateTask = async () => { };
+  const updateTask = async () => {
+    setLoading(true);
+    try {
+      const prevTodoChecklist = currentTask?.todoChecklist || currentTask?.todoCheckList || [];
+      const todoList = buildTodoChecklistPayload(taskData.todoCheckList, prevTodoChecklist);
+      const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-  const handleSubmit = async () => { 
+      await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
+        ...taskData,
+        attachments: uploadedAttachmentUrls,
+        dueDate: new Date(taskData.dueDate).toISOString(),
+        todoCheckList: todoList,
+      });
+
+      toast.success("Task Updated Successfully.");
+      navigate("/admin/tasks");
+    }catch (error) {
+      console.error("Error updating task:", error);
+      toast.error(error.response?.data?.message || "Failed to update task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     setError("");
 
-    if(!taskData.title.trim()) {
+    if (!taskData.title.trim()) {
       setError("Title is required.");
       return;
     }
-    if(!taskData.description.trim()) {
+    if (!taskData.description.trim()) {
       setError("Description is required.");
       return;
     }
 
-    if(!taskData.dueDate) {
+    if (!taskData.dueDate) {
       setError("DueDate is required.");
       return;
     }
 
-    if(taskData.todoCheckList?.length === 0) {
+    if (taskData.todoCheckList?.length === 0) {
       setError("Add at least one todo task.");
       return;
     }
 
-    if(taskData.assignedTo?.length === 0) {
+    if (taskData.assignedTo?.length === 0) {
       setError("Task not assigned to any member.");
       return;
     }
 
-    if(taskId) {
+    if (taskId) {
       updateTask();
       return;
     }
@@ -146,9 +205,55 @@ const CreateTask = () => {
     createTask();
   };
 
-  const getTaskDetailsByID = async () => { };
+  const getTaskDetailsByID = async () => {
+    try {
+      const response = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(taskId));
 
-  const deleteTask = async () => { };
+      if (response.data) {
+        const taskInfo = response.data;
+        setCurrentTask(taskInfo);
+
+        setTaskData({
+          title: taskInfo.title || "",
+          description: taskInfo.description || "",
+          priority: taskInfo.priority || "Low",
+          dueDate: taskInfo.dueDate
+            ? moment(taskInfo.dueDate).format("YYYY-MM-DD")
+            : null,
+          assignedTo: taskInfo?.assignedTo?.map((item) => item?._id) || [],
+          todoCheckList: taskInfo?.todoChecklist || taskInfo?.todoCheckList || [],
+          attachments: taskInfo?.attachments || [],
+        });
+      }
+    } catch(error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  const deleteTask = async () => {
+    if (!taskId) return;
+
+    setLoading(true);
+    try {
+      await axiosInstance.delete(API_PATHS.TASKS.DELETE_TASK(taskId));
+      toast.success("Task Deleted Successfully.");
+      setOpenDeleteAlert(false);
+      navigate("/admin/tasks");
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error(error.response?.data?.message || "Failed to delete task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (taskId) {
+      getTaskDetailsByID();
+    }
+
+    return () => {};
+  }, [taskId]);
 
   return (
     <DashboardLayout activeMenu="Create Task">
@@ -176,7 +281,7 @@ const CreateTask = () => {
             {taskId && (
               <button
                 onClick={() => setOpenDeleteAlert(true)}
-                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition"
+                className="flex cursor-pointer items-center gap-2 text-sm text-red-500 transition hover:text-red-600"
               >
                 <LuTrash2 className="text-lg" />
                 Delete
@@ -377,6 +482,12 @@ const CreateTask = () => {
           </div>
         </div>
       </div>
+      <DeleteAlert
+        open={openDeleteAlert}
+        loading={loading}
+        onClose={() => setOpenDeleteAlert(false)}
+        onConfirm={deleteTask}
+      />
     </DashboardLayout>
   );
 };

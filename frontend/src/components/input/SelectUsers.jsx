@@ -41,6 +41,10 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers }) => {
     getAllUsers();
   }, []);
 
+  useEffect(() => {
+    setTempSelectedUsers(Array.isArray(selectedUsers) ? selectedUsers : []);
+  }, [selectedUsers]);
+
   return (
     <div>
 

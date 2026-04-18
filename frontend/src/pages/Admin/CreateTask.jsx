@@ -5,8 +5,9 @@ import { PRIORITY_DATA } from "../../utils/data";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import toast from "react-hot-toast";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { LuTrash2 } from "react-icons/lu";
+import moment from "moment";
 import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
 import SelectUsers from "../../components/input/SelectUsers";
@@ -15,7 +16,9 @@ import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 
 const CreateTask = () => {
   const location = useLocation();
-  const { taskId } = location.state || {};
+  const { id: routeTaskId } = useParams();
+  const { taskId: stateTaskId } = location.state || {};
+  const taskId = stateTaskId || routeTaskId;
   const navigate = useNavigate();
 
   const [taskData, setTaskData] = useState({
@@ -64,7 +67,7 @@ const CreateTask = () => {
   const createTask = async () => {
     setLoading(true);
     try {
-      const todolist = taskData.todoCheckList?.map((item) =>({
+      const todolist = taskData.todoCheckList?.map((item) => ({
         text: item.text,
         completed: false,
       }));
@@ -94,7 +97,7 @@ const CreateTask = () => {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
-        todoCheckList:todolist,
+        todoCheckList: todolist,
       });
 
       toast.success("Task Created Successfully.");
@@ -109,36 +112,38 @@ const CreateTask = () => {
     }
   };
 
-  const updateTask = async () => { };
+  const updateTask = async () => {
 
-  const handleSubmit = async () => { 
+  };
+
+  const handleSubmit = async () => {
     setError("");
 
-    if(!taskData.title.trim()) {
+    if (!taskData.title.trim()) {
       setError("Title is required.");
       return;
     }
-    if(!taskData.description.trim()) {
+    if (!taskData.description.trim()) {
       setError("Description is required.");
       return;
     }
 
-    if(!taskData.dueDate) {
+    if (!taskData.dueDate) {
       setError("DueDate is required.");
       return;
     }
 
-    if(taskData.todoCheckList?.length === 0) {
+    if (taskData.todoCheckList?.length === 0) {
       setError("Add at least one todo task.");
       return;
     }
 
-    if(taskData.assignedTo?.length === 0) {
+    if (taskData.assignedTo?.length === 0) {
       setError("Task not assigned to any member.");
       return;
     }
 
-    if(taskId) {
+    if (taskId) {
       updateTask();
       return;
     }
@@ -146,9 +151,40 @@ const CreateTask = () => {
     createTask();
   };
 
-  const getTaskDetailsByID = async () => { };
+  const getTaskDetailsByID = async () => {
+    try {
+      const response = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(taskId));
+
+      if (response.data) {
+        const taskInfo = response.data;
+        setCurrentTask(taskInfo);
+
+        setTaskData({
+          title: taskInfo.title || "",
+          description: taskInfo.description || "",
+          priority: taskInfo.priority || "Low",
+          dueDate: taskInfo.dueDate
+            ? moment(taskInfo.dueDate).format("YYYY-MM-DD")
+            : null,
+          assignedTo: taskInfo?.assignedTo?.map((item) => item?._id) || [],
+          todoCheckList: taskInfo?.todoChecklist || taskInfo?.todoCheckList || [],
+          attachments: taskInfo?.attachments || [],
+        });
+      }
+    } catch(error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
   const deleteTask = async () => { };
+
+  useEffect(() => {
+    if (taskId) {
+      getTaskDetailsByID();
+    }
+
+    return () => {};
+  }, [taskId]);
 
   return (
     <DashboardLayout activeMenu="Create Task">

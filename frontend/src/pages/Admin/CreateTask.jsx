@@ -64,36 +64,69 @@ const CreateTask = () => {
     });
   };
 
+  const uploadAttachments = async (attachments = []) => {
+    const uploadedAttachmentUrls = [];
+
+    for (const file of attachments) {
+      if (typeof file === "string") {
+        uploadedAttachmentUrls.push(file);
+        continue;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const uploadResponse = await axiosInstance.post(
+          API_PATHS.IMAGE.UPLOAD_IMAGE,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        uploadedAttachmentUrls.push(uploadResponse.data.imageUrl);
+      } catch (err) {
+        console.error("Failed to upload file:", err);
+        toast.error("Failed to upload: " + file.name);
+        throw err;
+      }
+    }
+
+    return uploadedAttachmentUrls;
+  };
+
+  const buildTodoChecklistPayload = (todoItems = [], previousTodoItems = []) =>
+    todoItems.map((item) => {
+      if (typeof item === "string") {
+        const matchedTask = previousTodoItems.find((task) => task.text === item);
+        return {
+          text: item.trim(),
+          completed: matchedTask ? matchedTask.completed : false,
+        };
+      }
+
+      const normalizedText = item?.text?.trim() || "";
+      const matchedTask = previousTodoItems.find((task) => task.text === normalizedText);
+
+      return {
+        text: normalizedText,
+        completed:
+          typeof item?.completed === "boolean"
+            ? item.completed
+            : matchedTask
+              ? matchedTask.completed
+              : false,
+      };
+    }).filter((item) => item.text);
+
   const createTask = async () => {
     setLoading(true);
     try {
-      const todolist = taskData.todoCheckList?.map((item) => ({
-        text: item.text,
-        completed: false,
-      }));
+      const todolist = buildTodoChecklistPayload(taskData.todoCheckList);
+      const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-      let uploadedAttachmentUrls = [];
-      for (const file of taskData.attachments || []) {
-        if (typeof file === "string") {
-          uploadedAttachmentUrls.push(file);
-        } else {
-          try {
-            const formData = new FormData();
-            formData.append("image", file);
-            const uploadResponse = await axiosInstance.post(API_PATHS.IMAGE.UPLOAD_IMAGE, formData, {
-              headers: { "Content-Type": "multipart/form-data" },
-            });
-            uploadedAttachmentUrls.push(uploadResponse.data.imageUrl);
-          } catch (err) {
-            console.error("Failed to upload file:", err);
-            toast.error("Failed to upload: " + file.name);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
+      await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
@@ -113,7 +146,27 @@ const CreateTask = () => {
   };
 
   const updateTask = async () => {
+    setLoading(true);
+    try {
+      const prevTodoChecklist = currentTask?.todoChecklist || currentTask?.todoCheckList || [];
+      const todoList = buildTodoChecklistPayload(taskData.todoCheckList, prevTodoChecklist);
+      const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
+      await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
+        ...taskData,
+        attachments: uploadedAttachmentUrls,
+        dueDate: new Date(taskData.dueDate).toISOString(),
+        todoCheckList: todoList,
+      });
+
+      toast.success("Task Updated Successfully.");
+      navigate("/admin/tasks");
+    }catch (error) {
+      console.error("Error updating task:", error);
+      toast.error(error.response?.data?.message || "Failed to update task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {

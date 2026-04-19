@@ -123,8 +123,11 @@ const ManageUsers = () => {
                     px-4 py-4 rounded-lg
                     bg-[var(--surface)]
                     border border-[var(--border)]
-                    hover:bg-[var(--bg-soft)]
-                    transition-colors duration-150
+                    shadow-sm
+                    hover:-translate-y-0.5
+                    hover:border-slate-300/70
+                    hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]
+                    transition-all duration-200
                     cursor-pointer
                   "
                 >

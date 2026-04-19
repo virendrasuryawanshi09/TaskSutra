@@ -8,13 +8,16 @@ const getUsers = async (req, res) => {
         const users = await User.find({role: 'member'}).select("-password");
 
         const userWithTaskCounts = await Promise.all(users.map(async(user) => {
+            const totalTasks = await Task.countDocuments({
+                assignedTo: user._id,
+            });
             const pendingTasks = await Task.countDocuments({
                 assignedTo: user._id, 
                 status: "Pending"
             });
             const inProgressTasks = await Task.countDocuments({
                 assignedTo: user._id,
-                status: "In Progress"
+                status: { $in: ["In Progress", "In-progress", "in-Progress"] }
             });
             const completedTasks = await Task.countDocuments({
                 assignedTo: user._id, 
@@ -23,6 +26,7 @@ const getUsers = async (req, res) => {
 
             return {
                 ...user._doc,
+                totalTasks,
                 pendingTasks,
                 inProgressTasks,
                 completedTasks

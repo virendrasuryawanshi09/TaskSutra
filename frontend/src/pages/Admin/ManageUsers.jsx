@@ -125,7 +125,7 @@ const ManageUsers = () => {
                     border border-[var(--border)]
                     shadow-sm
                     hover:-translate-y-0.5
-                    hover:border-slate-300/70
+                    hover:border-[var(--accent)]
                     hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]
                     transition-all duration-200
                     cursor-pointer

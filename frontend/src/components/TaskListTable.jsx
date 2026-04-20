@@ -67,7 +67,11 @@ const TaskListTable = ({ tableData }) => {
                 {tableData.map((task) => (
                     <button
                         key={task._id || task.id}
-                        onClick={() => navigate(`/admin/tasks/${task._id || task.id}`)}
+                        onClick={() =>
+                            navigate("/admin/create-task", {
+                                state: { taskId: task._id || task.id },
+                            })
+                        }
                         className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 text-left shadow-sm transition-transform duration-200 active:scale-[0.99]"
                     >
                         <div className="flex items-start justify-between gap-3">
@@ -119,7 +123,11 @@ const TaskListTable = ({ tableData }) => {
                         {tableData.map((task) => (
                             <tr
                                 key={task._id || task.id}
-                                onClick={() => navigate(`/admin/tasks/${task._id || task.id}`)}
+                                onClick={() =>
+                                    navigate("/admin/create-task", {
+                                        state: { taskId: task._id || task.id },
+                                    })
+                                }
                                 className="border-t border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)] 
               hover:bg-[var(--bg-soft)] hover:scale-[1.01] cursor-pointer transition-all duration-200"
                             >

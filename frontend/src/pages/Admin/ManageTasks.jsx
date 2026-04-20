@@ -2,20 +2,45 @@ import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/Layouts/DashboardLayout';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
+import { downloadReport } from '../../utils/downloadReport';
 import { LuFileSpreadsheet } from 'react-icons/lu';
 import TaskStatusTabs from '../../components/TaskStatusTabs';
 import TaskCard from '../../components/Charts/TaskCard';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const ManageTasks = () => {
   const [allTasks, setAllTasks] = useState([]);
   const [tabs, setTabs] = useState([]);
   const [filterStatus, setFilterStatus] = useState('All');
+  const [isExporting, setIsExporting] = useState(false);
 
   const navigate = useNavigate();
 
   const handleClick = (task) => {
-    navigate(`/admin/create-task`, { state: { taskId: task._id } });
+    navigate(`/admin/tasks/${task._id}`);
+  };
+
+  const handleExportTasksReport = async () => {
+    const toastId = toast.loading('Preparing tasks report...');
+
+    try {
+      setIsExporting(true);
+      await downloadReport({
+        url: API_PATHS.REPORTS.EXPORT_TASKS,
+        fallbackFileName: 'task_report.xlsx',
+      });
+      toast.success('Tasks report downloaded successfully.', { id: toastId });
+    } catch (error) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          'Failed to download tasks report.',
+        { id: toastId }
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getAllTasks = async () => {
@@ -76,6 +101,9 @@ const ManageTasks = () => {
           </div>
 
           <button
+            type="button"
+            onClick={handleExportTasksReport}
+            disabled={isExporting}
             className="
               w-full sm:w-auto
               flex items-center justify-center gap-2
@@ -87,13 +115,15 @@ const ManageTasks = () => {
 
               shadow-sm
               hover:bg-[var(--accent-hover)]
+              disabled:cursor-not-allowed
+              disabled:opacity-70
               active:scale-[0.98]
 
               transition-all duration-200
             "
           >
             <LuFileSpreadsheet />
-            Export
+            {isExporting ? 'Exporting...' : 'Export'}
           </button>
 
         </div>

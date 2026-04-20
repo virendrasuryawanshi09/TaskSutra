@@ -3,6 +3,8 @@ import { HiOutlineTrash, HiOutlinePaperClip } from "react-icons/hi2";
 
 const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
   const attachmentList = Array.isArray(attachments) ? attachments : [];
+  const getAttachmentName = (file) =>
+    typeof file === "string" ? file.split("/").pop() || "Attachment" : file.name;
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -22,12 +24,16 @@ const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
   };
 
   const formatFileSize = (size) => {
+    if (typeof size !== "number") return "Uploaded";
     if (size < 1024) return size + " B";
     if (size < 1024 * 1024) return (size / 1024).toFixed(1) + " KB";
     return (size / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  const isImage = (file) => file.type?.startsWith("image/");
+  const isImage = (file) =>
+    typeof file === "string"
+      ? /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file)
+      : file.type?.startsWith("image/");
 
   return (
     <div className="space-y-4">
@@ -71,7 +77,7 @@ const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
 
           {attachmentList.map((file, index) => (
             <div
-              key={file.name + index}
+              key={`${typeof file === "string" ? file : file.name}-${index}`}
               className="
                 group relative
                 bg-[var(--bg-soft)]
@@ -86,7 +92,7 @@ const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
               {/* IMAGE PREVIEW */}
               {isImage(file) ? (
                 <img
-                  src={URL.createObjectURL(file)}
+                  src={typeof file === "string" ? file : URL.createObjectURL(file)}
                   alt=""
                   className="w-full h-24 object-cover rounded-md mb-2"
                 />
@@ -102,11 +108,11 @@ const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
 
               {/* FILE INFO */}
               <p className="text-xs text-[var(--text)] truncate">
-                {file.name}
+                {getAttachmentName(file)}
               </p>
 
               <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                {formatFileSize(file.size)}
+                {formatFileSize(typeof file === "string" ? undefined : file.size)}
               </p>
 
               {/* DELETE BUTTON */}

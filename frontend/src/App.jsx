@@ -14,7 +14,7 @@ import Login from "./pages/Auth/Login";
 import PrivateRoute from "./routes/PrivateRoute";
 import ManageUsers from "./pages/Admin/ManageUsers";
 import MyTasks from "./pages/User/MyTasks";
-import UserDashboard from "./pages/User/UserDashboard";
+import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/ViewTaskDetails";
 
 const App = () => {

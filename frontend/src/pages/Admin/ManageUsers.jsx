@@ -2,9 +2,13 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import { API_PATHS } from "../../utils/apiPaths";
 import axiosInstance from "../../utils/axiosInstance";
+import { downloadReport } from "../../utils/downloadReport";
+import { LuFileSpreadsheet } from "react-icons/lu";
+import toast from "react-hot-toast";
 
 const ManageUsers = () => {
   const [allUsers, setAllUsers] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const getAllUsers = async () => {
     try {
@@ -18,6 +22,28 @@ const ManageUsers = () => {
   useEffect(() => {
     getAllUsers();
   }, []);
+
+  const handleExportUsersReport = async () => {
+    const toastId = toast.loading("Preparing users report...");
+
+    try {
+      setIsExporting(true);
+      await downloadReport({
+        url: API_PATHS.REPORTS.EXPORT_USERS,
+        fallbackFileName: "user_report.xlsx",
+      });
+      toast.success("Users report downloaded successfully.", { id: toastId });
+    } catch (error) {
+      toast.error(
+        error?.message ||
+          error?.response?.data?.message ||
+          "Failed to download users report.",
+        { id: toastId }
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const getInitials = (name = "") => {
     const parts = name.trim().split(" ").filter(Boolean);
@@ -94,7 +120,7 @@ const ManageUsers = () => {
   return (
     <DashboardLayout activeMenu="manage-users">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-[20px] font-semibold text-[var(--text)]">
               Team Members
@@ -103,6 +129,29 @@ const ManageUsers = () => {
               Overview of team activity
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleExportUsersReport}
+            disabled={isExporting}
+            className="
+              w-full sm:w-auto
+              flex items-center justify-center gap-2
+              px-4 py-2.5 text-sm font-medium
+              rounded-xl
+              bg-[var(--accent)]
+              text-white
+              shadow-sm
+              hover:bg-[var(--accent-hover)]
+              disabled:cursor-not-allowed
+              disabled:opacity-70
+              active:scale-[0.98]
+              transition-all duration-200
+            "
+          >
+            <LuFileSpreadsheet />
+            {isExporting ? "Exporting..." : "Export Report"}
+          </button>
         </div>
 
         <div className="flex flex-col gap-3">

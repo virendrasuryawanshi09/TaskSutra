@@ -22,10 +22,20 @@ const getValidDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const isSameDay = (leftDate, rightDate) =>
-  leftDate.getFullYear() === rightDate.getFullYear() &&
-  leftDate.getMonth() === rightDate.getMonth() &&
-  leftDate.getDate() === rightDate.getDate();
+const isWithinCurrentWeek = (date, referenceDate) => {
+  const startOfWeek = new Date(referenceDate);
+  const day = startOfWeek.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  startOfWeek.setDate(startOfWeek.getDate() + diffToMonday);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  return date >= startOfWeek && date <= endOfWeek;
+};
 
 const normalizeStatus = (status) => {
   const normalizedValue = String(status || "").trim().toLowerCase();
@@ -102,8 +112,11 @@ const UserDashboard = () => {
   const inProgressTasks = normalizedTasks.filter(
     (task) => task.normalizedStatus === "In Progress"
   ).length;
-  const todayTaskCount = normalizedTasks.filter(
-    (task) => task.dueDateValue && isSameDay(task.dueDateValue, now)
+  const weekTaskCount = normalizedTasks.filter(
+    (task) =>
+      task.dueDateValue &&
+      isWithinCurrentWeek(task.dueDateValue, now) &&
+      task.normalizedStatus !== "Completed"
   ).length;
   const overdueTasks = normalizedTasks.filter(
     (task) =>
@@ -162,10 +175,10 @@ const UserDashboard = () => {
 
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-soft)] px-4 py-3 lg:min-w-[250px]">
               <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Today Summary
+                This Week
               </p>
               <p className="mt-2 text-2xl font-semibold text-[var(--text)]">
-                {todayTaskCount} due today
+                {weekTaskCount} due this week
               </p>
               <p className="mt-1 text-sm text-[var(--text-muted)]">
                 {overdueTasks > 0

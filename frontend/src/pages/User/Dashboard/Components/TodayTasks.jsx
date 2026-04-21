@@ -6,59 +6,87 @@ const PRIORITY_STYLES = {
   Low: "text-[#4C7F6A]",
 };
 
-const isSameDay = (date, compareDate) =>
-  date.getFullYear() === compareDate.getFullYear() &&
-  date.getMonth() === compareDate.getMonth() &&
-  date.getDate() === compareDate.getDate();
+const PRIORITY_ORDER = {
+  High: 0,
+  Medium: 1,
+  Low: 2,
+};
 
-const formatDueTime = (value) => {
+const normalizeStatus = (status) => {
+  const normalizedValue = String(status || "").trim().toLowerCase();
+
+  if (normalizedValue === "completed") return "Completed";
+  if (["in progress", "in-progress", "inprogress"].includes(normalizedValue)) {
+    return "In Progress";
+  }
+
+  return "Pending";
+};
+
+const getValidDate = (value) => {
   if (!value) {
-    return "--";
+    return null;
   }
 
   const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
-  if (Number.isNaN(date.getTime())) {
+const formatDueDate = (value) => {
+  const date = getValidDate(value);
+
+  if (!date) {
     return "--";
   }
 
   return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   }).format(date);
 };
 
 const TodayTasks = ({ tasks = [] }) => {
   const now = new Date();
 
-  const todayTasks = tasks
-    .filter((task) => {
-      if (!task?.dueDate) {
-        return false;
+  const priorityTasks = tasks
+    .filter((task) => normalizeStatus(task?.status) !== "Completed")
+    .slice()
+    .sort((leftTask, rightTask) => {
+      const leftPriority = PRIORITY_ORDER[leftTask?.priority] ?? 99;
+      const rightPriority = PRIORITY_ORDER[rightTask?.priority] ?? 99;
+
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
       }
 
-      const dueDate = new Date(task.dueDate);
-      return !Number.isNaN(dueDate.getTime()) && isSameDay(dueDate, now);
+      const leftDueDate = getValidDate(leftTask?.dueDate);
+      const rightDueDate = getValidDate(rightTask?.dueDate);
+
+      if (!leftDueDate && !rightDueDate) return 0;
+      if (!leftDueDate) return 1;
+      if (!rightDueDate) return -1;
+
+      return leftDueDate - rightDueDate;
     })
-    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-    .slice(0, 5);
+    .slice(0, 3);
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text)]">Today Focus</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-[var(--text)]">Priority Tasks</h2>
+        <span className="text-xs text-[var(--text-muted)]">{priorityTasks.length} tasks</span>
+      </div>
 
-      {todayTasks.length === 0 ? (
+      {priorityTasks.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--text-muted)]">
-          No tasks due today.
+          No priority tasks right now.
         </p>
       ) : (
         <ul className="mt-4 divide-y divide-[var(--border)]">
-          {todayTasks.map((task) => {
-            const dueDate = new Date(task.dueDate);
-            const isOverdue =
-              !Number.isNaN(dueDate.getTime()) &&
-              dueDate.getTime() < now.getTime() &&
-              task.status !== "Completed";
+          {priorityTasks.map((task) => {
+            const dueDate = getValidDate(task.dueDate);
+            const isOverdue = dueDate && dueDate.getTime() < now.getTime();
 
             return (
               <li
@@ -73,8 +101,8 @@ const TodayTasks = ({ tasks = [] }) => {
                   >
                     {task.title}
                   </p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Due {formatDueTime(task.dueDate)}
+                  <p className={`mt-1 text-xs ${isOverdue ? "text-[#B2554A]" : "text-[var(--text-muted)]"}`}>
+                    {isOverdue ? "Overdue" : "Due"} {formatDueDate(task.dueDate)}
                   </p>
                 </div>
 

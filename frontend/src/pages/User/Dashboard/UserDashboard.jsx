@@ -4,6 +4,7 @@ import { UserContext } from "../../../context/UserContextState";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import TodayTasks from "./Components/TodayTasks";
+import TaskTable from "./Components/TaskTable";
 
 const UserDashboard = () => {
   const { user } = useContext(UserContext);
@@ -56,7 +57,13 @@ const UserDashboard = () => {
         </section>
 
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Task Table</h2>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-[var(--text)]">Task Table</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Track assigned work and open task actions.
+            </p>
+          </div>
+          <TaskTable tasks={tasks} />
         </section>
       </div>
     </DashboardLayout>

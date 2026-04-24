@@ -2,6 +2,17 @@ const Task = require('../models/Task');
 const mongoose = require('mongoose');
 const MAX_RECENT_TASKS = 8;
 
+const normalizeTaskStatus = (status = '') => {
+    const normalizedValue = String(status).trim().toLowerCase();
+
+    if (normalizedValue === 'completed') return 'Completed';
+    if (['in progress', 'in-progress', 'inprogress'].includes(normalizedValue)) {
+        return 'In-progress';
+    }
+
+    return 'Pending';
+};
+
 const getTodoChecklist = (task) => {
     if (Array.isArray(task?.todoChecklist)) {
         return task.todoChecklist;
@@ -393,7 +404,7 @@ const updateTaskStatus = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to update this task status' });
         }
 
-        task.status = req.body.status || task.status;
+        task.status = normalizeTaskStatus(req.body.status || task.status);
 
         if (task.status === 'Completed') {
             task.todoChecklist = getTodoChecklist(task).map((item) => ({
@@ -402,6 +413,8 @@ const updateTaskStatus = async (req, res) => {
                 completed: true,
             }));
             task.progress = 100;
+        } else if (task.status === 'Pending') {
+            task.progress = 0;
         }
 
         await task.save();

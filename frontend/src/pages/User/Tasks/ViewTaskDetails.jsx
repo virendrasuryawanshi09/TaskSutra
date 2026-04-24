@@ -4,6 +4,7 @@ import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import AvatarGroup from "../../../components/AvatarGroup";
 import SelectDropdown from "../../../components/input/SelectDropdown";
+import TaskDiscussionPanel from "./TaskDiscussionPanel";
 
 const ViewTaskDetails = () => {
   const statusOptions = [
@@ -12,7 +13,7 @@ const ViewTaskDetails = () => {
     { label: "Completed" },
   ];
 
-  const currentStatus = "In Progress";
+  const [currentStatus, setCurrentStatus] = useState("In Progress");
   const currentPriority = "High";
   const isCompleted = currentStatus === "Completed";
   const assignedUsers = [
@@ -32,6 +33,22 @@ const ViewTaskDetails = () => {
     { id: 2, name: "task-flow-notes.docx" },
     { id: 3, name: "qa-checklist.xlsx" },
   ]);
+  const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      user: "Virendra",
+      message: "Please confirm whether this task should include final QA notes.",
+      timestamp: "Today, 10:12 AM",
+    },
+    {
+      id: 2,
+      user: "Sana Patel",
+      message: "Yes, include them in the last checklist step.",
+      timestamp: "Today, 10:18 AM",
+    },
+  ]);
 
   const visibleChecklistItems = useMemo(
     () =>
@@ -44,6 +61,11 @@ const ViewTaskDetails = () => {
   const completedChecklistCount = visibleChecklistItems.filter(
     (item) => item.completed
   ).length;
+  const progressValue = isCompleted
+    ? 100
+    : visibleChecklistItems.length > 0
+      ? Math.round((completedChecklistCount / visibleChecklistItems.length) * 100)
+      : 0;
 
   const getStatusDotClassName = (status) => {
     switch (status) {
@@ -81,6 +103,25 @@ const ViewTaskDetails = () => {
     );
   };
 
+  const handleSendMessage = () => {
+    const trimmedMessage = queryInput.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: Date.now(),
+        user: "You",
+        message: trimmedMessage,
+        timestamp: "Just now",
+      },
+    ]);
+    setQueryInput("");
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
@@ -92,11 +133,11 @@ const ViewTaskDetails = () => {
             shadow-sm
           "
         >
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
+            <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
               >
                 <HiOutlineArrowLeft className="text-base" />
                 Back
@@ -106,11 +147,11 @@ const ViewTaskDetails = () => {
                 Task Title
               </h1>
 
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-2 w-2 rounded-full ${getStatusDotClassName(
-                      currentStatus
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${getStatusDotClassName(
+                        currentStatus
                     )}`}
                   ></span>
                   <span>{currentStatus}</span>
@@ -122,20 +163,53 @@ const ViewTaskDetails = () => {
                       currentPriority
                     )}`}
                   ></span>
-                  <span>{currentPriority}</span>
+                    <span>{currentPriority}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 max-w-[280px] space-y-2">
+                  <div className="h-[4px] overflow-hidden rounded-full bg-[var(--bg-soft)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--accent)] transition-all duration-200"
+                      style={{ width: `${progressValue}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+                    <span>{progressValue}% complete</span>
+                    {isCompleted ? (
+                      <span className="text-[var(--text)]">Completed</span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="w-full md:w-[220px]">
-              <SelectDropdown
-                label="Status"
-                options={statusOptions}
-                value={currentStatus}
-                onChange={() => {}}
-              />
+              <div className="w-full md:w-[220px]">
+                <SelectDropdown
+                  label="Status"
+                  options={statusOptions}
+                  value={currentStatus}
+                  onChange={setCurrentStatus}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setIsDiscussionOpen(true)}
+                  className="
+                    mt-3
+                    w-full
+                    rounded-lg
+                    border border-[var(--border)]
+                    bg-[var(--surface)]
+                    px-4 py-2.5
+                    text-sm font-medium text-[var(--text)]
+                    transition-colors duration-200
+                    hover:bg-[var(--bg-soft)]
+                  "
+                >
+                  Open Discussion
+                </button>
+              </div>
             </div>
-          </div>
 
           <div className="space-y-8">
             <div className="space-y-5">
@@ -327,6 +401,15 @@ const ViewTaskDetails = () => {
           </div>
         </div>
       </div>
+
+      <TaskDiscussionPanel
+        isOpen={isDiscussionOpen}
+        onClose={() => setIsDiscussionOpen(false)}
+        messages={messages}
+        queryInput={queryInput}
+        onQueryInputChange={(event) => setQueryInput(event.target.value)}
+        onSend={handleSendMessage}
+      />
     </DashboardLayout>
   );
 };

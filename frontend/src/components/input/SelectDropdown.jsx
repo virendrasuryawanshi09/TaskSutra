@@ -6,8 +6,14 @@ import moment from "moment";
 import { HiCalendarDays, HiCheck, HiChevronUpDown } from "react-icons/hi2";
 
 const PriorityButton = ({ value }) => {
-  const priorityColor =
-    value === "Low" ? "text-green-500" : value === "Medium" ? "text-blue-500" : "text-orange-500";
+  const isPriorityValue = ["Low", "Medium", "High"].includes(value);
+  const priorityColor = !isPriorityValue
+    ? "text-[var(--text)]"
+    : value === "Low"
+      ? "text-green-500"
+      : value === "Medium"
+        ? "text-blue-500"
+        : "text-orange-500";
 
   return <span className={`font-medium ${priorityColor}`}>{value}</span>;
 };

@@ -1,150 +1,203 @@
-import React, { useState } from "react";
+import React from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
+import AvatarGroup from "../../../components/AvatarGroup";
+import SelectDropdown from "../../../components/input/SelectDropdown";
 
 const ViewTaskDetails = () => {
-  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
-
   const statusOptions = [
-    { label: "Pending", tone: "text-[var(--text-muted)]" },
-    { label: "In Progress", tone: "text-[#2F7A84]" },
-    { label: "Completed", tone: "text-[#4C7F6A]" },
+    { label: "Pending" },
+    { label: "In Progress" },
+    { label: "Completed" },
   ];
 
   const currentStatus = "In Progress";
   const currentPriority = "High";
+  const isCompleted = currentStatus === "Completed";
+  const assignedUsers = [
+    { name: "Alex Carter" },
+    { name: "Sana Patel" },
+    { name: "Ishaan Roy" },
+  ];
 
-  const getStatusClassName = (status) => {
+  const getStatusDotClassName = (status) => {
     switch (status) {
       case "Completed":
-        return "border border-[rgba(76,127,106,0.18)] bg-[rgba(76,127,106,0.14)] text-[#4C7F6A]";
+        return "bg-[#4C7F6A]";
       case "In Progress":
-        return "border border-[rgba(47,122,132,0.18)] bg-[rgba(47,122,132,0.14)] text-[#2F7A84]";
+        return "bg-[var(--accent)]";
       default:
-        return "border border-[rgba(148,163,184,0.2)] bg-[var(--bg-soft)] text-[var(--text-muted)]";
+        return "bg-[var(--text-muted)]";
     }
   };
 
-  const getPriorityClassName = (priority) => {
+  const getPriorityDotClassName = (priority) => {
     switch (priority) {
       case "High":
-        return "bg-[rgba(178,85,74,0.12)] text-[#B2554A]";
+        return "bg-[#B2554A]";
       case "Medium":
-        return "bg-[rgba(194,139,44,0.12)] text-[#C28B2C]";
+        return "bg-[#C28B2C]";
       default:
-        return "bg-[rgba(76,127,106,0.12)] text-[#4C7F6A]";
+        return "bg-[#4C7F6A]";
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="mx-auto w-full max-w-4xl px-1 py-2 md:py-4">
-        <div className="space-y-6">
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-            <div className="flex flex-col gap-5">
-              <div>
-                <button
-                  type="button"
-                  className="inline-flex w-fit items-center gap-2 text-sm font-medium text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
+      <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
+        <div
+          className="
+            bg-[var(--surface)]
+            border border-[var(--border)]
+            rounded-2xl p-4 md:p-6
+            shadow-sm
+          "
+        >
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
+              >
+                <HiOutlineArrowLeft className="text-base" />
+                Back
+              </button>
+
+              <h1 className="mt-3 text-xl font-semibold text-[var(--text)] tracking-tight">
+                Task Title
+              </h1>
+
+              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${getStatusDotClassName(
+                      currentStatus
+                    )}`}
+                  ></span>
+                  <span>{currentStatus}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${getPriorityDotClassName(
+                      currentPriority
+                    )}`}
+                  ></span>
+                  <span>{currentPriority}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full md:w-[220px]">
+              <SelectDropdown
+                label="Status"
+                options={statusOptions}
+                value={currentStatus}
+                onChange={() => {}}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            <div className="space-y-5">
+              <h2 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
+                Task Information
+              </h2>
+
+              <div className="space-y-2">
+                <label className="block text-xs text-[var(--text-muted)] mb-1">
+                  Description
+                </label>
+                <p
+                  className="
+                    w-full
+                    bg-[var(--bg-soft)]
+                    border border-[var(--border)]
+                    rounded-lg
+                    px-3 py-3
+                    text-sm leading-6 text-[var(--text)]
+                  "
                 >
-                  <HiOutlineArrowLeft className="text-base" />
-                  Back
-                </button>
+                  Task description will appear here.
+                </p>
               </div>
 
-              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0">
-                  <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)] md:text-3xl">
-                    Task Title
-                  </h1>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusClassName(
-                        currentStatus
-                      )}`}
-                    >
-                      {currentStatus}
-                    </span>
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${getPriorityClassName(
-                        currentPriority
-                      )}`}
-                    >
-                      {currentPriority}
-                    </span>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="block text-xs text-[var(--text-muted)]">
+                    Created Date
+                  </label>
+                  <div
+                    className="
+                      bg-[var(--bg-soft)]
+                      border border-[var(--border)]
+                      rounded-lg
+                      px-3 py-2.5
+                      text-sm text-[var(--text)]
+                    "
+                  >
+                    12 Apr 2026
                   </div>
                 </div>
 
-                <div className="relative w-full md:w-[190px]">
-                  <button
-                    type="button"
-                    onClick={() => setIsStatusMenuOpen((open) => !open)}
-                    className="flex w-full items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--text)] transition-colors duration-200 hover:bg-[var(--bg-soft)]"
-                  >
-                    <span>{currentStatus}</span>
-                    <span
-                      className={`text-xs text-[var(--text-muted)] transition-transform duration-200 ${
-                        isStatusMenuOpen ? "rotate-180" : ""
-                      }`}
-                    >
-                      ▼
-                    </span>
-                  </button>
-
+                <div className="space-y-1">
+                  <label className="block text-xs text-[var(--text-muted)]">
+                    Due Date
+                  </label>
                   <div
-                    className={`absolute right-0 top-[calc(100%+8px)] z-10 w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] transition-all duration-200 ${
-                      isStatusMenuOpen
-                        ? "pointer-events-auto translate-y-0 opacity-100"
-                        : "pointer-events-none -translate-y-1 opacity-0"
-                    }`}
+                    className="
+                      bg-[var(--bg-soft)]
+                      border border-[var(--border)]
+                      rounded-lg
+                      px-3 py-2.5
+                      text-sm text-[var(--text)]
+                    "
                   >
-                    <div className="py-1.5">
-                      {statusOptions.map((option) => {
-                        const isActive = option.label === currentStatus;
+                    {isCompleted ? "Completed" : "18 Apr 2026"}
+                  </div>
+                </div>
+              </div>
 
-                        return (
-                          <button
-                            key={option.label}
-                            type="button"
-                            className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-[var(--bg-soft)] ${
-                              isActive ? "bg-[var(--bg-soft)]" : ""
-                            }`}
-                          >
-                            <span className={option.tone}>{option.label}</span>
-                            {isActive ? (
-                              <span className="text-xs text-[var(--text-muted)]">
-                                Active
-                              </span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
+              <div className="space-y-1">
+                <label className="block text-xs text-[var(--text-muted)]">
+                  Assigned Users
+                </label>
+                <div
+                  className="
+                    bg-[var(--bg-soft)]
+                    border border-[var(--border)]
+                    rounded-lg
+                    px-3 py-3
+                  "
+                >
+                  <div className="flex items-center gap-3">
+                    <AvatarGroup avatars={assignedUsers} />
+                    <span className="text-sm text-[var(--text-muted)]">
+                      {assignedUsers.length} assigned
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-          </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--text)]">Task Info</h2>
-          </section>
+            <div className="space-y-5 pt-5 border-t border-[var(--border)]">
+              <h2 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
+                Checklist
+              </h2>
+            </div>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--text)]">Checklist</h2>
-          </section>
+            <div className="space-y-5 pt-5 border-t border-[var(--border)]">
+              <h2 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
+                Attachments
+              </h2>
+            </div>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--text)]">Attachments</h2>
-          </section>
-
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--text)]">
-              Activity / Query
-            </h2>
-          </section>
+            <div className="space-y-5 pt-5 border-t border-[var(--border)]">
+              <h2 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
+                Activity / Query
+              </h2>
+            </div>
+          </div>
         </div>
       </div>
     </DashboardLayout>

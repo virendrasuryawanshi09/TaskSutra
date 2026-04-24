@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
+import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import AvatarGroup from "../../../components/AvatarGroup";
 import SelectDropdown from "../../../components/input/SelectDropdown";
@@ -25,6 +26,11 @@ const ViewTaskDetails = () => {
     { id: 3, text: "Build requested screen updates", completed: false },
     { id: 4, text: "Verify responsive behavior", completed: false },
     { id: 5, text: "Prepare final handoff", completed: false },
+  ]);
+  const [attachmentFiles] = useState([
+    { id: 1, name: "dashboard-wireframe.pdf" },
+    { id: 2, name: "task-flow-notes.docx" },
+    { id: 3, name: "qa-checklist.xlsx" },
   ]);
 
   const visibleChecklistItems = useMemo(
@@ -265,6 +271,52 @@ const ViewTaskDetails = () => {
               <h2 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
                 Attachments
               </h2>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] mb-1">
+                    Upload File
+                  </label>
+                  <input
+                    type="file"
+                    className="
+                      w-full
+                      bg-[var(--bg-soft)]
+                      border border-[var(--border)]
+                      rounded-lg
+                      px-3 py-2.5
+                      text-sm text-[var(--text)]
+                      file:mr-3 file:rounded-md file:border-0
+                      file:bg-[var(--surface)] file:px-3 file:py-1.5
+                      file:text-sm file:text-[var(--text)]
+                    "
+                  />
+                </div>
+
+                <div className="overflow-hidden rounded-lg border border-[var(--border)]">
+                  {attachmentFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 last:border-b-0"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <HiOutlinePaperClip className="shrink-0 text-sm text-[var(--text-muted)]" />
+                        <span className="truncate text-sm text-[var(--text)]">
+                          {file.name}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
+                      >
+                        <HiOutlineArrowDownTray className="text-sm" />
+                        Download
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-5 pt-5 border-t border-[var(--border)]">

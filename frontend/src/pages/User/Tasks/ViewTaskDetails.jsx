@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import AvatarGroup from "../../../components/AvatarGroup";
@@ -19,6 +19,25 @@ const ViewTaskDetails = () => {
     { name: "Sana Patel" },
     { name: "Ishaan Roy" },
   ];
+  const [checklistItems, setChecklistItems] = useState([
+    { id: 1, text: "Review task requirements", completed: true },
+    { id: 2, text: "Prepare implementation notes", completed: true },
+    { id: 3, text: "Build requested screen updates", completed: false },
+    { id: 4, text: "Verify responsive behavior", completed: false },
+    { id: 5, text: "Prepare final handoff", completed: false },
+  ]);
+
+  const visibleChecklistItems = useMemo(
+    () =>
+      isCompleted
+        ? checklistItems.map((item) => ({ ...item, completed: true }))
+        : checklistItems,
+    [checklistItems, isCompleted]
+  );
+
+  const completedChecklistCount = visibleChecklistItems.filter(
+    (item) => item.completed
+  ).length;
 
   const getStatusDotClassName = (status) => {
     switch (status) {
@@ -40,6 +59,20 @@ const ViewTaskDetails = () => {
       default:
         return "bg-[#4C7F6A]";
     }
+  };
+
+  const handleChecklistToggle = (itemId) => {
+    if (isCompleted) {
+      return;
+    }
+
+    setChecklistItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === itemId
+          ? { ...item, completed: !item.completed }
+          : item
+      )
+    );
   };
 
   return (
@@ -184,6 +217,48 @@ const ViewTaskDetails = () => {
               <h2 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider uppercase">
                 Checklist
               </h2>
+
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-[var(--text-muted)]">
+                  {completedChecklistCount} of {visibleChecklistItems.length} completed
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-[var(--border)]">
+                {visibleChecklistItems.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleChecklistToggle(item.id)}
+                    disabled={isCompleted}
+                    className="flex w-full items-center gap-4 border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left transition-colors duration-200 hover:bg-[rgba(31,31,29,0.025)] disabled:cursor-not-allowed disabled:hover:bg-[var(--surface)] dark:hover:bg-[rgba(255,255,255,0.03)] last:border-b-0"
+                  >
+                    <span className="w-8 shrink-0 text-xs font-medium tracking-[0.12em] text-[var(--text-muted)]">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
+                        item.completed
+                          ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                          : "border-[var(--border)] bg-[var(--surface)] text-transparent"
+                      }`}
+                    >
+                      <span className="text-[10px] leading-none">✓</span>
+                    </span>
+
+                    <span
+                      className={`min-w-0 text-sm ${
+                        item.completed
+                          ? "text-[var(--text-muted)] line-through"
+                          : "text-[var(--text)]"
+                      }`}
+                    >
+                      {item.text}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-5 pt-5 border-t border-[var(--border)]">

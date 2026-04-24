@@ -153,7 +153,7 @@ const TaskTable = ({ tasks = [] }) => {
               return (
                 <tr
                   key={taskId || task.title}
-                  className="border-t border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)] hover:bg-[var(--bg-soft)] transition-all duration-200"
+                  className="border-t border-[rgba(0,0,0,0.05)] transition-colors duration-200 hover:bg-[rgba(31,31,29,0.025)] dark:border-[rgba(255,255,255,0.05)] dark:hover:bg-[rgba(255,255,255,0.03)]"
                 >
                   <td className="px-4 py-4 font-medium text-[var(--text)]">
                     <div className="flex items-center gap-3">

@@ -1,9 +1,8 @@
-import React from 'react'
+import React from "react";
+import MyTasksPage from "./MyTasks/MyTasksPage";
 
 const MyTasks = () => {
-  return (
-    <div>MyTasks</div>
-  )
-}
+  return <MyTasksPage />;
+};
 
-export default MyTasks
+export default MyTasks;

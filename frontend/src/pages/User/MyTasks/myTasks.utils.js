@@ -19,6 +19,12 @@ export const TASK_TABS = [
   { key: "overdue", label: "Overdue" },
 ];
 
+export const SORT_OPTIONS = [
+  { label: "Due Date", value: "due-date" },
+  { label: "Priority", value: "priority" },
+  { label: "Progress", value: "progress" },
+];
+
 export const getValidDate = (value) => {
   if (!value) return null;
 
@@ -123,6 +129,28 @@ export const filterTasksBySearch = (tasks = [], searchQuery = "") => {
       .toLowerCase();
 
     return searchableText.includes(normalizedQuery);
+  });
+};
+
+export const sortTasks = (tasks = [], sortBy = "due-date") => {
+  const priorityRank = {
+    High: 0,
+    Medium: 1,
+    Low: 2,
+  };
+
+  return [...tasks].sort((leftTask, rightTask) => {
+    if (sortBy === "priority") {
+      return (priorityRank[leftTask.priority] ?? 3) - (priorityRank[rightTask.priority] ?? 3);
+    }
+
+    if (sortBy === "progress") {
+      return rightTask.progress - leftTask.progress;
+    }
+
+    const leftTime = leftTask.dueDateValue?.getTime?.() ?? Number.MAX_SAFE_INTEGER;
+    const rightTime = rightTask.dueDateValue?.getTime?.() ?? Number.MAX_SAFE_INTEGER;
+    return leftTime - rightTime;
   });
 };
 

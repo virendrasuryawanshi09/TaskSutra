@@ -2,7 +2,7 @@ import React from "react";
 import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
 import PremiumTaskCard from "./PremiumTaskCard";
 
-const PremiumTaskGrid = ({ tasks, loading, onTaskClick }) => {
+const PremiumTaskGrid = ({ tasks, loading, onTaskClick, onStatusChange, updatingTaskId }) => {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
@@ -40,6 +40,8 @@ const PremiumTaskGrid = ({ tasks, loading, onTaskClick }) => {
           task={task}
           index={index}
           onClick={onTaskClick}
+          onStatusChange={onStatusChange}
+          updatingTaskId={updatingTaskId}
         />
       ))}
     </div>

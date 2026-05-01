@@ -1,5 +1,7 @@
 import React from "react";
-import { HiOutlineAdjustmentsHorizontal, HiOutlineArrowPath } from "react-icons/hi2";
+import { HiOutlineArrowPath } from "react-icons/hi2";
+import SelectDropdown from "../../../../components/input/SelectDropdown";
+import { SORT_OPTIONS } from "../myTasks.utils";
 import MyTasksTabs from "./MyTasksTabs";
 
 const MyTasksToolbar = ({
@@ -9,6 +11,8 @@ const MyTasksToolbar = ({
   loading,
   onTabChange,
   onRefresh,
+  sortBy,
+  onSortChange,
 }) => {
   return (
     <div className="flex flex-col gap-5">
@@ -26,13 +30,14 @@ const MyTasksToolbar = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--text)] transition-all duration-200 hover:border-[var(--text-muted)] hover:bg-[var(--bg-soft)]"
-          >
-            <HiOutlineAdjustmentsHorizontal className="text-base text-[var(--text-muted)]" />
-            Filter
-          </button>
+          <div className="w-[160px]">
+            <SelectDropdown
+              label="Sort"
+              options={SORT_OPTIONS}
+              value={sortBy}
+              onChange={onSortChange}
+            />
+          </div>
 
           <button
             type="button"

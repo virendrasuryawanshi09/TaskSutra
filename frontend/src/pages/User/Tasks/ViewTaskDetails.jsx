@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import AvatarGroup from "../../../components/AvatarGroup";
@@ -127,7 +127,9 @@ const deriveProgressValue = (status, checklist, fallbackProgress = 0) => {
 
 const ViewTaskDetails = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id: taskId } = useParams();
+  const returnPath = location.state?.from || "/user/dashboard";
 
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -322,7 +324,7 @@ const ViewTaskDetails = () => {
       });
 
       toast.success("Task updated successfully.");
-      navigate("/user/dashboard");
+      navigate(returnPath);
     } catch (requestError) {
       toast.error(
         requestError?.response?.data?.message || "Unable to update task."
@@ -388,7 +390,7 @@ const ViewTaskDetails = () => {
             <div>
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate(returnPath)}
                 className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
               >
                 <HiOutlineArrowLeft className="text-base" />

@@ -6,7 +6,14 @@ import {
   HiOutlinePaperClip,
 } from "react-icons/hi2";
 import AvatarGroup from "../../../../components/AvatarGroup";
+import SelectDropdown from "../../../../components/input/SelectDropdown";
 import { formatTaskDate, getDueTone, getTaskTags } from "../myTasks.utils";
+
+const statusOptions = [
+  { label: "Pending", value: "Pending" },
+  { label: "In Progress", value: "In Progress" },
+  { label: "Completed", value: "Completed" },
+];
 
 const priorityStyles = {
   Low: "bg-[rgba(76,127,106,0.15)] text-[#4C7F6A]",
@@ -34,9 +41,10 @@ const progressTone = {
   Completed: "bg-[#4C7F6A]",
 };
 
-const PremiumTaskCard = ({ task, index, onClick }) => {
+const PremiumTaskCard = ({ task, index, onClick, onStatusChange, updatingTaskId }) => {
   const dueTone = getDueTone(task);
   const tags = getTaskTags(task);
+  const isUpdating = updatingTaskId === task.id;
 
   return (
     <motion.button
@@ -51,10 +59,17 @@ const PremiumTaskCard = ({ task, index, onClick }) => {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${statusStyles[task.status] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
-              {task.status}
-            </span>
+          <div
+            className="flex flex-wrap items-center gap-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="w-[138px]">
+              <SelectDropdown
+                options={statusOptions}
+                value={task.status}
+                onChange={(value) => onStatusChange?.(task, value)}
+              />
+            </div>
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
               {task.priority}
             </span>
@@ -86,6 +101,9 @@ const PremiumTaskCard = ({ task, index, onClick }) => {
             style={{ width: `${task.progress}%` }}
           />
         </div>
+        {isUpdating ? (
+          <p className="text-xs text-[var(--text-muted)]">Updating status...</p>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

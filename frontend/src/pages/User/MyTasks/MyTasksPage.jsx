@@ -10,6 +10,7 @@ import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { UserContext } from "../../../context/UserContextState";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
+import toast from "react-hot-toast";
 import MyTasksHeader from "./components/MyTasksHeader";
 import MyTasksSurface from "./components/MyTasksSurface";
 import MyTasksToolbar from "./components/MyTasksToolbar";
@@ -21,6 +22,8 @@ import {
   filterTasksByTab,
   getInitialTab,
   getTaskCounts,
+  normalizeTaskStatus,
+  sortTasks,
 } from "./myTasks.utils";
 
 const overviewCardConfig = [
@@ -55,6 +58,8 @@ const MyTasksPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState(getInitialTab(new URLSearchParams(location.search).get("view")));
   const [selectedTask, setSelectedTask] = useState(null);
+  const [sortBy, setSortBy] = useState("due-date");
+  const [updatingTaskId, setUpdatingTaskId] = useState("");
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -114,8 +119,9 @@ const MyTasksPage = () => {
   const taskCounts = useMemo(() => getTaskCounts(taskViewModel), [taskViewModel]);
   const visibleTasks = useMemo(() => {
     const tabFilteredTasks = filterTasksByTab(taskViewModel, activeTab);
-    return filterTasksBySearch(tabFilteredTasks, searchQuery);
-  }, [activeTab, searchQuery, taskViewModel]);
+    const searchedTasks = filterTasksBySearch(tabFilteredTasks, searchQuery);
+    return sortTasks(searchedTasks, sortBy);
+  }, [activeTab, searchQuery, sortBy, taskViewModel]);
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
@@ -123,7 +129,51 @@ const MyTasksPage = () => {
 
   const handleOpenFullTask = (task) => {
     if (!task?.id) return;
-    navigate(`/user/task-details/${task.id}`);
+    navigate(`/user/task-details/${task.id}`, {
+      state: {
+        from: "/user/my-tasks",
+      },
+    });
+  };
+
+  const handleStatusChange = async (task, nextStatus) => {
+    const normalizedStatus = normalizeTaskStatus(nextStatus);
+
+    if (!task?.id || task.status === normalizedStatus) {
+      return;
+    }
+
+    setUpdatingTaskId(task.id);
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        (currentTask._id || currentTask.id) === task.id
+          ? { ...currentTask, status: normalizedStatus }
+          : currentTask
+      )
+    );
+
+    try {
+      const response = await axiosInstance.put(
+        API_PATHS.TASKS.UPDATE_TASK_STATUS(task.id),
+        { status: normalizedStatus }
+      );
+      const updatedTask = response.data?.task;
+
+      if (updatedTask) {
+        setTasks((currentTasks) =>
+          currentTasks.map((currentTask) =>
+            (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
+          )
+        );
+      }
+
+      toast.success("Status updated.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to update status.");
+      loadTasks();
+    } finally {
+      setUpdatingTaskId("");
+    }
   };
 
   return (
@@ -173,6 +223,8 @@ const MyTasksPage = () => {
                 loading={loading}
                 onTabChange={setActiveTab}
                 onRefresh={loadTasks}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
               />
             </div>
 
@@ -181,6 +233,8 @@ const MyTasksPage = () => {
                 tasks={visibleTasks}
                 loading={loading}
                 onTaskClick={handleTaskClick}
+                onStatusChange={handleStatusChange}
+                updatingTaskId={updatingTaskId}
               />
             </div>
           </MyTasksSurface>

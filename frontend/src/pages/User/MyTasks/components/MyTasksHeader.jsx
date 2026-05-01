@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import {
   HiOutlineCommandLine,
   HiOutlineMagnifyingGlass,
-  HiOutlinePlus,
 } from "react-icons/hi2";
 import { getTimeGreeting } from "../myTasks.utils";
 
@@ -12,7 +11,7 @@ const getInitial = (name = "") => {
   return trimmedName ? trimmedName.charAt(0).toUpperCase() : "U";
 };
 
-const MyTasksHeader = ({ user, searchQuery, onSearchChange, onAddTask }) => {
+const MyTasksHeader = ({ user, searchQuery, onSearchChange }) => {
   const userInitial = useMemo(() => getInitial(user?.name), [user?.name]);
 
   return (
@@ -71,14 +70,6 @@ const MyTasksHeader = ({ user, searchQuery, onSearchChange, onAddTask }) => {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onAddTask}
-              className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-[var(--accent)] px-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-md active:scale-[0.98]"
-            >
-              <HiOutlinePlus className="text-lg" />
-              Add Task
-            </button>
           </div>
         </div>
       </div>

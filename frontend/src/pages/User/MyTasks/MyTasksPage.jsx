@@ -14,6 +14,7 @@ import MyTasksHeader from "./components/MyTasksHeader";
 import MyTasksSurface from "./components/MyTasksSurface";
 import MyTasksToolbar from "./components/MyTasksToolbar";
 import PremiumTaskGrid from "./components/PremiumTaskGrid";
+import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -53,6 +54,7 @@ const MyTasksPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState(getInitialTab(new URLSearchParams(location.search).get("view")));
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -116,6 +118,10 @@ const MyTasksPage = () => {
   }, [activeTab, searchQuery, taskViewModel]);
 
   const handleTaskClick = (task) => {
+    setSelectedTask(task);
+  };
+
+  const handleOpenFullTask = (task) => {
     if (!task?.id) return;
     navigate(`/user/task-details/${task.id}`);
   };
@@ -128,7 +134,6 @@ const MyTasksPage = () => {
             user={user}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            onAddTask={() => {}}
           />
         </MyTasksSurface>
 
@@ -181,6 +186,12 @@ const MyTasksPage = () => {
           </MyTasksSurface>
           </div>
       </div>
+      <TaskQuickViewPanel
+        task={selectedTask}
+        open={Boolean(selectedTask)}
+        onClose={() => setSelectedTask(null)}
+        onOpenTask={handleOpenFullTask}
+      />
     </DashboardLayout>
   );
 };

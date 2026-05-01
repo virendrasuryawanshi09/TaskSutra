@@ -101,6 +101,29 @@ export const filterTasksByTab = (tasks = [], activeTab = "all") => {
   return tasks;
 };
 
+export const filterTasksBySearch = (tasks = [], searchQuery = "") => {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return tasks;
+  }
+
+  return tasks.filter((task) => {
+    const searchableText = [
+      task.title,
+      task.description,
+      task.status,
+      task.priority,
+      ...(task.tags || []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(normalizedQuery);
+  });
+};
+
 export const getTaskCounts = (tasks = []) => ({
   all: tasks.length,
   "in-progress": tasks.filter((task) => task.isInProgress).length,

@@ -322,6 +322,7 @@ const ViewTaskDetails = () => {
       });
 
       toast.success("Task updated successfully.");
+      navigate("/user/dashboard");
     } catch (requestError) {
       toast.error(
         requestError?.response?.data?.message || "Unable to update task."

@@ -70,6 +70,8 @@ export const buildTaskViewModel = (task = {}) => {
     tags: Array.isArray(task.tags) ? task.tags.filter(Boolean) : [],
     attachmentCount: Array.isArray(task.attachments) ? task.attachments.length : 0,
     assignedUsers: Array.isArray(task.assignedTo) ? task.assignedTo : [],
+    completedChecklistCount: checklist.filter((item) => item?.completed).length,
+    checklistCount: checklist.length,
     isCompleted: status === "Completed",
     isInProgress: status === "In Progress",
     isOverdue: Boolean(dueDate && dueDate.getTime() < Date.now() && status !== "Completed"),
@@ -143,6 +145,27 @@ export const formatTaskDate = (value, options = {}) => {
     month: "short",
     ...options,
   }).format(date);
+};
+
+export const getDueTone = (task = {}) => {
+  if (task.isCompleted) return "completed";
+  if (task.isOverdue) return "overdue";
+
+  const dueDate = getValidDate(task.dueDateValue);
+  if (!dueDate) return "neutral";
+
+  const daysUntilDue = Math.ceil((dueDate.getTime() - Date.now()) / 86400000);
+  if (daysUntilDue <= 1) return "urgent";
+  if (daysUntilDue <= 3) return "soon";
+
+  return "neutral";
+};
+
+export const getTaskTags = (task = {}) => {
+  const fallbackTags = [task.priority, task.status].filter(Boolean);
+  const sourceTags = task.tags?.length ? task.tags : fallbackTags;
+
+  return sourceTags.slice(0, 3);
 };
 
 export const getTimeGreeting = () => {

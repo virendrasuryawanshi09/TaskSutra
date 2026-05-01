@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   HiArrowTrendingDown,
   HiArrowTrendingUp,
@@ -11,9 +11,9 @@ import { UserContext } from "../../../context/UserContextState";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import MyTasksHeader from "./components/MyTasksHeader";
-import MyTasksSectionHeader from "./components/MyTasksSectionHeader";
 import MyTasksSurface from "./components/MyTasksSurface";
 import MyTasksToolbar from "./components/MyTasksToolbar";
+import PremiumTaskGrid from "./components/PremiumTaskGrid";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -48,6 +48,7 @@ const overviewCardConfig = [
 const MyTasksPage = () => {
   const { user } = useContext(UserContext);
   const location = useLocation();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -114,6 +115,11 @@ const MyTasksPage = () => {
     return filterTasksBySearch(tabFilteredTasks, searchQuery);
   }, [activeTab, searchQuery, taskViewModel]);
 
+  const handleTaskClick = (task) => {
+    if (!task?.id) return;
+    navigate(`/user/task-details/${task.id}`);
+  };
+
   return (
     <DashboardLayout>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -165,18 +171,12 @@ const MyTasksPage = () => {
               />
             </div>
 
-            <MyTasksSectionHeader
-              eyebrow="Queue"
-              title="Task list preview"
-              description="Search and segmented filters are wired into the task data. The premium task card system lands in the next commit."
-            />
-
             <div className="px-5 py-5 sm:px-6">
-              <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg-soft)]/35 px-4 py-5">
-                <p className="text-sm leading-6 text-[var(--text-muted)]">
-                  {searchQuery ? `Showing results for "${searchQuery}" across this view.` : `${visibleTasks.length} tasks match the current view.`}
-                </p>
-              </div>
+              <PremiumTaskGrid
+                tasks={visibleTasks}
+                loading={loading}
+                onTaskClick={handleTaskClick}
+              />
             </div>
           </MyTasksSurface>
           </div>

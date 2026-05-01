@@ -20,6 +20,7 @@ export const TASK_TABS = [
 ];
 
 export const SORT_OPTIONS = [
+  { label: "Custom", value: "custom" },
   { label: "Due Date", value: "due-date" },
   { label: "Priority", value: "priority" },
   { label: "Progress", value: "progress" },
@@ -133,6 +134,10 @@ export const filterTasksBySearch = (tasks = [], searchQuery = "") => {
 };
 
 export const sortTasks = (tasks = [], sortBy = "due-date") => {
+  if (sortBy === "custom") {
+    return tasks;
+  }
+
   const priorityRank = {
     High: 0,
     Medium: 1,

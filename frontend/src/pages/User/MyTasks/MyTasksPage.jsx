@@ -58,15 +58,19 @@ const MyTasksPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState(getInitialTab(new URLSearchParams(location.search).get("view")));
   const [selectedTask, setSelectedTask] = useState(null);
-  const [sortBy, setSortBy] = useState("due-date");
+  const [sortBy, setSortBy] = useState("custom");
   const [updatingTaskId, setUpdatingTaskId] = useState("");
+  const [taskOrder, setTaskOrder] = useState([]);
+  const [draggedTaskId, setDraggedTaskId] = useState("");
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
 
     try {
       const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
-      setTasks(Array.isArray(response.data?.tasks) ? response.data.tasks : []);
+      const nextTasks = Array.isArray(response.data?.tasks) ? response.data.tasks : [];
+      setTasks(nextTasks);
+      setTaskOrder(nextTasks.map((task) => task._id || task.id).filter(Boolean));
     } catch (error) {
       console.error("Error fetching tasks:", error);
       setTasks([]);
@@ -89,7 +93,9 @@ const MyTasksPage = () => {
         const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
 
         if (isMounted) {
-          setTasks(Array.isArray(response.data?.tasks) ? response.data.tasks : []);
+          const nextTasks = Array.isArray(response.data?.tasks) ? response.data.tasks : [];
+          setTasks(nextTasks);
+          setTaskOrder(nextTasks.map((task) => task._id || task.id).filter(Boolean));
         }
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -112,8 +118,17 @@ const MyTasksPage = () => {
   }, []);
 
   const taskViewModel = useMemo(
-    () => tasks.map((task) => buildTaskViewModel(task)),
-    [tasks]
+    () => {
+      const rank = new Map(taskOrder.map((taskId, index) => [taskId, index]));
+      return tasks
+        .map((task) => buildTaskViewModel(task))
+        .sort((leftTask, rightTask) => {
+          const leftRank = rank.get(leftTask.id) ?? Number.MAX_SAFE_INTEGER;
+          const rightRank = rank.get(rightTask.id) ?? Number.MAX_SAFE_INTEGER;
+          return leftRank - rightRank;
+        });
+    },
+    [taskOrder, tasks]
   );
 
   const taskCounts = useMemo(() => getTaskCounts(taskViewModel), [taskViewModel]);
@@ -176,6 +191,38 @@ const MyTasksPage = () => {
     }
   };
 
+  const handleDragStart = (event, taskId) => {
+    setDraggedTaskId(taskId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnter = (event, targetTaskId) => {
+    event.preventDefault();
+
+    if (!draggedTaskId || draggedTaskId === targetTaskId) {
+      return;
+    }
+
+    setTaskOrder((currentOrder) => {
+      const nextOrder = [...currentOrder];
+      const draggedIndex = nextOrder.indexOf(draggedTaskId);
+      const targetIndex = nextOrder.indexOf(targetTaskId);
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        return currentOrder;
+      }
+
+      nextOrder.splice(draggedIndex, 1);
+      nextOrder.splice(targetIndex, 0, draggedTaskId);
+      return nextOrder;
+    });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTaskId("");
+    setSortBy("custom");
+  };
+
   return (
     <DashboardLayout>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -235,6 +282,10 @@ const MyTasksPage = () => {
                 onTaskClick={handleTaskClick}
                 onStatusChange={handleStatusChange}
                 updatingTaskId={updatingTaskId}
+                canReorder={sortBy === "custom"}
+                onDragStart={handleDragStart}
+                onDragEnter={handleDragEnter}
+                onDragEnd={handleDragEnd}
               />
             </div>
           </MyTasksSurface>

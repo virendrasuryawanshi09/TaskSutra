@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   HiOutlineCalendarDays,
   HiOutlineChevronRight,
+  HiOutlineGripVertical,
   HiOutlinePaperClip,
 } from "react-icons/hi2";
 import AvatarGroup from "../../../../components/AvatarGroup";
@@ -41,7 +42,17 @@ const progressTone = {
   Completed: "bg-[#4C7F6A]",
 };
 
-const PremiumTaskCard = ({ task, index, onClick, onStatusChange, updatingTaskId }) => {
+const PremiumTaskCard = ({
+  task,
+  index,
+  onClick,
+  onStatusChange,
+  updatingTaskId,
+  draggable,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+}) => {
   const dueTone = getDueTone(task);
   const tags = getTaskTags(task);
   const isUpdating = updatingTaskId === task.id;
@@ -50,6 +61,11 @@ const PremiumTaskCard = ({ task, index, onClick, onStatusChange, updatingTaskId 
     <motion.button
       type="button"
       onClick={() => onClick?.(task)}
+      draggable={draggable}
+      onDragStart={(event) => onDragStart?.(event, task.id)}
+      onDragEnter={(event) => onDragEnter?.(event, task.id)}
+      onDragOver={(event) => draggable && event.preventDefault()}
+      onDragEnd={onDragEnd}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.035, duration: 0.24, ease: "easeOut" }}
@@ -83,9 +99,19 @@ const PremiumTaskCard = ({ task, index, onClick, onStatusChange, updatingTaskId 
           </p>
         </div>
 
-        <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-all duration-200 group-hover:border-[var(--accent)] group-hover:text-[var(--accent)]">
-          <HiOutlineChevronRight className="text-lg" />
-        </span>
+        <div className="mt-1 flex shrink-0 items-center gap-2">
+          {draggable ? (
+            <span
+              className="flex h-9 w-9 cursor-grab items-center justify-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-all duration-200 active:cursor-grabbing group-hover:border-[var(--accent)] group-hover:text-[var(--accent)]"
+              title="Drag to reorder"
+            >
+              <HiOutlineGripVertical className="text-lg" />
+            </span>
+          ) : null}
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-all duration-200 group-hover:border-[var(--accent)] group-hover:text-[var(--accent)]">
+            <HiOutlineChevronRight className="text-lg" />
+          </span>
+        </div>
       </div>
 
       <div className="mt-4 space-y-2">

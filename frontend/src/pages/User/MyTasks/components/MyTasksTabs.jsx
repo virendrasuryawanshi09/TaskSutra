@@ -5,7 +5,7 @@ import { TASK_TABS } from "../myTasks.utils";
 const MyTasksTabs = ({ activeTab, counts, onChange }) => {
   return (
     <div className="w-full overflow-x-auto">
-      <div className="inline-flex min-w-full items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)] p-1">
+      <div className="flex min-w-max items-center gap-6 border-b border-[var(--border)]">
         {TASK_TABS.map((tab) => {
           const isActive = activeTab === tab.key;
 
@@ -14,7 +14,7 @@ const MyTasksTabs = ({ activeTab, counts, onChange }) => {
               key={tab.key}
               type="button"
               onClick={() => onChange(tab.key)}
-              className={`relative flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
+              className={`relative flex min-h-11 items-center gap-2 pb-3 text-sm font-medium transition-colors duration-200 ${
                 isActive
                   ? "text-[var(--text)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)]"
@@ -23,7 +23,7 @@ const MyTasksTabs = ({ activeTab, counts, onChange }) => {
               {isActive ? (
                 <motion.span
                   layoutId="myTasksActiveTab"
-                  className="absolute inset-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-sm"
+                  className="absolute bottom-0 left-0 h-[2px] w-full rounded-full bg-[var(--accent)]"
                   transition={{ duration: 0.2, ease: "easeOut" }}
                 />
               ) : null}
@@ -32,8 +32,8 @@ const MyTasksTabs = ({ activeTab, counts, onChange }) => {
               <span
                 className={`relative rounded-full px-2 py-0.5 text-[11px] ${
                   isActive
-                    ? "bg-[var(--bg-soft)] text-[var(--accent)]"
-                    : "bg-[var(--surface)] text-[var(--text-muted)]"
+                    ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                    : "bg-[var(--bg-soft)] text-[var(--text-muted)]"
                 }`}
               >
                 {counts[tab.key] || 0}

@@ -11,13 +11,16 @@ const MyTasksToolbar = ({
   onRefresh,
 }) => {
   return (
-    <div className="flex flex-col gap-4 px-5 py-5 sm:px-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            My Tasks
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            Workspace
           </p>
-          <p className="mt-2 text-sm text-[var(--text-muted)]">
+          <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
+            Task Queue
+          </h2>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
             {loading ? "Loading tasks..." : `${resultCount} tasks in this view`}
           </p>
         </div>
@@ -25,7 +28,7 @@ const MyTasksToolbar = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--text)] transition-all duration-200 hover:bg-[var(--bg-soft)]"
+            className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--text)] transition-all duration-200 hover:border-[var(--text-muted)] hover:bg-[var(--bg-soft)]"
           >
             <HiOutlineAdjustmentsHorizontal className="text-base text-[var(--text-muted)]" />
             Filter

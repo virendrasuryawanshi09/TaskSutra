@@ -1,11 +1,10 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import {
+  HiArrowTrendingDown,
   HiArrowTrendingUp,
-  HiOutlineCalendarDays,
   HiOutlineCheckCircle,
-  HiOutlineClipboardDocumentList,
+  HiOutlineClock,
 } from "react-icons/hi2";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { UserContext } from "../../../context/UserContextState";
@@ -26,23 +25,23 @@ import {
 const overviewCardConfig = [
   {
     key: "all",
-    label: "Assigned",
-    icon: HiOutlineClipboardDocumentList,
-  },
-  {
-    key: "in-progress",
-    label: "In Progress",
+    label: "Total",
     icon: HiArrowTrendingUp,
   },
   {
+    key: "in-progress",
+    label: "Active",
+    icon: HiOutlineClock,
+  },
+  {
     key: "completed",
-    label: "Completed",
+    label: "Done",
     icon: HiOutlineCheckCircle,
   },
   {
     key: "overdue",
-    label: "Overdue",
-    icon: HiOutlineCalendarDays,
+    label: "Late",
+    icon: HiArrowTrendingDown,
   },
 ];
 
@@ -118,76 +117,69 @@ const MyTasksPage = () => {
   return (
     <DashboardLayout>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <MyTasksSurface className="overflow-hidden">
+        <MyTasksSurface className="overflow-hidden shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
           <MyTasksHeader
             user={user}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onAddTask={() => {}}
           />
+        </MyTasksSurface>
 
-          <div className="grid grid-cols-2 gap-3 border-b border-[var(--border)] px-5 py-5 sm:grid-cols-4 sm:px-6">
-            {overviewCardConfig.map(({ key, label, icon: Icon }) => (
-              <motion.div
-                key={key}
-                whileHover={{ y: -2 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="rounded-2xl border border-[var(--border)] bg-[var(--bg-soft)]/45 px-4 py-4"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium uppercase text-[var(--text-muted)]">
-                    {label}
+        <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+              Focus Rail
+            </p>
+            <div className="mt-4 divide-y divide-[var(--border)]">
+              {overviewCardConfig.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
+                  className={`flex w-full items-center justify-between gap-3 py-4 text-left transition-colors duration-200 ${
+                    activeTab === key ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-soft)] text-[var(--accent)]">
+                      <Icon className="text-base" />
+                    </span>
+                    <span className="text-sm font-medium">{label}</span>
                   </span>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--accent)]">
-                    <Icon className="text-base" />
-                  </span>
-                </div>
+                  <span className="text-lg font-semibold">{taskCounts[key]}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
 
-                <p className="mt-4 text-2xl font-semibold text-[var(--text)]">
-                  {taskCounts[key]}
+          <MyTasksSurface className="overflow-hidden">
+            <div className="px-5 py-5 sm:px-6">
+              <MyTasksToolbar
+                activeTab={activeTab}
+                counts={taskCounts}
+                resultCount={visibleTasks.length}
+                loading={loading}
+                onTabChange={setActiveTab}
+                onRefresh={loadTasks}
+              />
+            </div>
+
+            <MyTasksSectionHeader
+              eyebrow="Queue"
+              title="Task list preview"
+              description="Search and segmented filters are wired into the task data. The premium task card system lands in the next commit."
+            />
+
+            <div className="px-5 py-5 sm:px-6">
+              <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg-soft)]/35 px-4 py-5">
+                <p className="text-sm leading-6 text-[var(--text-muted)]">
+                  {searchQuery ? `Showing results for "${searchQuery}" across this view.` : `${visibleTasks.length} tasks match the current view.`}
                 </p>
-              </motion.div>
-            ))}
-          </div>
-        </MyTasksSurface>
-
-        <MyTasksSurface className="overflow-hidden">
-          <MyTasksToolbar
-            activeTab={activeTab}
-            counts={taskCounts}
-            resultCount={visibleTasks.length}
-            loading={loading}
-            onTabChange={setActiveTab}
-            onRefresh={loadTasks}
-          />
-
-          <MyTasksSectionHeader
-            eyebrow="Queue"
-            title="Task list preview"
-            description="The task card system lands in the next commit. Search and segmented filters are already wired into the data model."
-          />
-
-          <div className="grid gap-4 px-5 py-5 sm:px-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-5">
-              <p className="text-xs uppercase text-[var(--text-muted)]">
-                Search
-              </p>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-                {searchQuery ? `Showing results for "${searchQuery}".` : "Search is ready."}
-              </p>
+              </div>
             </div>
-
-            <div className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-5">
-              <p className="text-xs uppercase text-[var(--text-muted)]">
-                Results
-              </p>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-                <span className="font-medium text-[var(--text)]">{visibleTasks.length}</span>{" "}
-                tasks match the current view.
-              </p>
-            </div>
+          </MyTasksSurface>
           </div>
-        </MyTasksSurface>
       </div>
     </DashboardLayout>
   );

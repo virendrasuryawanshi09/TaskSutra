@@ -14,6 +14,7 @@ const PRIORITY_LABELS = {
 
 export const TASK_TABS = [
   { key: "all", label: "All Tasks" },
+  { key: "upcoming", label: "Upcoming" },
   { key: "in-progress", label: "In Progress" },
   { key: "completed", label: "Completed" },
   { key: "overdue", label: "Overdue" },
@@ -89,12 +90,21 @@ export const getInitialTab = (viewParam) => {
   const normalizedValue = String(viewParam || "").trim().toLowerCase();
 
   if (normalizedValue === "completed") return "completed";
-  if (normalizedValue === "upcoming") return "in-progress";
+  if (normalizedValue === "upcoming") return "upcoming";
 
   return "all";
 };
 
 export const filterTasksByTab = (tasks = [], activeTab = "all") => {
+  if (activeTab === "upcoming") {
+    return tasks.filter(
+      (task) =>
+        task.dueDateValue &&
+        task.dueDateValue.getTime() >= Date.now() &&
+        !task.isCompleted
+    );
+  }
+
   if (activeTab === "completed") {
     return tasks.filter((task) => task.isCompleted);
   }
@@ -161,6 +171,12 @@ export const sortTasks = (tasks = [], sortBy = "due-date") => {
 
 export const getTaskCounts = (tasks = []) => ({
   all: tasks.length,
+  upcoming: tasks.filter(
+    (task) =>
+      task.dueDateValue &&
+      task.dueDateValue.getTime() >= Date.now() &&
+      !task.isCompleted
+  ).length,
   "in-progress": tasks.filter((task) => task.isInProgress).length,
   completed: tasks.filter((task) => task.isCompleted).length,
   overdue: tasks.filter((task) => task.isOverdue).length,

@@ -32,6 +32,25 @@ const SideMenu = () => {
     }
   };
 
+  const getIsActive = (item) => {
+    if (item.path === "logout") {
+      return false;
+    }
+
+    const currentPath = `${location.pathname}${location.search}`;
+
+    if (item.path.includes("?")) {
+      return currentPath === item.path;
+    }
+
+    return (
+      location.pathname === item.path &&
+      !location.search
+    ) || (
+      !location.search &&
+      location.pathname.startsWith(`${item.path}/`)
+    );
+  };
 
   return (
     <div className="flex h-full min-h-[calc(100vh-4rem)] w-full flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]">
@@ -103,7 +122,7 @@ const SideMenu = () => {
       {/* MENU */}
       <div className="flex flex-1 flex-col gap-1 pb-4">
         {sideMenuData.map((item, index) => {
-          const isActive = location.pathname.startsWith(item.path);
+          const isActive = getIsActive(item);
           const isLogout = item.path === "logout";
 
           return (

@@ -368,6 +368,9 @@ const UserDashboard = () => {
                             <span className={`font-medium ${dueWindow.tone}`}>
                               {dueWindow.label}
                             </span>
+                            <span className={`font-medium sm:hidden ${priorityStyle.text}`}>
+                              {task.priority || "No Priority"}
+                            </span>
                             <span>
                               {formatDueDate(task.dueDate)} at {formatDueTime(task.dueDate)}
                             </span>

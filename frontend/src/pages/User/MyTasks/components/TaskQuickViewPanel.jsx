@@ -4,6 +4,7 @@ import {
   HiOutlineArrowTopRightOnSquare,
   HiOutlineCalendarDays,
   HiOutlineCheck,
+  HiOutlineClipboardDocumentCheck,
   HiOutlineXMark,
 } from "react-icons/hi2";
 import AvatarGroup from "../../../../components/AvatarGroup";
@@ -31,20 +32,25 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
           />
 
           <motion.aside
-            initial={{ x: 420 }}
+            initial={{ x: -420 }}
             animate={{ x: 0 }}
-            exit={{ x: 420 }}
+            exit={{ x: -420 }}
             transition={{ duration: 0.26, ease: "easeOut" }}
-            className="fixed inset-y-0 right-0 z-[90] flex w-full max-w-[420px] flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
+            className="fixed inset-y-0 left-0 z-[90] flex w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[420px]"
           >
-            <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-              <div>
+            <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-soft)]/35 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)]">
+                  <HiOutlineClipboardDocumentCheck className="text-xl" />
+                </span>
+                <div>
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
                   Task Preview
                 </p>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
                   Assigned work details
                 </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -74,7 +80,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
               </p>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-soft)]/45 px-4 py-3">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/45 px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
                     Due Date
                   </p>
@@ -84,7 +90,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-soft)]/45 px-4 py-3">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/45 px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
                     Progress
                   </p>
@@ -94,7 +100,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 rounded-xl border border-[var(--border)] px-4 py-4">
                 <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                   <span>
                     {task.completedChecklistCount} of {task.checklistCount || 0} completed
@@ -113,7 +119,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
                   Checklist
                 </p>
-                <div className="mt-3 divide-y divide-[var(--border)] rounded-2xl border border-[var(--border)]">
+                <div className="mt-3 divide-y divide-[var(--border)] rounded-xl border border-[var(--border)]">
                   {(task.checklist || []).slice(0, 5).map((item, index) => (
                     <div key={`${item.text}-${index}`} className="flex items-start gap-3 px-4 py-3">
                       <span className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${

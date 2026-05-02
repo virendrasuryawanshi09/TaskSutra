@@ -1,20 +1,11 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  HiArrowTrendingDown,
-  HiArrowTrendingUp,
-  HiOutlineCheckCircle,
-  HiOutlineClock,
-} from "react-icons/hi2";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { UserContext } from "../../../context/UserContextState";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import toast from "react-hot-toast";
-import MyTasksHeader from "./components/MyTasksHeader";
-import MyTasksSurface from "./components/MyTasksSurface";
-import MyTasksToolbar from "./components/MyTasksToolbar";
-import PremiumTaskGrid from "./components/PremiumTaskGrid";
+import MyTasksWorkspace from "./components/MyTasksWorkspace";
 import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
 import {
   buildTaskViewModel,
@@ -25,29 +16,6 @@ import {
   normalizeTaskStatus,
   sortTasks,
 } from "./myTasks.utils";
-
-const overviewCardConfig = [
-  {
-    key: "all",
-    label: "Total",
-    icon: HiArrowTrendingUp,
-  },
-  {
-    key: "in-progress",
-    label: "Active",
-    icon: HiOutlineClock,
-  },
-  {
-    key: "completed",
-    label: "Done",
-    icon: HiOutlineCheckCircle,
-  },
-  {
-    key: "overdue",
-    label: "Late",
-    icon: HiArrowTrendingDown,
-  },
-];
 
 const MyTasksPage = () => {
   const { user } = useContext(UserContext);
@@ -225,72 +193,27 @@ const MyTasksPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <MyTasksSurface className="overflow-hidden shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-          <MyTasksHeader
-            user={user}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-        </MyTasksSurface>
-
-        <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
-          <aside className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              Focus Rail
-            </p>
-            <div className="mt-4 divide-y divide-[var(--border)]">
-              {overviewCardConfig.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveTab(key)}
-                  className={`flex w-full items-center justify-between gap-3 py-4 text-left transition-colors duration-200 ${
-                    activeTab === key ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-soft)] text-[var(--accent)]">
-                      <Icon className="text-base" />
-                    </span>
-                    <span className="text-sm font-medium">{label}</span>
-                  </span>
-                  <span className="text-lg font-semibold">{taskCounts[key]}</span>
-                </button>
-              ))}
-            </div>
-          </aside>
-
-          <MyTasksSurface className="overflow-hidden">
-            <div className="px-5 py-5 sm:px-6">
-              <MyTasksToolbar
-                activeTab={activeTab}
-                counts={taskCounts}
-                resultCount={visibleTasks.length}
-                loading={loading}
-                onTabChange={setActiveTab}
-                onRefresh={loadTasks}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-              />
-            </div>
-
-            <div className="px-5 py-5 sm:px-6">
-              <PremiumTaskGrid
-                tasks={visibleTasks}
-                loading={loading}
-                onTaskClick={handleTaskClick}
-                onStatusChange={handleStatusChange}
-                updatingTaskId={updatingTaskId}
-                canReorder={sortBy === "custom"}
-                onDragStart={handleDragStart}
-                onDragEnter={handleDragEnter}
-                onDragEnd={handleDragEnd}
-              />
-            </div>
-          </MyTasksSurface>
-          </div>
-      </div>
+      <MyTasksWorkspace
+        user={user}
+        tasks={visibleTasks}
+        loading={loading}
+        counts={taskCounts}
+        activeTab={activeTab}
+        searchQuery={searchQuery}
+        sortBy={sortBy}
+        updatingTaskId={updatingTaskId}
+        selectedTaskId={selectedTask?.id || ""}
+        canReorder={sortBy === "custom"}
+        onSearchChange={setSearchQuery}
+        onTabChange={setActiveTab}
+        onSortChange={setSortBy}
+        onRefresh={loadTasks}
+        onTaskClick={handleTaskClick}
+        onStatusChange={handleStatusChange}
+        onDragStart={handleDragStart}
+        onDragEnter={handleDragEnter}
+        onDragEnd={handleDragEnd}
+      />
       <TaskQuickViewPanel
         task={selectedTask}
         open={Boolean(selectedTask)}

@@ -341,11 +341,13 @@ const UserDashboard = () => {
                   const priorityStyle = getUpcomingPriorityStyle(task.priority);
                   const dueWindow = getDueWindow(task.dueDate, now);
 
+                  const taskTitle = task.title || "Untitled task";
+
                   return (
-                    <li key={task._id || task.id || task.title}>
+                    <li key={task._id || task.id || taskTitle}>
                       <button
                         type="button"
-                        aria-label={`View details for ${task.title || "upcoming task"}`}
+                        aria-label={`View details for ${taskTitle}`}
                         onClick={() => handleUpcomingTaskClick(task._id || task.id)}
                         className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 text-left transition-all duration-300 hover:bg-[var(--bg-soft)]/65 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                       >
@@ -359,7 +361,7 @@ const UserDashboard = () => {
                           <span className="flex min-w-0 items-center gap-2">
                             <span className={`h-2 w-2 shrink-0 rounded-full ${priorityStyle.dot}`} />
                             <span className="truncate text-sm font-semibold text-[var(--text)] transition-colors duration-300 group-hover:text-[var(--accent)]">
-                              {task.title}
+                              {taskTitle}
                             </span>
                           </span>
                           <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">

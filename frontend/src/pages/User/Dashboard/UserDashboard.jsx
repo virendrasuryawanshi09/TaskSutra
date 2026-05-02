@@ -345,6 +345,7 @@ const UserDashboard = () => {
                     <li key={task._id || task.id || task.title}>
                       <button
                         type="button"
+                        aria-label={`View details for ${task.title || "upcoming task"}`}
                         onClick={() => handleUpcomingTaskClick(task._id || task.id)}
                         className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 text-left transition-all duration-300 hover:bg-[var(--bg-soft)]/65 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                       >

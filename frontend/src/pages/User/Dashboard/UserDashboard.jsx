@@ -375,7 +375,10 @@ const UserDashboard = () => {
                               {formatDueDate(task.dueDate)} at {formatDueTime(task.dueDate)}
                             </span>
                           </span>
-                          <span className="mt-3 block h-1.5 overflow-hidden rounded-full bg-[var(--bg-soft)]">
+                          <span
+                            className="mt-3 block h-1.5 overflow-hidden rounded-full bg-[var(--bg-soft)]"
+                            aria-hidden="true"
+                          >
                             <span
                               className="block h-full rounded-full bg-[var(--accent)] transition-all duration-500"
                               style={{ width: `${dueWindow.progress}%` }}

@@ -316,6 +316,9 @@ const UserDashboard = () => {
                   <h2 className="mt-2 text-lg font-semibold text-[var(--text)]">
                     Upcoming Deadlines
                   </h2>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                    Sorted by the closest due date in your active workload.
+                  </p>
                 </div>
                 <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-muted)] shadow-sm">
                   Next {upcomingTasks.length}

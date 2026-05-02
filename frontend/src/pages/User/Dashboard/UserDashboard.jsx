@@ -9,10 +9,14 @@ import TodayTasks from "./Components/TodayTasks";
 import TaskTable from "./Components/TaskTable";
 import InfoCard from "../../../components/Cards/InfoCard";
 import {
+  HiOutlineArrowRight,
+  HiOutlineCalendar,
   HiOutlineCheckCircle,
   HiOutlineClock,
   HiOutlineClipboardList,
+  HiOutlineFlag,
   HiOutlineRefresh,
+  HiOutlineSparkles,
 } from "react-icons/hi";
 
 const getValidDate = (value) => {
@@ -48,6 +52,41 @@ const normalizeStatus = (status) => {
   return "Pending";
 };
 
+const UPCOMING_PRIORITY_STYLES = {
+  High: {
+    dot: "bg-[#B2554A]",
+    text: "text-[#B2554A]",
+    bg: "bg-[rgba(178,85,74,0.10)]",
+    border: "border-[rgba(178,85,74,0.22)]",
+    ring: "shadow-[0_0_0_4px_rgba(178,85,74,0.08)]",
+  },
+  Medium: {
+    dot: "bg-[#C28B2C]",
+    text: "text-[#9B6E1E]",
+    bg: "bg-[rgba(194,139,44,0.12)]",
+    border: "border-[rgba(194,139,44,0.24)]",
+    ring: "shadow-[0_0_0_4px_rgba(194,139,44,0.08)]",
+  },
+  Low: {
+    dot: "bg-[#4C7F6A]",
+    text: "text-[#4C7F6A]",
+    bg: "bg-[rgba(76,127,106,0.11)]",
+    border: "border-[rgba(76,127,106,0.22)]",
+    ring: "shadow-[0_0_0_4px_rgba(76,127,106,0.08)]",
+  },
+};
+
+const DEFAULT_UPCOMING_PRIORITY_STYLE = {
+  dot: "bg-[var(--text-muted)]",
+  text: "text-[var(--text-muted)]",
+  bg: "bg-[var(--bg-soft)]",
+  border: "border-[var(--border)]",
+  ring: "shadow-[0_0_0_4px_rgba(111,110,105,0.08)]",
+};
+
+const getUpcomingPriorityStyle = (priority) =>
+  UPCOMING_PRIORITY_STYLES[priority] || DEFAULT_UPCOMING_PRIORITY_STYLE;
+
 const formatDueDate = (value) => {
   const date = getValidDate(value);
 
@@ -72,6 +111,51 @@ const formatDueTime = (value) => {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+};
+
+const getDueWindow = (value, referenceDate) => {
+  const date = getValidDate(value);
+
+  if (!date) {
+    return {
+      label: "No date",
+      progress: 12,
+      tone: "text-[var(--text-muted)]",
+    };
+  }
+
+  const diffMs = date.getTime() - referenceDate.getTime();
+  const diffHours = Math.max(0, diffMs / (1000 * 60 * 60));
+
+  if (diffHours <= 24) {
+    return {
+      label: "Due today",
+      progress: 88,
+      tone: "text-[#B2554A]",
+    };
+  }
+
+  if (diffHours <= 48) {
+    return {
+      label: "Due tomorrow",
+      progress: 68,
+      tone: "text-[#C28B2C]",
+    };
+  }
+
+  if (diffHours <= 168) {
+    return {
+      label: "This week",
+      progress: 48,
+      tone: "text-[var(--accent)]",
+    };
+  }
+
+  return {
+    label: "Planned",
+    progress: 28,
+    tone: "text-[#4C7F6A]",
+  };
 };
 
 const UserDashboard = () => {
@@ -221,43 +305,100 @@ const UserDashboard = () => {
             <TodayTasks tasks={tasks} />
           </section>
 
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Upcoming Deadlines</h2>
-              <span className="text-xs text-[var(--text-muted)]">
-                Next {upcomingTasks.length}
-              </span>
+          <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+            <div className="border-b border-[var(--border)] bg-[linear-gradient(135deg,rgba(31,111,120,0.12),rgba(76,127,106,0.06)_52%,transparent)] px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+                    <HiOutlineSparkles className="text-sm" aria-hidden="true" />
+                    Focus queue
+                  </p>
+                  <h2 className="mt-2 text-lg font-semibold text-[var(--text)]">
+                    Upcoming Deadlines
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                    Sorted by the closest due date in your active workload.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-muted)] shadow-sm">
+                  Next {upcomingTasks.length}
+                </span>
+              </div>
             </div>
 
             {upcomingTasks.length === 0 ? (
-              <p className="mt-4 text-sm text-[var(--text-muted)]">
-                No upcoming deadlines yet.
-              </p>
+              <div className="flex min-h-[245px] flex-col items-center justify-center px-6 py-10 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-soft)] text-xl text-[var(--accent)]">
+                  <HiOutlineCalendar aria-hidden="true" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-[var(--text)]">
+                  No upcoming deadlines
+                </h3>
+                <p className="mt-2 max-w-[260px] text-sm leading-6 text-[var(--text-muted)]">
+                  Tasks with future due dates will land here when your schedule fills up.
+                </p>
+              </div>
             ) : (
-              <ul className="mt-4 space-y-2">
-                {upcomingTasks.map((task) => (
-                  <li
-                    key={task._id || task.id || task.title}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleUpcomingTaskClick(task._id || task.id)}
-                      className="group flex w-full items-start justify-between gap-4 rounded-2xl border border-transparent px-3 py-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--border)] hover:bg-[var(--bg-soft)] hover:shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-[var(--text)] transition-colors duration-300 group-hover:text-[var(--accent)]">
-                          {task.title}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          Due {formatDueDate(task.dueDate)} at {formatDueTime(task.dueDate)}
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition-colors duration-300 group-hover:text-[var(--text)]">
-                        {task.priority || "No Priority"}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+              <ul className="divide-y divide-[var(--border)] px-3 py-3">
+                {upcomingTasks.map((task) => {
+                  const priorityStyle = getUpcomingPriorityStyle(task.priority);
+                  const dueWindow = getDueWindow(task.dueDate, now);
+
+                  const taskTitle = task.title || "Untitled task";
+
+                  return (
+                    <li key={task._id || task.id || taskTitle}>
+                      <button
+                        type="button"
+                        aria-label={`View details for ${taskTitle}`}
+                        onClick={() => handleUpcomingTaskClick(task._id || task.id)}
+                        className="group grid min-h-[88px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 text-left transition-all duration-300 hover:bg-[var(--bg-soft)]/65 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                      >
+                        <span
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.ring}`}
+                        >
+                          <HiOutlineFlag className="text-base" aria-hidden="true" />
+                        </span>
+
+                        <span className="min-w-0">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className={`h-2 w-2 shrink-0 rounded-full ${priorityStyle.dot}`} />
+                            <span className="truncate text-sm font-semibold text-[var(--text)] transition-colors duration-300 group-hover:text-[var(--accent)]">
+                              {taskTitle}
+                            </span>
+                          </span>
+                          <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
+                            <span className={`font-medium ${dueWindow.tone}`}>
+                              {dueWindow.label}
+                            </span>
+                            <span className={`font-medium sm:hidden ${priorityStyle.text}`}>
+                              {task.priority || "No Priority"}
+                            </span>
+                            <span>
+                              {formatDueDate(task.dueDate)} at {formatDueTime(task.dueDate)}
+                            </span>
+                          </span>
+                          <span
+                            className="mt-3 block h-1.5 overflow-hidden rounded-full bg-[var(--bg-soft)]"
+                            aria-hidden="true"
+                          >
+                            <span
+                              className="block h-full rounded-full bg-[var(--accent)] transition-all duration-500"
+                              style={{ width: `${dueWindow.progress}%` }}
+                            />
+                          </span>
+                        </span>
+
+                        <span className="flex items-center gap-2">
+                          <span className={`hidden rounded-full border px-2.5 py-1 text-xs font-medium sm:inline-flex ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text}`}>
+                            {task.priority || "No Priority"}
+                          </span>
+                          <HiOutlineArrowRight className="text-lg text-[var(--text-muted)] transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-[var(--accent)]" aria-hidden="true" />
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>

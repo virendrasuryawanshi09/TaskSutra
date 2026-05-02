@@ -352,7 +352,7 @@ const UserDashboard = () => {
                         type="button"
                         aria-label={`View details for ${taskTitle}`}
                         onClick={() => handleUpcomingTaskClick(task._id || task.id)}
-                        className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 text-left transition-all duration-300 hover:bg-[var(--bg-soft)]/65 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                        className="group grid min-h-[88px] w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 text-left transition-all duration-300 hover:bg-[var(--bg-soft)]/65 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                       >
                         <span
                           className={`flex h-9 w-9 items-center justify-center rounded-full border ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.ring}`}

@@ -310,7 +310,7 @@ const UserDashboard = () => {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-                    <HiOutlineSparkles className="text-sm" />
+                    <HiOutlineSparkles className="text-sm" aria-hidden="true" />
                     Focus queue
                   </p>
                   <h2 className="mt-2 text-lg font-semibold text-[var(--text)]">
@@ -326,7 +326,7 @@ const UserDashboard = () => {
             {upcomingTasks.length === 0 ? (
               <div className="flex min-h-[245px] flex-col items-center justify-center px-6 py-10 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-soft)] text-xl text-[var(--accent)]">
-                  <HiOutlineCalendar />
+                  <HiOutlineCalendar aria-hidden="true" />
                 </div>
                 <h3 className="mt-4 text-sm font-semibold text-[var(--text)]">
                   No upcoming deadlines
@@ -354,7 +354,7 @@ const UserDashboard = () => {
                         <span
                           className={`flex h-9 w-9 items-center justify-center rounded-full border ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.ring}`}
                         >
-                          <HiOutlineFlag className="text-base" />
+                          <HiOutlineFlag className="text-base" aria-hidden="true" />
                         </span>
 
                         <span className="min-w-0">
@@ -387,7 +387,7 @@ const UserDashboard = () => {
                           <span className={`hidden rounded-full border px-2.5 py-1 text-xs font-medium sm:inline-flex ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text}`}>
                             {task.priority || "No Priority"}
                           </span>
-                          <HiOutlineArrowRight className="text-lg text-[var(--text-muted)] transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-[var(--accent)]" />
+                          <HiOutlineArrowRight className="text-lg text-[var(--text-muted)] transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-[var(--accent)]" aria-hidden="true" />
                         </span>
                       </button>
                     </li>

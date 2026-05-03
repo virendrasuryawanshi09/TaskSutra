@@ -4,7 +4,6 @@ import {
     LuClipboardCheck,
     LuSquarePlus,
     LuLogOut,
-    LuCalendarClock,
     LuCircleCheckBig
 } from "react-icons/lu";
 
@@ -60,11 +59,11 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "03",
-        label:"Upcoming",
-        icon: LuCalendarClock,
-        path: "/user/my-tasks?view=upcoming",
+        label:"Team Members",
+        icon: LuUsers,
+        path: "/user/team-members",
         section: "views",
-        description: "Jump straight into the tasks that are approaching their deadlines.",
+        description: "See everyone on your team and their task progress.",
     },
     {
         id: "04",

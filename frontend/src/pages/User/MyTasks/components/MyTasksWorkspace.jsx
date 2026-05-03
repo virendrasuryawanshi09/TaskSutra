@@ -525,9 +525,11 @@ const TaskRow = ({
   const isUpdating = updatingTaskId === task.id;
 
   return (
-    <motion.button
-      type="button"
+    <motion.div
+      role="row"
+      tabIndex={0}
       onClick={() => onClick?.(task)}
+      onKeyDown={(e) => e.key === "Enter" && onClick?.(task)}
       draggable={draggable}
       onDragStart={(event) => onDragStart?.(event, task.id)}
       onDragEnter={(event) => onDragEnter?.(event, task.id)}
@@ -536,7 +538,7 @@ const TaskRow = ({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.02, duration: 0.2, ease: "easeOut" }}
-      className={`group grid w-full grid-cols-1 gap-3 border-b border-[var(--border)] px-4 py-3.5 text-left transition-all duration-200 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_150px_110px_120px_34px] ${
+      className={`group grid w-full cursor-pointer grid-cols-1 gap-3 border-b border-[var(--border)] px-4 py-3.5 text-left transition-all duration-200 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_150px_110px_120px_34px] ${
         selected
           ? "bg-[rgba(31,111,120,0.08)] shadow-[inset_3px_0_0_var(--accent)]"
           : "bg-[var(--surface)] hover:bg-[var(--bg-soft)]/55"
@@ -599,7 +601,7 @@ const TaskRow = ({
           </span>
         ) : null}
       </div>
-    </motion.button>
+    </motion.div>
   );
 };
 

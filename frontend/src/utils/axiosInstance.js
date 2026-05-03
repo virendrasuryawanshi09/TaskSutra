@@ -37,9 +37,8 @@ axiosInstance.interceptors.response.use(
             } else if(error.response.status === 500) {
                 console.error("Server error Please try again");
             }
-
-            return Promise.reject(error);
         }
+        return Promise.reject(error);
     }
 );
 

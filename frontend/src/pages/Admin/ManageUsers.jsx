@@ -220,9 +220,7 @@ const ManageUsers = () => {
                       Total: {stats.total}
                     </span>
 
-                    <button className="text-[var(--accent)] hover:underline font-medium">
-                      Edit Profile
-                    </button>
+                    <span className="text-green-500">✓ {stats.completed}</span>
 
                     <span className="text-cyan-500">↻ {stats.inProgress}</span>
 

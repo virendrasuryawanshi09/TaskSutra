@@ -96,6 +96,8 @@ const updateUserProfile = async (req, res) => {
         }
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
+        user.profileImageUrl = req.body.profileImageUrl || user.profileImageUrl;
+        user.skills = req.body.skills || user.skills;
 
         if(req.body.password){
             const salt = await bcrypt.genSalt(10);
@@ -109,6 +111,8 @@ const updateUserProfile = async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             role: updatedUser.role,
+            profileImageUrl: updatedUser.profileImageUrl,
+            skills: updatedUser.skills,
             token: generateToken(updatedUser._id),
         });
     }catch(error){

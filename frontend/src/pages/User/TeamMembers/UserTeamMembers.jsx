@@ -1,145 +1,209 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
-import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
-import {
-  HiOutlineCheckCircle,
-  HiOutlineClock,
-  HiOutlineRefresh,
-  HiOutlineUser,
-} from "react-icons/hi";
-
-const getInitial = (name) => {
-  const trimmed = String(name || "").trim();
-  return trimmed ? trimmed.charAt(0).toUpperCase() : "U";
-};
+import axiosInstance from "../../../utils/axiosInstance";
 
 const UserTeamMembers = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const getMembers = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(API_PATHS.USERS.GET_ALL_USERS);
+      setMembers(response.data || []);
+      setError("");
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError("Unable to load team members.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosInstance.get(API_PATHS.USERS.GET_ALL_USERS);
-        setMembers(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        setError("Unable to load team members.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMembers();
+    getMembers();
   }, []);
+
+  const getInitials = (name = "") => {
+    const parts = name.trim().split(" ").filter(Boolean);
+
+    if (parts.length === 0) return "U";
+    if (parts.length === 1) return parts[0][0]?.toUpperCase();
+
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+  };
+
+  const getNumericCount = (value) => {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : 0;
+  };
+
+  const extractTasks = (user) => {
+    return user.tasks || user.assignedTasks || user.taskList || [];
+  };
+
+  const getTaskStatsFromTasks = (tasks = []) => {
+    return tasks.reduce(
+      (stats, task) => {
+        const normalizedStatus = (task?.status || "").trim().toLowerCase();
+
+        stats.total += 1;
+
+        if (normalizedStatus === "completed") {
+          stats.completed += 1;
+        } else if (
+          normalizedStatus === "in progress" ||
+          normalizedStatus === "in-progress" ||
+          normalizedStatus === "inprogress"
+        ) {
+          stats.inProgress += 1;
+        } else {
+          stats.pending += 1;
+        }
+
+        return stats;
+      },
+      {
+        total: 0,
+        completed: 0,
+        inProgress: 0,
+        pending: 0,
+      }
+    );
+  };
+
+  const getTaskStats = (user) => {
+    const hasCountFields =
+      user?.totalTasks !== undefined ||
+      user?.pendingTasks !== undefined ||
+      user?.inProgressTasks !== undefined ||
+      user?.completedTasks !== undefined;
+
+    if (hasCountFields) {
+      const pending = getNumericCount(user.pendingTasks);
+      const inProgress = getNumericCount(user.inProgressTasks);
+      const completed = getNumericCount(user.completedTasks);
+      const totalFromApi = getNumericCount(user.totalTasks);
+
+      return {
+        total: totalFromApi || pending + inProgress + completed,
+        completed,
+        inProgress,
+        pending,
+      };
+    }
+
+    return getTaskStatsFromTasks(extractTasks(user));
+  };
 
   return (
     <DashboardLayout>
-      <div className="mx-auto w-full max-w-5xl space-y-6">
-
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text)]">
-            Team Members
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Everyone on your team and a quick look at their workload.
-          </p>
-        </section>
-
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[76px] animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
-              />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-muted)]">
-            {error}
-          </div>
-        ) : members.length === 0 ? (
-          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-6 text-center">
-            <HiOutlineUser className="text-4xl text-[var(--text-muted)]" />
-            <p className="mt-3 text-sm font-medium text-[var(--text)]">No team members yet</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              Team members will appear here once they join.
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div>
+            <h1 className="text-[20px] font-semibold text-[var(--text)]">
+              Team Members
+            </h1>
+            <p className="text-[13px] text-[var(--text-muted)] mt-1">
+              Overview of team activity
             </p>
           </div>
-        ) : (
-          <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_repeat(3,auto)] items-center gap-4 border-b border-[var(--border)] bg-[var(--bg-soft)] px-5 py-2.5">
-              <span />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Member
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Pending
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Active
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Done
-              </span>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[76px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+              />
+            ))
+          ) : error ? (
+            <div className="p-6 text-center text-sm text-red-500 bg-red-50/10 rounded-lg border border-red-500/20">
+              {error}
             </div>
+          ) : members.length === 0 ? (
+            <div className="p-6 text-center text-sm text-[var(--text-muted)]">
+              No team members found
+            </div>
+          ) : (
+            members.map((member, index) => {
+              const stats = getTaskStats(member);
 
-            {members.map((member, index) => (
-              <motion.div
-                key={member._id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.04, duration: 0.2 }}
-                className="grid grid-cols-[auto_minmax(0,1fr)_repeat(3,auto)] items-center gap-4 border-b border-[var(--border)] px-5 py-3.5 last:border-b-0 hover:bg-[var(--bg-soft)] transition-colors duration-200"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--bg-soft)] text-sm font-semibold text-[var(--accent)]">
-                  {member.profileImageUrl ? (
-                    <img
-                      src={member.profileImageUrl}
-                      alt={member.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    getInitial(member.name)
-                  )}
-                </div>
+              return (
+                <motion.div
+                  key={member._id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="
+                    flex flex-col sm:flex-row sm:items-center sm:justify-between
+                    gap-4
+                    px-4 py-4 rounded-lg
+                    bg-[var(--surface)]
+                    border border-[var(--border)]
+                    shadow-sm
+                    hover:-translate-y-0.5
+                    hover:border-[var(--accent)]
+                    hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]
+                    transition-all duration-200
+                    cursor-pointer
+                  "
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className="
+                        w-9 h-9 rounded-full
+                        bg-[var(--bg-soft)]
+                        flex items-center justify-center
+                        text-[12px] font-medium text-[var(--text)]
+                        overflow-hidden shrink-0
+                      "
+                    >
+                      {member.profileImageUrl ? (
+                        <img
+                          src={member.profileImageUrl}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        getInitials(member.name || "U")
+                      )}
+                    </div>
 
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--text)]">
-                    {member.name}
-                  </p>
-                  <p className="truncate text-xs text-[var(--text-muted)]">
-                    {member.email}
-                  </p>
-                </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[13px] font-medium text-[var(--text)] truncate">
+                        {member.name || "Unnamed"}
+                      </span>
 
-                <div className="flex items-center gap-1.5">
-                  <HiOutlineClock className="text-sm text-[#C28B2C]" />
-                  <span className="text-sm font-medium text-[var(--text)]">
-                    {member.pendingTasks ?? 0}
-                  </span>
-                </div>
+                      <span className="text-[12px] text-[var(--text-muted)] truncate">
+                        {member.email}
+                      </span>
+                    </div>
+                  </div>
 
-                <div className="flex items-center gap-1.5">
-                  <HiOutlineRefresh className="text-sm text-[var(--accent)]" />
-                  <span className="text-sm font-medium text-[var(--text)]">
-                    {member.inProgressTasks ?? 0}
-                  </span>
-                </div>
+                  <div className="flex flex-wrap items-center gap-4 text-[12px]">
+                    <span className="text-[var(--text-muted)]">
+                      Total: {stats.total}
+                    </span>
 
-                <div className="flex items-center gap-1.5">
-                  <HiOutlineCheckCircle className="text-sm text-[#4C7F6A]" />
-                  <span className="text-sm font-medium text-[var(--text)]">
-                    {member.completedTasks ?? 0}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </section>
-        )}
+                    <span className="text-green-500">✓ {stats.completed}</span>
+
+                    <span className="text-cyan-500">↻ {stats.inProgress}</span>
+
+                    <span className="text-yellow-500">• {stats.pending}</span>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -17,6 +17,7 @@ import MyTasks from "./pages/User/MyTasks";
 import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
 import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
+import EditProfile from "./pages/User/Profile/EditProfile";
 
 const App = () => {
 

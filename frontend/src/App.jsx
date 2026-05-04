@@ -16,6 +16,7 @@ import ManageUsers from "./pages/Admin/ManageUsers";
 import MyTasks from "./pages/User/MyTasks";
 import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
+import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
 
 const App = () => {
 
@@ -108,6 +109,7 @@ const App = () => {
             <Route path="/user/dashboard" element={<UserDashboard />} />
             <Route path="/user/my-tasks" element={<MyTasks />} />
             <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
+            <Route path="/user/team-members" element={<UserTeamMembers />} />
           </Route>
         </Routes>
       </Router>

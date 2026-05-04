@@ -59,16 +59,16 @@ const Ring = ({ pct = 0, color, size = 52, stroke = 4 }) => {
 };
 
 // ── Single stat card ──────────────────────────────────────────────────────────
-const StatCard = ({ label, value = 0, total = 0, icon: Icon, color, accentBg, delay = 0 }) => {
-  const animatedValue = useCountUp(value, 900);
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+const StatCard = ({ label, value, total = 0, icon: Icon, color, accentBg, delay = 0, isAction = false }) => {
+  const animatedValue = useCountUp(typeof value === 'number' ? value : 0, 900);
+  const pct = !isAction && total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.35, ease: "easeOut" }}
-      className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.10)]"
+      className="group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.10)] cursor-pointer"
     >
       {/* subtle gradient wash on hover */}
       <div
@@ -86,18 +86,18 @@ const StatCard = ({ label, value = 0, total = 0, icon: Icon, color, accentBg, de
         </div>
 
         {/* Ring */}
-        <Ring pct={pct} color={color} />
+        {!isAction && <Ring pct={pct} color={color} />}
       </div>
 
       <div className="relative mt-3">
         <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
           {label}
         </p>
-        <p className="mt-1 text-2xl font-bold tracking-tight text-[var(--text)]">
-          {animatedValue}
+        <p className="mt-1 text-xl font-bold tracking-tight text-[var(--text)]">
+          {isAction ? value : animatedValue}
         </p>
         <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-          {total > 0 ? `${pct}% of total` : "No tasks yet"}
+          {isAction ? "Manage your account" : total > 0 ? `${pct}% of total` : "No tasks yet"}
         </p>
       </div>
 
@@ -141,12 +141,12 @@ const StatCards = ({ total = 0, inProgress = 0, completed = 0, overdue = 0 }) =>
       delay: 0.07,
     },
     {
-      label: "Completed",
-      value: completed,
-      total,
+      label: "Settings",
+      value: "Edit Profile",
+      isAction: true,
       icon: (props) => (
-        <svg {...props} viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" className="h-5 w-5">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       ),
       color: "#4C7F6A",

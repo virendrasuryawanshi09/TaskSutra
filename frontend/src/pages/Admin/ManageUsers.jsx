@@ -135,7 +135,7 @@ const ManageUsers = () => {
             onClick={handleExportUsersReport}
             disabled={isExporting}
             className="
-              w-full sm:w-auto
+              w-fit
               flex items-center justify-center gap-2
               px-4 py-2.5 text-sm font-medium
               rounded-xl

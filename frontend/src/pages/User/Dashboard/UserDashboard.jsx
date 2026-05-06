@@ -228,7 +228,7 @@ const UserDashboard = () => {
     const getUserTasks = async () => {
       try {
         const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
-        setTasks(response.data?.tasks || []);
+        setTasks(response?.data?.tasks || []);
       } catch (error) {
         console.error("Error fetching user tasks:", error);
       }

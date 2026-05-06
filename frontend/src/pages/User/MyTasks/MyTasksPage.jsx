@@ -36,7 +36,7 @@ const MyTasksPage = () => {
 
     try {
       const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
-      const nextTasks = Array.isArray(response.data?.tasks) ? response.data.tasks : [];
+      const nextTasks = Array.isArray(response?.data?.tasks) ? response.data.tasks : [];
       setTasks(nextTasks);
       setTaskOrder(nextTasks.map((task) => task._id || task.id).filter(Boolean));
     } catch (error) {
@@ -59,9 +59,8 @@ const MyTasksPage = () => {
 
       try {
         const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
-
         if (isMounted) {
-          const nextTasks = Array.isArray(response.data?.tasks) ? response.data.tasks : [];
+          const nextTasks = Array.isArray(response?.data?.tasks) ? response.data.tasks : [];
           setTasks(nextTasks);
           setTaskOrder(nextTasks.map((task) => task._id || task.id).filter(Boolean));
         }

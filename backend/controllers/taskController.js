@@ -214,7 +214,10 @@ const updateTaskChecklist = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        if (!task.assignedTo.includes(req.user._id) && req.user.role !== 'admin') {
+        const isAssigned = task.assignedTo.some(
+            (userId) => userId.toString() === req.user._id.toString()
+        );
+        if (!isAssigned && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
         }
 
@@ -258,7 +261,7 @@ const getDashboardData = async (req, res) => {
             dueDate: { $lt: new Date() }
         });
 
-        const taskStatuses = ["Pending", "In Progress", "Completed"];
+        const taskStatuses = ["Pending", "In-progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
             {
                 $group: {
@@ -331,7 +334,7 @@ const getUserDashboardData = async (req, res) => {
             dueDate: { $lt: new Date() }
         });
 
-        const taskStatuses = ["Pending", "In Progress", "Completed"];
+        const taskStatuses = ["Pending", "In-progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
             { $match: { assignedTo: userId } },
             {

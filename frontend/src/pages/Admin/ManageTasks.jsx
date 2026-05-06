@@ -105,7 +105,7 @@ const ManageTasks = () => {
             onClick={handleExportTasksReport}
             disabled={isExporting}
             className="
-              w-full sm:w-auto
+              w-fit
               flex items-center justify-center gap-2
               px-4 py-2.5 text-sm font-medium
               rounded-xl
@@ -178,7 +178,7 @@ const ManageTasks = () => {
                 }))}
 
                 attachmentCount={item.attachments?.length || 0}
-                completedTodoCount={item.completedTodoCount || 0}
+                completedTodoCount={item.completedChecklistCount || 0}
                 todoChecklist={item.todoChecklist || []}
                 onClick={() => handleClick(item)}
               />

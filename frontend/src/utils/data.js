@@ -4,7 +4,8 @@ import {
     LuClipboardCheck,
     LuSquarePlus,
     LuLogOut,
-    LuCircleCheckBig
+    LuCircleCheckBig,
+    LuUser
 } from "react-icons/lu";
 
 export const SIDE_MENU_DATA = [
@@ -67,11 +68,11 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "04",
-        label:"Completed",
-        icon: LuCircleCheckBig,
-        path: "/user/my-tasks?view=completed",
+        label:"Edit Profile",
+        icon: LuUser,
+        path: "/user/profile",
         section: "views",
-        description: "Look back at finished work and the progress you have already made.",
+        description: "Update your personal information and profile picture.",
     },
     {
         id: "05",

@@ -5,7 +5,8 @@ import {
     LuSquarePlus,
     LuLogOut,
     LuCircleCheckBig,
-    LuUser
+    LuUser,
+    LuMessageSquare
 } from "react-icons/lu";
 
 export const SIDE_MENU_DATA = [
@@ -32,6 +33,12 @@ export const SIDE_MENU_DATA = [
         label:"Team Members",
         icon: LuUsers,
         path: "/admin/users",
+    },
+    {
+        id: "chat-admin",
+        label: "Community Chat",
+        icon: LuMessageSquare,
+        path: "/admin/chat",
     },
     {
         id: "05",
@@ -73,6 +80,14 @@ export const SIDE_MENU_USER_DATA = [
         path: "/user/profile",
         section: "views",
         description: "Update your personal information and profile picture.",
+    },
+    {
+        id: "chat-user",
+        label: "Community Chat",
+        icon: LuMessageSquare,
+        path: "/user/chat",
+        section: "views",
+        description: "Global realtime chat for all community members.",
     },
     {
         id: "05",

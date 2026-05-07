@@ -51,6 +51,23 @@ module.exports = (io) => {
              addUser(userId.toString(), socket.id);
         });
         
+        // --- Global Chat Events ---
+        socket.on("send_message", (messageData) => {
+            // messageData should contain { content, sender, createdAt } populated
+            // Broadcast to all connected clients
+            io.emit("receive_message", messageData);
+        });
+
+        socket.on("typing", (data) => {
+             // data should contain { userId, name }
+             socket.broadcast.emit("typing", data);
+        });
+
+        socket.on("stop_typing", (data) => {
+             // data should contain { userId }
+             socket.broadcast.emit("stop_typing", data);
+        });
+
         socket.on("error", (error) => {
             console.error(`Socket error for ${socket.id}:`, error);
         });

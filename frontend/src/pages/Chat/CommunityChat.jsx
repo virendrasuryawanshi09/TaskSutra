@@ -93,15 +93,15 @@ const CommunityChat = () => {
     try {
       const response = await axiosInstance.post('/api/chat', { content: newMessage });
       const savedMessage = response.data;
-      
+
       // Emit to others
       socketRef.current.emit('send_message', savedMessage);
-      
+
       // Update local state is handled by receive_message but since we just sent it, we can wait for the socket broadcast or add locally.
       // Wait, in chatController it doesn't emit, so we rely on this socket emit. The receiver will get it via socket.
       // We also need to add it to our own state so we see it immediately without waiting for our own broadcast if we don't receive it.
       // Actually, io.emit broadcasts to ALL including sender. So we shouldn't add it twice.
-      
+
       setNewMessage('');
       handleStopTyping();
     } catch (error) {
@@ -136,14 +136,14 @@ const CommunityChat = () => {
   return (
     <DashboardLayout activeMenu="Community Chat">
       <div className="flex h-[calc(100vh-8rem)] w-full overflow-hidden bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm sm:mx-4 my-4 max-w-7xl lg:mx-auto">
-        
+
         {/* Main Chat Area */}
         <div className="flex flex-1 flex-col relative bg-[var(--bg)]">
           {/* Header */}
           <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)] flex justify-between items-center z-10 shadow-sm">
             <div>
               <h2 className="text-lg font-semibold text-[var(--text)] flex items-center gap-2">
-                <span className="text-xl">🌍</span> Community Chat
+                Community Chat
               </h2>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">Real-time global discussion</p>
             </div>
@@ -161,7 +161,7 @@ const CommunityChat = () => {
               const senderName = msg.sender?.name || 'Unknown User';
               const senderImage = msg.sender?.profilePicture || msg.sender?.profileImageUrl;
               const time = moment(msg.createdAt).format('h:mm A');
-              
+
               const showHeader = index === 0 || messages[index - 1].sender?._id !== msg.sender?._id || moment(msg.createdAt).diff(moment(messages[index - 1].createdAt), 'minutes') > 5;
 
               return (
@@ -170,11 +170,11 @@ const CommunityChat = () => {
                   {showHeader ? (
                     <div className="flex-shrink-0">
                       {senderImage ? (
-                         <img src={senderImage} alt={senderName} className="w-10 h-10 rounded-full object-cover shadow-sm border border-[var(--border)]" />
+                        <img src={senderImage} alt={senderName} className="w-10 h-10 rounded-full object-cover shadow-sm border border-[var(--border)]" />
                       ) : (
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-white flex items-center justify-center font-bold shadow-sm">
-                           {senderName.charAt(0).toUpperCase()}
-                         </div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-white flex items-center justify-center font-bold shadow-sm">
+                          {senderName.charAt(0).toUpperCase()}
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -189,18 +189,17 @@ const CommunityChat = () => {
                         <span className="text-xs text-[var(--text-muted)]">{time}</span>
                       </div>
                     )}
-                    <div className={`px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
-                      isMe 
-                      ? 'bg-[var(--accent)] text-white rounded-tr-sm' 
-                      : 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-tl-sm'
-                    }`}>
+                    <div className={`px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${isMe
+                        ? 'bg-[var(--accent)] text-white rounded-tr-sm'
+                        : 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded-tl-sm'
+                      }`}>
                       {msg.content}
                     </div>
                   </div>
                 </div>
               );
             })}
-            
+
             {/* Typing Indicator */}
             {typingArray.length > 0 && (
               <div className="flex items-center gap-3 text-sm text-[var(--text-muted)] animate-pulse pl-14">
@@ -212,7 +211,7 @@ const CommunityChat = () => {
                 <span>{typingArray.join(', ')} {typingArray.length === 1 ? 'is' : 'are'} typing...</span>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -256,11 +255,11 @@ const CommunityChat = () => {
                 <div key={id || index} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--bg-soft)] transition-colors">
                   <div className="relative">
                     <div className="w-8 h-8 rounded-full bg-[var(--bg-soft)] border border-[var(--border)] flex items-center justify-center text-xs font-bold text-[var(--text)]">
-                       U
+                      U
                     </div>
                     <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[var(--surface)] rounded-full"></span>
                   </div>
-                  <span className="text-sm font-medium text-[var(--text)] truncate">User {id.substring(0,4)}</span>
+                  <span className="text-sm font-medium text-[var(--text)] truncate">User {id.substring(0, 4)}</span>
                 </div>
               ))
             )}

@@ -5,7 +5,6 @@ import {
     LuSquarePlus,
     LuLogOut,
     LuCircleCheckBig,
-    LuCircleCheckBig,
     LuUser,
     LuMessageSquare
 } from "react-icons/lu";

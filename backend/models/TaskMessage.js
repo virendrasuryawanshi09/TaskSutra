@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 
-const directMessageSchema = new mongoose.Schema(
+const taskMessageSchema = new mongoose.Schema(
   {
-    chatId: {
+    discussionId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "DirectChat",
+      ref: "TaskDiscussion",
       required: true,
     },
     sender: {
@@ -17,12 +17,8 @@ const directMessageSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    isRead: {
-      type: Boolean,
-      default: false,
-    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("DirectMessage", directMessageSchema);
+module.exports = mongoose.model("TaskMessage", taskMessageSchema);

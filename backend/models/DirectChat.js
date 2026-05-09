@@ -13,9 +13,8 @@ const directChatSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "DirectMessage",
     },
-    // Map to keep track of unread messages for each user ID
-    // e.g., { "userId1": 2, "userId2": 0 }
     unreadCounts: {
+      // Map userId to unread count
       type: Map,
       of: Number,
       default: {},

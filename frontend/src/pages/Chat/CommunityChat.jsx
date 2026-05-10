@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
 import { LuHash, LuMessageSquare } from 'react-icons/lu';
+import { io } from 'socket.io-client';
 
 const CommunityChat = () => {
   const { user } = useContext(UserContext);
@@ -15,6 +16,9 @@ const CommunityChat = () => {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loadingSidebar, setLoadingSidebar] = useState(true);
+  
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const socketRef = useRef(null);
 
   // Fetch Sidebar Data
   useEffect(() => {
@@ -38,6 +42,29 @@ const CommunityChat = () => {
     
     fetchSidebarData();
   }, [user]);
+
+  // Setup Socket for online tracking
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on('userOnline', (data) => {
+      setOnlineUsers(Object.values(data.onlineUsers || {}));
+    });
+
+    socketRef.current.on('userOffline', (data) => {
+      setOnlineUsers(Object.values(data.onlineUsers || {}));
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, []);
 
   return (
     <DashboardLayout activeMenu="Workspace Chat">
@@ -76,20 +103,24 @@ const CommunityChat = () => {
                 ) : users.length === 0 ? (
                    <div className="px-2 text-[12px] text-[var(--text-muted)] italic">No colleagues found.</div>
                 ) : (
-                   users.map(u => (
-                     <div 
-                        key={u._id}
-                        onClick={() => { setChatMode('direct'); setActiveChatId(u._id); }}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
-                      >
-                        <div className="relative flex items-center justify-center w-5 h-5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] group-hover:border-[var(--text-muted)] transition-colors">
-                          {u.name.charAt(0).toUpperCase()}
+                   users.map(u => {
+                     const isOnline = onlineUsers.includes(u._id.toString());
+                     return (
+                       <div 
+                          key={u._id}
+                          onClick={() => { setChatMode('direct'); setActiveChatId(u._id); }}
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                        >
+                          <div className="relative flex items-center justify-center w-5 h-5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] group-hover:border-[var(--text-muted)] transition-colors">
+                            {u.name.charAt(0).toUpperCase()}
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-[7px] h-[7px] border border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                          </div>
+                          <span className={`text-[13px] font-medium truncate ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                             {u.name}
+                          </span>
                         </div>
-                        <span className={`text-[13px] font-medium truncate ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
-                           {u.name}
-                        </span>
-                      </div>
-                   ))
+                     );
+                   })
                 )}
               </div>
             </div>
@@ -105,7 +136,7 @@ const CommunityChat = () => {
                 ) : tasks.length === 0 ? (
                    <div className="px-2 text-[12px] text-[var(--text-muted)] italic">No active tasks.</div>
                 ) : (
-                   tasks.map(t => (
+                   tasks.slice(0, 6).map(t => (
                      <div 
                         key={t._id}
                         onClick={() => { setChatMode('task'); setActiveChatId(t._id); }}

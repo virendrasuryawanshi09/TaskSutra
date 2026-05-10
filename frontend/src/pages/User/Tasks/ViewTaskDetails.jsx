@@ -9,6 +9,7 @@ import SelectDropdown from "../../../components/input/SelectDropdown";
 import TaskDiscussionPanel from "./TaskDiscussionPanel";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
+import { io } from "socket.io-client";
 
 const statusOptions = [
   { label: "Pending" },
@@ -143,6 +144,7 @@ const ViewTaskDetails = () => {
   const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const socketRef = React.useRef(null);
 
   const isCompleted = currentStatus === "Completed";
 
@@ -196,7 +198,8 @@ const ViewTaskDetails = () => {
         setSavedChecklistItems(normalizedChecklist);
         setAttachmentFiles(normalizedAttachments);
         setAssignedUsers(normalizedUsers);
-        setMessages(getInitialMessages(taskData.title));
+        // We will fetch real messages below, so no need for getInitialMessages anymore unless we want a fallback
+        // setMessages(getInitialMessages(taskData.title));
       } catch (requestError) {
         setError(
           requestError?.response?.data?.message ||
@@ -208,6 +211,63 @@ const ViewTaskDetails = () => {
     };
 
     fetchTaskDetails();
+  }, [taskId]);
+
+  // Fetch real task discussion messages & setup socket
+  useEffect(() => {
+    if (!taskId) return;
+
+    const fetchDiscussion = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/task-discussions/${taskId}`);
+        if (response.data && response.data.messages) {
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: msg._id,
+            user: msg.sender?.name || "Team Member",
+            message: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching discussion", error);
+      }
+    };
+    fetchDiscussion();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on('connect', () => {
+       socketRef.current.emit("joinTaskRoom", taskId);
+    });
+
+    socketRef.current.on('receive_task_message', (msgData) => {
+       // Only add if it's not from us (since we append optimistically, or we can just rely on socket)
+       setMessages((prev) => {
+          // Prevent duplicates if optimistic
+          if (prev.find(m => m.id === msgData._id)) return prev;
+          
+          return [...prev, {
+            id: msgData._id,
+            user: msgData.sender?.name || "Team Member",
+            message: msgData.content,
+            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+       });
+    });
+
+    return () => {
+       if (socketRef.current) {
+           socketRef.current.emit("leaveTaskRoom", taskId);
+           socketRef.current.disconnect();
+       }
+    };
   }, [taskId]);
 
   const handleChecklistToggle = (itemId) => {
@@ -222,23 +282,40 @@ const ViewTaskDetails = () => {
     );
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const trimmedMessage = queryInput.trim();
 
     if (!trimmedMessage) {
       return;
     }
 
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: Date.now(),
-        user: "You",
-        message: trimmedMessage,
-        timestamp: "Just now",
-      },
-    ]);
-    setQueryInput("");
+    try {
+      const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
+        content: trimmedMessage
+      });
+      
+      const savedMessage = response.data.message;
+      
+      const newMsg = {
+         id: savedMessage._id,
+         user: "You",
+         message: savedMessage.content,
+         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setMessages((currentMessages) => [...currentMessages, newMsg]);
+      
+      if (socketRef.current) {
+        socketRef.current.emit("send_task_message", {
+           taskId,
+           messageData: savedMessage
+        });
+      }
+      
+      setQueryInput("");
+    } catch (error) {
+      toast.error("Failed to send message. Please ensure you are authorized.");
+    }
   };
 
   const handleCancelChanges = () => {

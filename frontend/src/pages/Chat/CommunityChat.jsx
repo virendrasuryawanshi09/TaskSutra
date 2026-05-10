@@ -1,12 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
-import { LuHash, LuMessageSquare, LuCheckSquare } from 'react-icons/lu';
+import { UserContext } from '../../context/UserContextState';
+import axiosInstance from '../../utils/axiosInstance';
+import { LuHash, LuMessageSquare } from 'react-icons/lu';
 
 const CommunityChat = () => {
+  const { user } = useContext(UserContext);
+  
   // --- Unified State Management Foundation ---
-  // chatMode can be: 'community', 'direct', 'task'
   const [chatMode, setChatMode] = useState('community');
-  const [activeChatId, setActiveChatId] = useState('community-chat'); // user _id, task _id, or 'community-chat'
+  const [activeChatId, setActiveChatId] = useState('community-chat');
+  
+  // --- Sidebar Data State ---
+  const [users, setUsers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loadingSidebar, setLoadingSidebar] = useState(true);
+
+  // Fetch Sidebar Data
+  useEffect(() => {
+    const fetchSidebarData = async () => {
+      if (!user) return;
+      try {
+        setLoadingSidebar(true);
+        // Fetch Users
+        const usersRes = await axiosInstance.get('/api/users');
+        setUsers(usersRes.data.filter(u => u._id !== (user?._id || user?.id)));
+        
+        // Fetch Tasks
+        const tasksRes = await axiosInstance.get('/api/tasks');
+        setTasks(tasksRes.data.tasks || tasksRes.data || []);
+      } catch (error) {
+        console.error('Error fetching workspace sidebar data:', error);
+      } finally {
+        setLoadingSidebar(false);
+      }
+    };
+    
+    fetchSidebarData();
+  }, [user]);
 
   return (
     <DashboardLayout activeMenu="Workspace Chat">
@@ -34,23 +65,61 @@ const CommunityChat = () => {
               </div>
             </div>
 
-            {/* Direct Messages Section Foundation */}
+            {/* Direct Messages Section */}
             <div className="px-3 mb-6">
-              <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 px-2 flex justify-between items-center">
+              <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 px-2 flex justify-between items-center group cursor-pointer hover:text-[var(--text)] transition-colors">
                 <span>Direct Messages</span>
               </div>
-              <div className="px-2 text-[12px] text-[var(--text-muted)] italic">
-                Loading team members...
+              <div className="space-y-0.5">
+                {loadingSidebar ? (
+                   <div className="px-2 text-[12px] text-[var(--text-muted)] italic">Loading...</div>
+                ) : users.length === 0 ? (
+                   <div className="px-2 text-[12px] text-[var(--text-muted)] italic">No colleagues found.</div>
+                ) : (
+                   users.map(u => (
+                     <div 
+                        key={u._id}
+                        onClick={() => { setChatMode('direct'); setActiveChatId(u._id); }}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                      >
+                        <div className="relative flex items-center justify-center w-5 h-5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] group-hover:border-[var(--text-muted)] transition-colors">
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className={`text-[13px] font-medium truncate ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                           {u.name}
+                        </span>
+                      </div>
+                   ))
+                )}
               </div>
             </div>
 
-            {/* Task Discussions Section Foundation */}
+            {/* Task Discussions Section */}
             <div className="px-3">
-              <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 px-2 flex justify-between items-center">
+              <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 px-2 flex justify-between items-center group cursor-pointer hover:text-[var(--text)] transition-colors">
                 <span>Task Discussions</span>
               </div>
-              <div className="px-2 text-[12px] text-[var(--text-muted)] italic">
-                Loading assigned tasks...
+              <div className="space-y-0.5">
+                {loadingSidebar ? (
+                   <div className="px-2 text-[12px] text-[var(--text-muted)] italic">Loading...</div>
+                ) : tasks.length === 0 ? (
+                   <div className="px-2 text-[12px] text-[var(--text-muted)] italic">No active tasks.</div>
+                ) : (
+                   tasks.map(t => (
+                     <div 
+                        key={t._id}
+                        onClick={() => { setChatMode('task'); setActiveChatId(t._id); }}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'task' && activeChatId === t._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                      >
+                        <div className={`flex items-center justify-center w-5 h-5 ${chatMode === 'task' && activeChatId === t._id ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                           <LuHash className="text-[14px]" />
+                        </div>
+                        <span className={`text-[13px] font-medium truncate ${chatMode === 'task' && activeChatId === t._id ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                           {t.title}
+                        </span>
+                      </div>
+                   ))
+                )}
               </div>
             </div>
           </div>

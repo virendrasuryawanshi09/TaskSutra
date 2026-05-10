@@ -68,6 +68,50 @@ module.exports = (io) => {
              socket.broadcast.emit("stop_typing", data);
         });
 
+        // --- Direct Messaging Events ---
+        socket.on("send_direct_message", (data) => {
+            // data should contain { receiverId, messageData }
+            const { receiverId, messageData } = data;
+            const receiverSocketId = getSocketId(receiverId);
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("receive_direct_message", messageData);
+            }
+        });
+
+        socket.on("dm_typing", (data) => {
+             // data should contain { receiverId, senderId, name }
+             const receiverSocketId = getSocketId(data.receiverId);
+             if (receiverSocketId) {
+                 io.to(receiverSocketId).emit("dm_typing", data);
+             }
+        });
+
+        socket.on("dm_stop_typing", (data) => {
+             // data should contain { receiverId, senderId }
+             const receiverSocketId = getSocketId(data.receiverId);
+             if (receiverSocketId) {
+                 io.to(receiverSocketId).emit("dm_stop_typing", data);
+             }
+        });
+
+        // --- Task Discussion Events ---
+        socket.on("send_task_message", (data) => {
+             // data should contain { taskId, messageData }
+             const { taskId, messageData } = data;
+             // Broadcast to everyone in the task room
+             io.to(`task_${taskId}`).emit("receive_task_message", messageData);
+        });
+
+        socket.on("task_typing", (data) => {
+             // data should contain { taskId, userId, name }
+             socket.to(`task_${data.taskId}`).emit("task_typing", data);
+        });
+
+        socket.on("task_stop_typing", (data) => {
+             // data should contain { taskId, userId }
+             socket.to(`task_${data.taskId}`).emit("task_stop_typing", data);
+        });
+
         socket.on("error", (error) => {
             console.error(`Socket error for ${socket.id}:`, error);
         });

@@ -213,19 +213,46 @@ const DirectChat = () => {
         <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0">
           
           {!activeUser ? (
-             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center">
-                 <div className="w-16 h-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center overflow-y-auto">
+                 <div className="w-16 h-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center mb-4 shadow-sm hidden md:flex">
                     <LuMessageSquare className="text-3xl text-[var(--accent)]" />
                  </div>
-                 <h2 className="text-xl font-bold text-[var(--text)] tracking-tight mb-2">Your Direct Messages</h2>
-                 <p className="text-[14px] max-w-sm">Select a colleague from the sidebar to start a private conversation. Direct messages are encrypted and secure.</p>
+                 <h2 className="text-xl font-bold text-[var(--text)] tracking-tight mb-2 hidden md:block">Your Direct Messages</h2>
+                 <p className="text-[14px] max-w-sm hidden md:block">Select a colleague from the sidebar to start a private conversation. Direct messages are encrypted and secure.</p>
+                 
+                 {/* Mobile User List */}
+                 <div className="md:hidden w-full flex flex-col items-start text-left space-y-2 mt-4">
+                    <h2 className="text-lg font-bold text-[var(--text)] mb-2">Select a Colleague</h2>
+                    {users.map((u) => {
+                      const isOnline = onlineUsers.includes(u._id.toString());
+                      return (
+                        <div 
+                          key={u._id} 
+                          onClick={() => setActiveUser(u)}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-sm active:scale-[0.98] transition-transform"
+                        >
+                           <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] font-bold text-[var(--text-muted)]">
+                            {u.name.charAt(0).toUpperCase()}
+                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-[2px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                           </div>
+                           <span className="font-semibold text-[var(--text)]">{u.name}</span>
+                        </div>
+                      );
+                    })}
+                 </div>
              </div>
           ) : (
              <>
               {/* Header */}
-              <div className="h-14 px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex items-center justify-center w-6 h-6 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)]">
+              <div className="h-14 px-4 md:px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button 
+                     onClick={() => setActiveUser(null)}
+                     className="md:hidden mr-1 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+                  >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  </button>
+                  <div className="relative flex items-center justify-center w-7 h-7 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[11px] font-bold text-[var(--text-muted)]">
                         {activeUser.name.charAt(0).toUpperCase()}
                         <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[var(--surface)] rounded-full ${onlineUsers.includes(activeUser._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                   </div>

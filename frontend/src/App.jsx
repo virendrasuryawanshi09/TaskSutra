@@ -18,6 +18,7 @@ import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
 import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
 import CommunityChat from "./pages/Chat/CommunityChat";
+import DirectChat from "./pages/Chat/DirectChat";
 
 const App = () => {
 
@@ -104,6 +105,7 @@ const App = () => {
             <Route path="/admin/tasks/:id" element={<CreateTask />} />
             <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/chat" element={<CommunityChat />} />
+            <Route path="/admin/direct-chat" element={<DirectChat />} />
           </Route>
 
           {/* User */}
@@ -113,6 +115,7 @@ const App = () => {
             <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
             <Route path="/user/team-members" element={<UserTeamMembers />} />
             <Route path="/user/chat" element={<CommunityChat />} />
+            <Route path="/user/direct-chat" element={<DirectChat />} />
           </Route>
         </Routes>
       </Router>

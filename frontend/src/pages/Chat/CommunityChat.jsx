@@ -15,6 +15,7 @@ const CommunityChat = () => {
   // --- Sidebar Data State ---
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [directChats, setDirectChats] = useState([]);
   const [loadingSidebar, setLoadingSidebar] = useState(true);
   
   const [onlineUsers, setOnlineUsers] = useState([]);
@@ -33,6 +34,10 @@ const CommunityChat = () => {
         // Fetch Tasks
         const tasksRes = await axiosInstance.get('/api/tasks');
         setTasks(tasksRes.data.tasks || tasksRes.data || []);
+
+        // Fetch Direct Chats for badges and ordering
+        const directChatsRes = await axiosInstance.get('/api/direct-chats');
+        setDirectChats(directChatsRes.data || []);
       } catch (error) {
         console.error('Error fetching workspace sidebar data:', error);
       } finally {
@@ -65,6 +70,15 @@ const CommunityChat = () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
+
+  // Sort users by recent direct chat activity
+  const sortedUsers = [...users].sort((a, b) => {
+    const chatA = directChats.find(c => c.participants.some(p => (p._id || p) === a._id));
+    const chatB = directChats.find(c => c.participants.some(p => (p._id || p) === b._id));
+    const dateA = chatA ? new Date(chatA.updatedAt).getTime() : 0;
+    const dateB = chatB ? new Date(chatB.updatedAt).getTime() : 0;
+    return dateB - dateA;
+  });
 
   return (
     <DashboardLayout activeMenu="Workspace Chat">
@@ -103,21 +117,31 @@ const CommunityChat = () => {
                 ) : users.length === 0 ? (
                    <div className="px-2 text-[12px] text-[var(--text-muted)] italic">No colleagues found.</div>
                 ) : (
-                   users.map(u => {
+                   sortedUsers.map(u => {
                      const isOnline = onlineUsers.includes(u._id.toString());
+                     const chat = directChats.find(c => c.participants.some(p => (p._id || p) === u._id));
+                     const unreadCount = chat?.unreadCounts?.[user?._id || user?.id] || 0;
+
                      return (
                        <div 
                           key={u._id}
                           onClick={() => { setChatMode('direct'); setActiveChatId(u._id); }}
-                          className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                          className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
                         >
-                          <div className="relative flex items-center justify-center w-5 h-5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] group-hover:border-[var(--text-muted)] transition-colors">
-                            {u.name.charAt(0).toUpperCase()}
-                            <div className={`absolute -bottom-0.5 -right-0.5 w-[7px] h-[7px] border border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="relative flex items-center justify-center w-5 h-5 shrink-0 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] group-hover:border-[var(--text-muted)] transition-colors">
+                              {u.name.charAt(0).toUpperCase()}
+                              <div className={`absolute -bottom-0.5 -right-0.5 w-[7px] h-[7px] border border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            </div>
+                            <span className={`text-[13px] truncate transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] font-medium group-hover:text-[var(--text)]'}`}>
+                               {u.name}
+                            </span>
                           </div>
-                          <span className={`text-[13px] font-medium truncate ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
-                             {u.name}
-                          </span>
+                          {unreadCount > 0 && (
+                            <div className="bg-[var(--accent)] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                               {unreadCount}
+                            </div>
+                          )}
                         </div>
                      );
                    })

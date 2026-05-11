@@ -180,19 +180,80 @@ const CommunityChat = () => {
           </div>
         </div>
 
-        {/* Main Chat Area Foundation */}
-        <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0">
-           <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center">
-                 <div className="w-16 h-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center mb-4 shadow-sm hidden md:flex">
-                    <LuMessageSquare className="text-3xl text-[var(--accent)]" />
-                 </div>
-                 <h2 className="text-xl font-bold text-[var(--text)] tracking-tight mb-2 hidden md:block">
-                   {chatMode === 'community' ? 'Community Chat' : chatMode === 'direct' ? 'Direct Messages' : 'Task Discussions'}
-                 </h2>
-                 <p className="text-[14px] max-w-sm hidden md:block">
-                   Workspace UI structural foundation initialized. Mode routing is active.
-                 </p>
+        {/* Main Chat Area */}
+        <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0 relative">
+          
+          {/* Header */}
+          <div className="h-14 px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
+            {chatMode === 'community' && (
+              <div className="flex items-center gap-2">
+                <LuHash className="text-[var(--text-muted)] text-[18px]" />
+                <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">community-chat</h2>
+              </div>
+            )}
+            
+            {chatMode === 'direct' && (
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const activeU = users.find(u => u._id === activeChatId);
+                  if (!activeU) return <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">Direct Message</h2>;
+                  const isOnline = onlineUsers.includes(activeU._id.toString());
+                  return (
+                    <>
+                      <div className="relative flex items-center justify-center w-6 h-6 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)]">
+                        {activeU.name.charAt(0).toUpperCase()}
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      </div>
+                      <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">{activeU.name}</h2>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
+
+            {chatMode === 'task' && (
+              <div className="flex items-center gap-2">
+                <LuMessageSquare className="text-[var(--text-muted)] text-[18px]" />
+                {(() => {
+                  const activeT = tasks.find(t => t._id === activeChatId);
+                  if (!activeT) return <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">Task Discussion</h2>;
+                  return <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">{activeT.title}</h2>;
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* Messages Feed Placeholder */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-1 scrollbar-thin">
+             <div className="pb-10 pt-4 max-w-3xl">
+                <h1 className="text-2xl font-bold text-[var(--text)] mb-2 tracking-tight">
+                  {chatMode === 'community' && 'Welcome to #community-chat!'}
+                  {chatMode === 'direct' && 'Private Direct Message'}
+                  {chatMode === 'task' && 'Task Discussion Room'}
+                </h1>
+                <p className="text-[14px] text-[var(--text-muted)]">
+                  {chatMode === 'community' && 'This is the start of the community chat channel. Messages here are seen by all active members.'}
+                  {chatMode === 'direct' && 'This is the beginning of your direct message history. Messages are securely encrypted.'}
+                  {chatMode === 'task' && 'Discuss task details securely here. Only assigned members and admins can view this.'}
+                </p>
              </div>
+             
+             <div className="h-px bg-[var(--border)] w-full my-6 flex items-center justify-center">
+                <span className="bg-[var(--bg)] px-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Beginning of History</span>
+             </div>
+          </div>
+
+          {/* Input Area */}
+          <div className="p-5 pt-0 bg-[var(--bg)] shrink-0">
+            <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all shadow-sm">
+                <textarea
+                  placeholder={chatMode === 'community' ? "Message #community-chat" : chatMode === 'direct' ? "Send a direct message" : "Discuss this task"}
+                  rows={1}
+                  className="w-full max-h-32 min-h-[44px] bg-transparent text-[14px] text-[var(--text)] px-4 py-3 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
+                  style={{ overflowY: 'auto' }}
+                />
+            </div>
+          </div>
         </div>
         
       </div>

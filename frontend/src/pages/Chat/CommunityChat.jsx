@@ -4,6 +4,7 @@ import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
 import { LuHash, LuMessageSquare, LuSend, LuMenu, LuX } from 'react-icons/lu';
 import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 
 const CommunityChat = () => {
   const { user } = useContext(UserContext);
@@ -14,6 +15,19 @@ const CommunityChat = () => {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  
+  const activeChatIdRef = useRef(activeChatId);
+  const chatModeRef = useRef(chatMode);
+  const userRef = useRef(user);
+  
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+    chatModeRef.current = chatMode;
+  }, [activeChatId, chatMode]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   
   // --- Sidebar Data State ---
   const [users, setUsers] = useState([]);
@@ -69,10 +83,101 @@ const CommunityChat = () => {
       setOnlineUsers(Object.values(data.onlineUsers || {}));
     });
 
+    // Handle Incoming Messages
+    socketRef.current.on('receive_message', (message) => {
+       if (chatModeRef.current === 'community') {
+          setMessages(prev => {
+             if (prev.find(m => m._id === message._id)) return prev;
+             return [...prev, message];
+          });
+       }
+    });
+
+    socketRef.current.on('receive_direct_message', (message) => {
+       const senderId = message.sender._id || message.sender;
+       const senderName = message.sender.name || 'A colleague';
+       
+       if (chatModeRef.current === 'direct' && (activeChatIdRef.current === senderId || activeChatIdRef.current === message.receiver?._id)) {
+          setMessages(prev => {
+             if (prev.find(m => m._id === message._id)) return prev;
+             return [...prev, message];
+          });
+       } else if (senderId !== (userRef.current?._id || userRef.current?.id)) {
+          // Show Elite Notification
+          toast.custom((t) => (
+            <div className={`flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] px-4 py-3 rounded-lg shadow-lg ${t.visible ? 'animate-enter' : 'animate-leave'}`}>
+               <div className="w-8 h-8 rounded bg-[var(--accent)] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                  {senderName.charAt(0).toUpperCase()}
+               </div>
+               <div>
+                 <p className="text-[13px] font-bold text-[var(--text)]">{senderName} sent a private message</p>
+                 <p className="text-[12px] text-[var(--text-muted)] truncate max-w-[200px]">{message.content}</p>
+               </div>
+            </div>
+          ), { duration: 4000, position: 'bottom-right' });
+
+          // Dynamically update directChats state to increment unread count and bump to top
+          setDirectChats(prev => {
+             const existingChat = prev.find(c => c.participants.some(p => (p._id || p) === senderId));
+             if (existingChat) {
+                return prev.map(c => {
+                   if (c._id === existingChat._id) {
+                      const currentUnread = c.unreadCounts?.[userRef.current?._id || userRef.current?.id] || 0;
+                      return { 
+                         ...c, 
+                         unreadCounts: { ...c.unreadCounts, [userRef.current?._id || userRef.current?.id]: currentUnread + 1 },
+                         updatedAt: new Date().toISOString()
+                      };
+                   }
+                   return c;
+                });
+             } else {
+                axiosInstance.get('/api/direct-chats').then(res => setDirectChats(res.data || []));
+                return prev;
+             }
+          });
+       }
+    });
+
+    socketRef.current.on('receive_task_message', (msgData) => {
+       if (chatModeRef.current === 'task') {
+          setMessages(prev => {
+             if (prev.find(m => m._id === msgData._id)) return prev;
+             return [...prev, msgData];
+          });
+       } else if (msgData.sender?._id !== (userRef.current?._id || userRef.current?.id)) {
+          // Show Elite Notification for tasks
+          const senderName = msgData.sender?.name || 'A colleague';
+          toast.custom((t) => (
+            <div className={`flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] px-4 py-3 rounded-lg shadow-lg ${t.visible ? 'animate-enter' : 'animate-leave'}`}>
+               <div className="w-8 h-8 rounded bg-[#4C7F6A] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                  <LuHash className="text-[14px]" />
+               </div>
+               <div>
+                 <p className="text-[13px] font-bold text-[var(--text)]">New message in a Task</p>
+                 <p className="text-[12px] text-[var(--text-muted)] truncate max-w-[200px]">{senderName}: {msgData.content}</p>
+               </div>
+            </div>
+          ), { duration: 4000, position: 'bottom-right' });
+       }
+    });
+
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
+
+  // Manage Task Rooms Connection
+  useEffect(() => {
+     if (chatMode === 'task' && socketRef.current) {
+        socketRef.current.emit('joinTaskRoom', activeChatId);
+     }
+     return () => {
+        if (chatMode === 'task' && socketRef.current) {
+           socketRef.current.emit('leaveTaskRoom', activeChatId);
+        }
+     };
+  }, [chatMode, activeChatId]);
 
   // Sort users by recent direct chat activity
   const sortedUsers = [...users].sort((a, b) => {
@@ -117,13 +222,43 @@ const CommunityChat = () => {
     setNewMessage('');
   }, [activeChatId]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
-    if (!newMessage.trim()) return;
-    
-    // We will implement actual Socket/API sending in the next step.
-    console.log("Preparing to send:", newMessage);
-    setNewMessage('');
+    const trimmedMessage = newMessage.trim();
+    if (!trimmedMessage) return;
+
+    try {
+      if (chatMode === 'community') {
+         const response = await axiosInstance.post('/api/chat', { content: trimmedMessage });
+         socketRef.current.emit('send_message', response.data);
+         // Prevent duplicates by checking if socket already added it
+         setMessages(prev => prev.find(m => m._id === response.data._id) ? prev : [...prev, response.data]);
+      } else if (chatMode === 'direct') {
+         const response = await axiosInstance.post('/api/direct-chats', { 
+           receiverId: activeChatId, 
+           content: trimmedMessage 
+         });
+         const savedMessage = response.data.message;
+         socketRef.current.emit('send_direct_message', {
+           receiverId: activeChatId,
+           messageData: savedMessage
+         });
+         setMessages(prev => [...prev, savedMessage]);
+      } else if (chatMode === 'task') {
+         const response = await axiosInstance.post(`/api/task-discussions/${activeChatId}`, { 
+           content: trimmedMessage 
+         });
+         const savedMessage = response.data.message;
+         socketRef.current.emit('send_task_message', {
+           taskId: activeChatId,
+           messageData: savedMessage
+         });
+         setMessages(prev => [...prev, savedMessage]);
+      }
+      setNewMessage('');
+    } catch (error) {
+       console.error("Failed to send message", error);
+    }
   };
 
   const handleSelectChat = (mode, id) => {

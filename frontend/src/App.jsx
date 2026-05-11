@@ -4,6 +4,7 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
 } from "react-router-dom";
 
 import Dashboard from "./pages/Admin/Dashboard";
@@ -19,6 +20,24 @@ import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
 import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
 import CommunityChat from "./pages/Chat/CommunityChat";
 import DirectChat from "./pages/Chat/DirectChat";
+import useUserAuth from "./hooks/useUserAuth";
+
+const RootRedirect = () => {
+  const { isAuthenticated, role } = useUserAuth();
+  return isAuthenticated ? (
+    <Navigate to={role === "admin" ? "/admin/dashboard" : "/user/dashboard"} replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
+};
+
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, role } = useUserAuth();
+  if (isAuthenticated) {
+    return <Navigate to={role === "admin" ? "/admin/dashboard" : "/user/dashboard"} replace />;
+  }
+  return children;
+};
 
 const App = () => {
 
@@ -94,8 +113,9 @@ const App = () => {
 
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
 
           {/* Admin */}
           <Route element={<PrivateRoute allowedRoles={["admin"]} />}>

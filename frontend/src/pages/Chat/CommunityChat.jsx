@@ -44,9 +44,9 @@ const CommunityChat = () => {
       if (!user) return;
       try {
         setLoadingSidebar(true);
-        // Fetch Users
+        // Fetch Users (this only returns members)
         const usersRes = await axiosInstance.get('/api/users');
-        setUsers(usersRes.data.filter(u => u._id !== (user?._id || user?.id)));
+        let fetchedUsers = usersRes.data.filter(u => String(u._id) !== String(user?._id || user?.id));
         
         // Fetch Tasks
         const tasksRes = await axiosInstance.get('/api/tasks');
@@ -54,7 +54,21 @@ const CommunityChat = () => {
 
         // Fetch Direct Chats for badges and ordering
         const directChatsRes = await axiosInstance.get('/api/direct-chats');
-        setDirectChats(directChatsRes.data || []);
+        const chats = directChatsRes.data || [];
+        setDirectChats(chats);
+
+        // Crucial Fix: Admins are not returned by /api/users, so we must extract them from directChats
+        // and inject them into our local users array so they appear in the sidebar!
+        chats.forEach(chat => {
+           chat.participants.forEach(p => {
+              // If participant is not the current user, and not already in fetchedUsers, add them
+              if (String(p._id) !== String(user?._id || user?.id) && !fetchedUsers.find(u => String(u._id) === String(p._id))) {
+                 fetchedUsers.push(p);
+              }
+           });
+        });
+
+        setUsers(fetchedUsers);
       } catch (error) {
         console.error('Error fetching workspace sidebar data:', error);
       } finally {
@@ -94,15 +108,16 @@ const CommunityChat = () => {
     });
 
     socketRef.current.on('receive_direct_message', (message) => {
-       const senderId = message.sender._id || message.sender;
-       const senderName = message.sender.name || 'A colleague';
+       const senderId = String(message.sender?._id || message.sender);
+       const senderName = message.sender?.name || 'A colleague';
+       const currentActiveId = String(activeChatIdRef.current);
        
-       if (chatModeRef.current === 'direct' && (activeChatIdRef.current === senderId || activeChatIdRef.current === message.receiver?._id)) {
+       if (chatModeRef.current === 'direct' && currentActiveId === senderId) {
           setMessages(prev => {
-             if (prev.find(m => m._id === message._id)) return prev;
+             if (prev.find(m => String(m._id) === String(message._id))) return prev;
              return [...prev, message];
           });
-       } else if (senderId !== (userRef.current?._id || userRef.current?.id)) {
+       } else if (senderId !== String(userRef.current?._id || userRef.current?.id)) {
           // Show Elite Notification
           toast.custom((t) => (
             <div className={`flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] px-4 py-3 rounded-lg shadow-lg ${t.visible ? 'animate-enter' : 'animate-leave'}`}>
@@ -118,10 +133,10 @@ const CommunityChat = () => {
 
           // Dynamically update directChats state to increment unread count and bump to top
           setDirectChats(prev => {
-             const existingChat = prev.find(c => c.participants.some(p => (p._id || p) === senderId));
+             const existingChat = prev.find(c => c.participants.some(p => String(p._id || p) === senderId));
              if (existingChat) {
                 return prev.map(c => {
-                   if (c._id === existingChat._id) {
+                   if (String(c._id) === String(existingChat._id)) {
                       const currentUnread = c.unreadCounts?.[userRef.current?._id || userRef.current?.id] || 0;
                       return { 
                          ...c, 
@@ -132,7 +147,19 @@ const CommunityChat = () => {
                    return c;
                 });
              } else {
-                axiosInstance.get('/api/direct-chats').then(res => setDirectChats(res.data || []));
+                // If this is a completely new chat, refetch chats
+                axiosInstance.get('/api/direct-chats').then(res => {
+                   const newChats = res.data || [];
+                   setDirectChats(newChats);
+                   
+                   // Also ensure the sender is added to the users list so they appear in the sidebar!
+                   setUsers(prevUsers => {
+                      if (!prevUsers.find(u => String(u._id) === senderId)) {
+                         return [...prevUsers, message.sender];
+                      }
+                      return prevUsers;
+                   });
+                });
                 return prev;
              }
           });

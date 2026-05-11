@@ -72,7 +72,7 @@ module.exports = (io) => {
         socket.on("send_direct_message", (data) => {
             // data should contain { receiverId, messageData }
             const { receiverId, messageData } = data;
-            const receiverSocketId = getSocketId(receiverId);
+            const receiverSocketId = getSocketId(String(receiverId));
             if (receiverSocketId) {
                 io.to(receiverSocketId).emit("receive_direct_message", messageData);
             }
@@ -80,7 +80,7 @@ module.exports = (io) => {
 
         socket.on("dm_typing", (data) => {
              // data should contain { receiverId, senderId, name }
-             const receiverSocketId = getSocketId(data.receiverId);
+             const receiverSocketId = getSocketId(String(data.receiverId));
              if (receiverSocketId) {
                  io.to(receiverSocketId).emit("dm_typing", data);
              }
@@ -88,7 +88,7 @@ module.exports = (io) => {
 
         socket.on("dm_stop_typing", (data) => {
              // data should contain { receiverId, senderId }
-             const receiverSocketId = getSocketId(data.receiverId);
+             const receiverSocketId = getSocketId(String(data.receiverId));
              if (receiverSocketId) {
                  io.to(receiverSocketId).emit("dm_stop_typing", data);
              }

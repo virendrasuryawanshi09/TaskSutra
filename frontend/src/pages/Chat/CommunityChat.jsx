@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
-import { LuHash, LuMessageSquare, LuSend } from 'react-icons/lu';
+import { LuHash, LuMessageSquare, LuSend, LuMenu, LuX } from 'react-icons/lu';
 import { io } from 'socket.io-client';
 
 const CommunityChat = () => {
@@ -13,6 +13,7 @@ const CommunityChat = () => {
   const [activeChatId, setActiveChatId] = useState('community-chat');
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState([]);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   
   // --- Sidebar Data State ---
   const [users, setUsers] = useState([]);
@@ -125,15 +126,38 @@ const CommunityChat = () => {
     setNewMessage('');
   };
 
+  const handleSelectChat = (mode, id) => {
+    setChatMode(mode);
+    setActiveChatId(id);
+    setShowMobileSidebar(false);
+  };
+
   return (
     <DashboardLayout activeMenu="Workspace Chat">
       {/* Hyper-minimalist Elite Container */}
-      <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4">
+      <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4 relative">
         
-        {/* Left Sidebar - Unified Navigation Foundation */}
-        <div className="hidden md:flex w-[280px] flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10 select-none">
-          <div className="h-14 px-5 flex items-center border-b border-[var(--border)] shadow-sm shrink-0">
+        {/* Mobile Sidebar Overlay */}
+        {showMobileSidebar && (
+          <div 
+            className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm transition-opacity" 
+            onClick={() => setShowMobileSidebar(false)}
+          />
+        )}
+
+        {/* Left Sidebar - Unified Navigation */}
+        <div className={`
+          ${showMobileSidebar ? 'absolute inset-y-0 left-0 z-50 flex shadow-2xl translate-x-0' : 'hidden md:flex'}
+          w-[280px] flex-col bg-[var(--surface)] border-r border-[var(--border)] select-none transition-transform duration-300
+        `}>
+          <div className="h-14 px-5 flex items-center justify-between border-b border-[var(--border)] shadow-sm shrink-0">
             <h1 className="text-[15px] font-bold tracking-tight text-[var(--text)]">TaskSutra Workspace</h1>
+            <button 
+               onClick={() => setShowMobileSidebar(false)}
+               className="md:hidden p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+            >
+               <LuX className="text-[18px]" />
+            </button>
           </div>
           
           <div className="flex-1 overflow-y-auto py-4 scrollbar-thin">
@@ -143,7 +167,7 @@ const CommunityChat = () => {
                 <span>Channels</span>
               </div>
               <div 
-                onClick={() => { setChatMode('community'); setActiveChatId('community-chat'); }}
+                onClick={() => handleSelectChat('community', 'community-chat')}
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${chatMode === 'community' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]'}`}
               >
                 <LuHash className="text-[16px]" />
@@ -170,7 +194,7 @@ const CommunityChat = () => {
                      return (
                        <div 
                           key={u._id}
-                          onClick={() => { setChatMode('direct'); setActiveChatId(u._id); }}
+                          onClick={() => handleSelectChat('direct', u._id)}
                           className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -211,7 +235,7 @@ const CommunityChat = () => {
                    tasks.slice(0, 6).map(t => (
                      <div 
                         key={t._id}
-                        onClick={() => { setChatMode('task'); setActiveChatId(t._id); }}
+                        onClick={() => handleSelectChat('task', t._id)}
                         className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${chatMode === 'task' && activeChatId === t._id ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
                       >
                         <div className={`flex items-center justify-center w-5 h-5 ${chatMode === 'task' && activeChatId === t._id ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
@@ -232,9 +256,15 @@ const CommunityChat = () => {
         <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0 relative">
           
           {/* Header */}
-          <div className="h-14 px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
+          <div className="h-14 px-4 md:px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
             {chatMode === 'community' && (
               <div className="flex items-center gap-2">
+                <button 
+                   onClick={() => setShowMobileSidebar(true)}
+                   className="md:hidden mr-1 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+                >
+                   <LuMenu className="text-[18px]" />
+                </button>
                 <LuHash className="text-[var(--text-muted)] text-[18px]" />
                 <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">community-chat</h2>
               </div>
@@ -242,6 +272,12 @@ const CommunityChat = () => {
             
             {chatMode === 'direct' && (
               <div className="flex items-center gap-2">
+                <button 
+                   onClick={() => setShowMobileSidebar(true)}
+                   className="md:hidden mr-1 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+                >
+                   <LuMenu className="text-[18px]" />
+                </button>
                 {(() => {
                   const activeU = users.find(u => u._id === activeChatId);
                   if (!activeU) return <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">Direct Message</h2>;
@@ -261,6 +297,12 @@ const CommunityChat = () => {
 
             {chatMode === 'task' && (
               <div className="flex items-center gap-2">
+                <button 
+                   onClick={() => setShowMobileSidebar(true)}
+                   className="md:hidden mr-1 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+                >
+                   <LuMenu className="text-[18px]" />
+                </button>
                 <LuMessageSquare className="text-[var(--text-muted)] text-[18px]" />
                 {(() => {
                   const activeT = tasks.find(t => t._id === activeChatId);

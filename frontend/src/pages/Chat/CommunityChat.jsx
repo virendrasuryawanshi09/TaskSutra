@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
-import { LuHash, LuMessageSquare } from 'react-icons/lu';
+import { LuHash, LuMessageSquare, LuSend } from 'react-icons/lu';
 import { io } from 'socket.io-client';
 
 const CommunityChat = () => {
@@ -11,6 +11,8 @@ const CommunityChat = () => {
   // --- Unified State Management Foundation ---
   const [chatMode, setChatMode] = useState('community');
   const [activeChatId, setActiveChatId] = useState('community-chat');
+  const [newMessage, setNewMessage] = useState('');
+  const [messages, setMessages] = useState([]);
   
   // --- Sidebar Data State ---
   const [users, setUsers] = useState([]);
@@ -80,6 +82,49 @@ const CommunityChat = () => {
     return dateB - dateA;
   });
 
+  // Fetch messages based on active context
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        setMessages([]); // Clear while loading
+        if (chatMode === 'community') {
+           const res = await axiosInstance.get('/api/chat');
+           setMessages(res.data.messages || res.data || []);
+        } else if (chatMode === 'direct' && activeChatId !== 'community-chat') {
+           const res = await axiosInstance.get(`/api/direct-chats/${activeChatId}`);
+           setMessages(res.data.messages || []);
+           // Optimistically clear unread counts locally
+           setDirectChats(prev => prev.map(chat => {
+              if (chat.participants.some(p => (p._id || p) === activeChatId)) {
+                 return { ...chat, unreadCounts: { ...chat.unreadCounts, [user?._id || user?.id]: 0 } };
+              }
+              return chat;
+           }));
+        } else if (chatMode === 'task' && activeChatId !== 'community-chat') {
+           const res = await axiosInstance.get(`/api/task-discussions/${activeChatId}`);
+           setMessages(res.data.messages || []);
+        }
+      } catch (err) {
+         console.error('Error fetching messages', err);
+      }
+    };
+    fetchMessages();
+  }, [chatMode, activeChatId]);
+
+  // Clear input when switching chats
+  useEffect(() => {
+    setNewMessage('');
+  }, [activeChatId]);
+
+  const handleSendMessage = (e) => {
+    if (e) e.preventDefault();
+    if (!newMessage.trim()) return;
+    
+    // We will implement actual Socket/API sending in the next step.
+    console.log("Preparing to send:", newMessage);
+    setNewMessage('');
+  };
+
   return (
     <DashboardLayout activeMenu="Workspace Chat">
       {/* Hyper-minimalist Elite Container */}
@@ -133,8 +178,11 @@ const CommunityChat = () => {
                               {u.name.charAt(0).toUpperCase()}
                               <div className={`absolute -bottom-0.5 -right-0.5 w-[7px] h-[7px] border border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                             </div>
-                            <span className={`text-[13px] truncate transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] font-medium group-hover:text-[var(--text)]'}`}>
+                            <span className={`text-[13px] truncate flex items-center gap-1.5 transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] font-medium group-hover:text-[var(--text)]'}`}>
                                {u.name}
+                               {u.role && u.role.toLowerCase() === 'admin' && (
+                                  <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)]">Admin</span>
+                               )}
                             </span>
                           </div>
                           {unreadCount > 0 && (
@@ -223,7 +271,7 @@ const CommunityChat = () => {
             )}
           </div>
 
-          {/* Messages Feed Placeholder */}
+          {/* Messages Feed Placeholder -> Real Messages Feed */}
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-1 scrollbar-thin">
              <div className="pb-10 pt-4 max-w-3xl">
                 <h1 className="text-2xl font-bold text-[var(--text)] mb-2 tracking-tight">
@@ -241,18 +289,103 @@ const CommunityChat = () => {
              <div className="h-px bg-[var(--border)] w-full my-6 flex items-center justify-center">
                 <span className="bg-[var(--bg)] px-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Beginning of History</span>
              </div>
+
+             {messages.map((msg, index) => {
+                const isMe = msg.sender?._id === (user?._id || user?.id);
+                const senderName = isMe ? 'You' : (msg.sender?.name || 'Unknown');
+                const isAdmin = msg.sender?.role && msg.sender.role.toLowerCase() === 'admin';
+                const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Group consecutive messages
+                const isConsecutive = index > 0 
+                  && messages[index - 1].sender?._id === msg.sender?._id 
+                  && (new Date(msg.createdAt) - new Date(messages[index - 1].createdAt)) < 5 * 60 * 1000;
+
+                return (
+                  <div key={msg._id || index} className={`group flex gap-4 px-2 py-1 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-4'}`}>
+                    {/* Avatar */}
+                    <div className="w-10 flex-shrink-0 flex justify-center">
+                      {!isConsecutive ? (
+                        <div className="mt-0.5">
+                            <div className={`w-10 h-10 rounded-md flex items-center justify-center text-[14px] font-bold text-white shadow-sm ${isMe ? 'bg-[#0f172a]' : isAdmin ? 'bg-[#C28B2C]' : 'bg-[var(--accent)]'}`}>
+                              {senderName.charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                      ) : (
+                        <div className="opacity-0 group-hover:opacity-100 text-[10px] text-[var(--text-muted)] font-medium pt-1.5 select-none">
+                          {time}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex flex-col flex-1 min-w-0 pb-0.5">
+                      {!isConsecutive && (
+                        <div className="flex items-center gap-2 leading-tight mb-1">
+                          <span className="text-[15px] font-bold text-[var(--text)] tracking-tight">
+                            {senderName}
+                          </span>
+                          {isAdmin && (
+                            <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)]">Admin</span>
+                          )}
+                          <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                            {time}
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-[15px] text-[var(--text)] leading-[1.45] break-words whitespace-pre-wrap">
+                        {msg.content}
+                      </div>
+                    </div>
+                  </div>
+                );
+             })}
           </div>
 
           {/* Input Area */}
           <div className="p-5 pt-0 bg-[var(--bg)] shrink-0">
-            <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all shadow-sm">
-                <textarea
-                  placeholder={chatMode === 'community' ? "Message #community-chat" : chatMode === 'direct' ? "Send a direct message" : "Discuss this task"}
-                  rows={1}
-                  className="w-full max-h-32 min-h-[44px] bg-transparent text-[14px] text-[var(--text)] px-4 py-3 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
-                  style={{ overflowY: 'auto' }}
-                />
-            </div>
+            <form onSubmit={handleSendMessage} className="relative">
+              <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all shadow-sm">
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
+                    placeholder={chatMode === 'community' ? "Message #community-chat" : chatMode === 'direct' ? "Send a direct message" : "Discuss this task"}
+                    rows={1}
+                    className="w-full max-h-32 min-h-[44px] bg-transparent text-[14px] text-[var(--text)] px-4 py-3 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
+                    style={{ overflowY: 'auto' }}
+                  />
+                  
+                  <div className="flex items-center justify-between px-2 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
+                    <div className="flex items-center gap-1 text-[var(--text-muted)]">
+                      <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
+                        <span className="font-bold font-mono text-[12px]">B</span>
+                      </div>
+                      <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
+                        <span className="italic font-serif text-[12px]">I</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      disabled={!newMessage.trim()}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold rounded-lg transition-all ${
+                        newMessage.trim() 
+                        ? 'bg-[var(--accent)] text-white hover:opacity-90 shadow-sm' 
+                        : 'bg-[var(--border)] text-[var(--text-muted)] cursor-not-allowed'
+                      }`}
+                    >
+                      <LuSend className="text-[14px]" />
+                      Send
+                    </button>
+                  </div>
+              </div>
+            </form>
           </div>
         </div>
         

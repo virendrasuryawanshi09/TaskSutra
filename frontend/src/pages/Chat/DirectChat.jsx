@@ -22,7 +22,10 @@ const DirectChat = () => {
   // Auto scroll
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+      messagesEndRef.current.scrollTo({
+         top: messagesEndRef.current.scrollHeight,
+         behavior: "smooth"
+      });
     }
   };
 
@@ -69,6 +72,14 @@ const DirectChat = () => {
         if (res.data.chat) {
           await axiosInstance.put(`/api/direct-chats/${res.data.chat._id}/read`);
           
+          if (socketRef.current) {
+             socketRef.current.emit('mark_messages_seen', {
+                chatId: res.data.chat._id,
+                readerId: user?._id || user?.id,
+                senderId: activeUser._id
+             });
+          }
+
           // Clear local unread count
           setDirectChats(prev => prev.map(c => {
              if (String(c._id) === String(res.data.chat._id)) {
@@ -162,6 +173,14 @@ const DirectChat = () => {
     socketRef.current.on('dm_stop_typing', (data) => {
       if (activeUser && data.senderId === activeUser._id) {
          setTypingStatus(null);
+      }
+    });
+
+    socketRef.current.on('messages_seen', (data) => {
+      if (activeUser && data.readerId === activeUser._id) {
+         setMessages(prev => prev.map(m => 
+            m.sender?._id === (user?._id || user?.id) ? { ...m, isRead: true } : m
+         ));
       }
     });
 
@@ -399,18 +418,18 @@ const DirectChat = () => {
                     && moment(msg.createdAt).diff(moment(messages[index - 1].createdAt), 'minutes') < 5;
 
                   return (
-                    <div key={msg._id || index} className={`group flex gap-4 px-2 py-1 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-4'}`}>
+                    <div key={msg._id || index} className={`group flex gap-4 px-2 py-1.5 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-5'}`}>
                       
                       {/* Left Column (Avatar or Timestamp) */}
                       <div className="w-10 flex-shrink-0 flex justify-center">
                         {!isConsecutive ? (
                           <div className="mt-0.5">
-                              <div className={`w-10 h-10 rounded-md flex items-center justify-center text-[14px] font-bold text-white shadow-sm ${isMe ? 'bg-[#0f172a]' : 'bg-[var(--accent)]'}`}>
+                              <div className={`w-10 h-10 rounded-md flex items-center justify-center text-[14px] font-bold text-white shadow-sm transition-transform hover:scale-105 ${isMe ? 'bg-[#0f172a]' : 'bg-[var(--accent)]'}`}>
                                 {senderName.charAt(0).toUpperCase()}
                               </div>
                           </div>
                         ) : (
-                          <div className="opacity-0 group-hover:opacity-100 text-[10px] text-[var(--text-muted)] font-medium pt-1.5 select-none">
+                          <div className="opacity-0 group-hover:opacity-100 text-[10px] text-[var(--text-muted)] font-bold pt-1.5 select-none transition-opacity">
                             {time}
                           </div>
                         )}
@@ -420,16 +439,25 @@ const DirectChat = () => {
                       <div className="flex flex-col flex-1 min-w-0 pb-0.5">
                         {!isConsecutive && (
                           <div className="flex items-baseline gap-2 leading-tight mb-1">
-                            <span className="text-[15px] font-bold text-[var(--text)] tracking-tight">
+                            <span className="text-[15px] font-bold text-[var(--text)] tracking-tight hover:underline cursor-pointer">
                               {senderName}
                             </span>
-                            <span className="text-[11px] font-medium text-[var(--text-muted)] hover:underline cursor-pointer">
-                              {date} {time}
+                            <span className="text-[11px] font-medium text-[var(--text-muted)] flex items-center gap-1">
+                              {time}
                             </span>
                           </div>
                         )}
-                        <div className="text-[15px] text-[var(--text)] leading-[1.45] break-words whitespace-pre-wrap">
-                          {msg.content}
+                        <div className="text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2">
+                          <span>{msg.content}</span>
+                          {isMe && (
+                             <span className="text-[14px] leading-none mb-0.5 ml-1 inline-block" title={msg.isRead ? "Seen" : "Sent"}>
+                                {msg.isRead ? (
+                                   <span className="text-blue-500 font-bold">✓✓</span>
+                                ) : (
+                                   <span className="text-[var(--text-muted)]">✓</span>
+                                )}
+                             </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -438,16 +466,25 @@ const DirectChat = () => {
 
                 {/* Elite Typing Indicator */}
                 {typingStatus && (
-                  <div className="flex items-center gap-2 text-[13px] text-[var(--text-muted)] font-medium mt-2 px-2 animate-pulse">
-                    {typingStatus}
+                  <div className="flex gap-4 px-2 py-2 -mx-2 mt-2">
+                    <div className="w-10 flex-shrink-0 flex justify-center">
+                       <div className="w-8 h-8 rounded-md bg-[var(--bg-soft)] border border-[var(--border)] flex items-center justify-center animate-pulse">
+                          <span className="text-[10px]">💬</span>
+                       </div>
+                    </div>
+                    <div className="flex items-center">
+                       <span className="text-[13px] text-[var(--text-muted)] font-medium italic animate-pulse">
+                         {typingStatus}
+                       </span>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Input Area */}
-              <div className="p-5 pt-0 bg-[var(--bg)] shrink-0">
-                <form onSubmit={handleSendMessage} className="relative">
-                  <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all shadow-sm">
+              <div className="p-4 md:p-6 pt-2 bg-[var(--bg)] shrink-0 z-10">
+                <form onSubmit={handleSendMessage} className="relative max-w-5xl mx-auto">
+                  <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/20 transition-all shadow-sm">
                     
                     <textarea
                       value={newMessage}
@@ -460,35 +497,38 @@ const DirectChat = () => {
                       }}
                       placeholder={`Message ${activeUser.name}`}
                       rows={1}
-                      className="w-full max-h-32 min-h-[44px] bg-transparent text-[14px] text-[var(--text)] px-4 py-3 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
+                      className="w-full max-h-[40vh] min-h-[48px] bg-transparent text-[15px] text-[var(--text)] px-4 py-3.5 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
                       style={{ overflowY: 'auto' }}
                     />
                     
-                    <div className="flex items-center justify-between px-2 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
+                    <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
                       <div className="flex items-center gap-1 text-[var(--text-muted)]">
-                        <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
-                          <span className="font-bold font-mono text-[12px]">B</span>
-                        </div>
-                        <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
-                          <span className="italic font-serif text-[12px]">I</span>
-                        </div>
+                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" title="Bold">
+                          <span className="font-bold font-mono text-[13px]">B</span>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" title="Italic">
+                          <span className="italic font-serif text-[13px]">I</span>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors" title="Link">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        </button>
                         <div className="w-px h-4 bg-[var(--border)] mx-1"></div>
-                        <div className="px-2 py-1 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[11px] font-medium flex items-center gap-1">
-                          Press <span className="px-1 py-0.5 bg-[var(--border)] rounded text-[9px] font-bold text-[var(--text)] shadow-sm">Enter</span> to send
+                        <div className="px-2 py-1 rounded text-[11px] font-medium hidden sm:flex items-center gap-1">
+                          Press <kbd className="px-1.5 py-0.5 bg-[var(--border)] rounded text-[10px] font-bold text-[var(--text)] shadow-sm font-sans">Enter</kbd> to send
                         </div>
                       </div>
                       
                       <button
                         type="submit"
                         disabled={!newMessage.trim()}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold rounded-lg transition-all ${
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-bold rounded-lg transition-all ${
                           newMessage.trim() 
-                          ? 'bg-[var(--accent)] text-white hover:opacity-90 shadow-sm' 
+                          ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-sm active:scale-95' 
                           : 'bg-[var(--border)] text-[var(--text-muted)] cursor-not-allowed'
                         }`}
                       >
-                        <LuSend className="text-[14px]" />
-                        Send
+                        <LuSend className="text-[15px]" />
+                        <span className="hidden sm:inline">Send</span>
                       </button>
                     </div>
 

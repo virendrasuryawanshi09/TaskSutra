@@ -299,16 +299,21 @@ const DirectChat = () => {
         <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0">
           
           {!activeUser ? (
-             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center overflow-y-auto">
-                 <div className="w-16 h-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center mb-4 shadow-sm hidden md:flex">
-                    <LuMessageSquare className="text-3xl text-[var(--accent)]" />
+             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center bg-gradient-to-b from-[var(--surface)] to-[var(--bg)]">
+                 <div className="relative mb-6 hidden md:flex">
+                    <div className="absolute inset-0 bg-[var(--accent)] blur-2xl opacity-10 rounded-full"></div>
+                    <div className="w-20 h-20 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center shadow-lg relative z-10">
+                       <LuMessageSquare className="text-4xl text-[var(--accent)]" />
+                    </div>
                  </div>
-                 <h2 className="text-xl font-bold text-[var(--text)] tracking-tight mb-2 hidden md:block">Your Direct Messages</h2>
-                 <p className="text-[14px] max-w-sm hidden md:block">Select a colleague from the sidebar to start a private conversation. Direct messages are encrypted and secure.</p>
+                 <h2 className="text-2xl font-black text-[var(--text)] tracking-tight mb-3 hidden md:block">Unified Workspace Messaging</h2>
+                 <p className="text-[15px] max-w-md hidden md:block leading-relaxed">
+                    Select a colleague from the sidebar to start a private conversation. Direct messages are real-time, encrypted, and seamlessly integrated into your workflow.
+                 </p>
                  
                  {/* Mobile User List */}
-                 <div className="md:hidden w-full flex flex-col items-start text-left space-y-2 mt-4">
-                    <h2 className="text-lg font-bold text-[var(--text)] mb-2">Select a Colleague</h2>
+                 <div className="md:hidden w-full flex flex-col items-start text-left space-y-3 mt-4">
+                    <h2 className="text-xl font-black text-[var(--text)] mb-2">Direct Messages</h2>
                     {users.map((u) => {
                       const isOnline = onlineUsers.includes(u._id.toString());
                       return (
@@ -317,11 +322,14 @@ const DirectChat = () => {
                           onClick={() => setActiveUser(u)}
                           className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-sm active:scale-[0.98] transition-transform"
                         >
-                           <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] font-bold text-[var(--text-muted)]">
+                           <div className="relative flex items-center justify-center w-10 h-10 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] font-bold text-[var(--text-muted)]">
                             {u.name.charAt(0).toUpperCase()}
-                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-[2px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-[2.5px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                            </div>
-                           <span className="font-semibold text-[var(--text)]">{u.name}</span>
+                           <div className="flex flex-col">
+                              <span className="font-bold text-[var(--text)] text-[15px]">{u.name}</span>
+                              <span className="text-[12px] text-[var(--text-muted)]">{isOnline ? 'Active now' : 'Offline'}</span>
+                           </div>
                         </div>
                       );
                     })}
@@ -330,36 +338,53 @@ const DirectChat = () => {
           ) : (
              <>
               {/* Header */}
-              <div className="h-14 px-4 md:px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
-                <div className="flex items-center gap-2 md:gap-3">
+              <div className="h-16 px-4 md:px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-[0_1px_2px_rgba(0,0,0,0.02)] shrink-0 z-10">
+                <div className="flex items-center gap-3 md:gap-4">
                   <button 
                      onClick={() => setActiveUser(null)}
-                     className="md:hidden mr-1 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+                     className="md:hidden mr-1 p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)] transition-colors"
                   >
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                   </button>
-                  <div className="relative flex items-center justify-center w-7 h-7 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[11px] font-bold text-[var(--text-muted)]">
+                  <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] text-[13px] font-bold text-[var(--text-muted)] shadow-sm">
                         {activeUser.name.charAt(0).toUpperCase()}
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[var(--surface)] rounded-full ${onlineUsers.includes(activeUser._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-[2.5px] border-[var(--surface)] rounded-full ${onlineUsers.includes(activeUser._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                   </div>
-                  <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">{activeUser.name}</h2>
-                  <span className="text-[12px] text-[var(--text-muted)] ml-2">{activeUser.email}</span>
+                  <div className="flex flex-col justify-center">
+                     <h2 className="text-[16px] font-black text-[var(--text)] tracking-tight leading-tight flex items-center gap-2">
+                        {activeUser.name}
+                     </h2>
+                     <span className="text-[12px] font-medium text-[var(--text-muted)] flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${onlineUsers.includes(activeUser._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                        {onlineUsers.includes(activeUser._id.toString()) ? 'Active now' : 'Offline'}
+                     </span>
+                  </div>
                 </div>
               </div>
 
               {/* Messages Feed */}
               <div ref={messagesEndRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-1 scrollbar-thin">
                 
-                <div className="pb-10 pt-4 max-w-3xl">
-                  <div className="w-12 h-12 bg-[var(--bg-soft)] rounded-xl flex items-center justify-center mb-4 border border-[var(--border)] text-[20px] font-bold text-[var(--text)]">
+                <div className="pb-8 pt-6 max-w-3xl">
+                  <div className="w-16 h-16 bg-[var(--surface)] rounded-2xl flex items-center justify-center mb-5 border border-[var(--border)] shadow-sm text-[28px] font-black text-[var(--text)]">
                     {activeUser.name.charAt(0).toUpperCase()}
                   </div>
-                  <h1 className="text-2xl font-bold text-[var(--text)] mb-2 tracking-tight">{activeUser.name}</h1>
-                  <p className="text-[14px] text-[var(--text-muted)]">This is the very beginning of your direct message history with {activeUser.name}.</p>
+                  <h1 className="text-[28px] font-black text-[var(--text)] mb-3 tracking-tight leading-none">{activeUser.name}</h1>
+                  <p className="text-[15px] text-[var(--text-muted)] leading-relaxed">
+                     This is the very beginning of your direct message history with <span className="font-bold text-[var(--text)]">@{activeUser.name}</span>. 
+                     Only the two of you are in this conversation, and no one else can join it.
+                  </p>
                 </div>
 
-                <div className="h-px bg-[var(--border)] w-full my-6 flex items-center justify-center">
-                  <span className="bg-[var(--bg)] px-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Beginning of History</span>
+                <div className="relative w-full my-8 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                     <div className="w-full border-t border-[var(--border)]"></div>
+                  </div>
+                  <div className="relative bg-[var(--bg)] px-4">
+                     <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest bg-[var(--surface)] px-3 py-1 rounded-full border border-[var(--border)]">
+                        History Starts Here
+                     </span>
+                  </div>
                 </div>
 
                 {messages.map((msg, index) => {

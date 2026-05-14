@@ -129,7 +129,7 @@ const ManageTasks = () => {
         </div>
 
         {/* 🔥 TABS */}
-        <div className="mb-6 overflow-x-auto -mx-2 px-2">
+        <div className="mb-6 -mx-2 px-2">
           <TaskStatusTabs
             tabs={tabs}
             activeTab={filterStatus}

@@ -165,7 +165,7 @@ const MyTasksWorkspace = ({
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <div className="grid min-h-[calc(100vh-9rem)] lg:grid-cols-[232px_minmax(0,1fr)]">
+        <div className="min-h-[calc(100vh-9rem)]">
           <main className="min-w-0 w-full px-4 py-6 sm:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div>
@@ -193,27 +193,18 @@ const MyTasksWorkspace = ({
             </div>
 
             <div>
-              {activeTab === "upcoming" ? (
-                <UpcomingTaskList
-                  tasks={tasks}
-                  loading={loading}
-                  selectedTaskId={selectedTaskId}
-                  onTaskClick={onTaskClick}
-                />
-              ) : (
-                <TaskList
-                  tasks={tasks}
-                  loading={loading}
-                  updatingTaskId={updatingTaskId}
-                  selectedTaskId={selectedTaskId}
-                  canReorder={canReorder}
-                  onTaskClick={onTaskClick}
-                  onStatusChange={onStatusChange}
-                  onDragStart={onDragStart}
-                  onDragEnter={onDragEnter}
-                  onDragEnd={onDragEnd}
-                />
-              )}
+              <TaskList
+                tasks={tasks}
+                loading={loading}
+                updatingTaskId={updatingTaskId}
+                selectedTaskId={selectedTaskId}
+                canReorder={canReorder}
+                onTaskClick={onTaskClick}
+                onStatusChange={onStatusChange}
+                onDragStart={onDragStart}
+                onDragEnter={onDragEnter}
+                onDragEnd={onDragEnd}
+              />
             </div>
           </main>
         </div>
@@ -223,8 +214,8 @@ const MyTasksWorkspace = ({
 };
 
 const Tabs = ({ activeTab, counts, onChange }) => (
-  <div className="w-full overflow-x-auto">
-    <div className="flex min-w-max items-center gap-6 border-b border-[var(--border)]">
+  <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex flex-nowrap min-w-max items-center gap-x-6 border-b border-[var(--border)]">
       {TASK_TABS.map((tab) => {
         const isActive = activeTab === tab.key;
 
@@ -306,125 +297,6 @@ const TaskList = ({
         />
       ))}
     </div>
-  );
-};
-
-const UpcomingTaskList = ({ tasks, loading, selectedTaskId, onTaskClick }) => {
-  if (loading) {
-    return (
-      <div className="grid gap-3 xl:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-[158px] animate-pulse rounded-2xl bg-[var(--bg-soft)]" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!tasks.length) {
-    return (
-      <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border)] bg-[linear-gradient(135deg,rgba(31,111,120,0.10),rgba(76,127,106,0.05)_54%,transparent)] px-6 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-2xl text-[var(--accent)] shadow-sm">
-          <HiOutlineCalendarDays aria-hidden="true" />
-        </div>
-        <h3 className="mt-4 text-base font-semibold text-[var(--text)]">
-          No upcoming tasks
-        </h3>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--text-muted)]">
-          Tasks with future due dates will appear here as soon as they are assigned.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-      <div className="border-b border-[var(--border)] bg-[linear-gradient(135deg,rgba(31,111,120,0.12),rgba(76,127,106,0.06)_52%,transparent)] px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-              <HiOutlineSparkles className="text-sm" aria-hidden="true" />
-              Focus queue
-            </p>
-            <h2 className="mt-2 text-lg font-semibold text-[var(--text)]">
-              Upcoming Deadlines
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Sorted by closest due date across your active workload.
-            </p>
-          </div>
-          <span className="w-fit rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-muted)] shadow-sm">
-            {tasks.length} upcoming
-          </span>
-        </div>
-      </div>
-
-      <div className="grid gap-3 p-3 xl:grid-cols-2">
-        {tasks.map((task, index) => {
-          const priorityStyle = upcomingPriorityStyles[task.priority] || defaultUpcomingPriorityStyle;
-          const dueWindow = getUpcomingDueWindow(task);
-          const taskTitle = task.title || "Untitled task";
-          const isSelected = selectedTaskId === task.id;
-
-          return (
-            <motion.button
-              key={task.id || `${taskTitle}-${index}`}
-              type="button"
-              onClick={() => onTaskClick?.(task)}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03, duration: 0.2, ease: "easeOut" }}
-              className={`group min-h-[154px] rounded-xl border p-4 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                isSelected
-                  ? "border-[var(--accent)] bg-[rgba(31,111,120,0.08)]"
-                  : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--bg-soft)]/45"
-              }`}
-              aria-label={`Preview ${taskTitle}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text}`}
-                >
-                  <HiOutlineFlag className="text-base" aria-hidden="true" />
-                </span>
-                <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${priorityStyle.border} ${priorityStyle.bg} ${priorityStyle.text}`}>
-                  {task.priority || "No Priority"}
-                </span>
-              </div>
-
-              <div className="mt-4 min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${priorityStyle.dot}`} />
-                  <h3 className="truncate text-sm font-semibold text-[var(--text)] transition-colors duration-300 group-hover:text-[var(--accent)]">
-                    {taskTitle}
-                  </h3>
-                </div>
-                <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-[var(--text-muted)]">
-                  {task.description || "No description added yet."}
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-                <span className={`font-medium ${dueWindow.tone}`}>
-                  {dueWindow.label}
-                </span>
-                <span>
-                  {formatTaskDate(task.dueDateValue, { year: "numeric" })}
-                </span>
-              </div>
-              <span
-                className="mt-3 block h-1.5 overflow-hidden rounded-full bg-[var(--bg-soft)]"
-                aria-hidden="true"
-              >
-                <span
-                  className="block h-full rounded-full bg-[var(--accent)] transition-all duration-500"
-                  style={{ width: `${dueWindow.progress}%` }}
-                />
-              </span>
-            </motion.button>
-          );
-        })}
-      </div>
-    </section>
   );
 };
 

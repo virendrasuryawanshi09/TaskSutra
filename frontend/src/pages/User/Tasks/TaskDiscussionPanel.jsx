@@ -19,7 +19,7 @@ const TaskDiscussionPanel = ({
       />
 
       <aside
-        className={`fixed right-0 top-0 z-[80] flex h-screen w-full max-w-[350px] flex-col border-l border-[var(--border)] bg-[var(--surface)] transition-transform duration-200 ${
+        className={`fixed right-0 top-0 z-[80] flex h-screen w-[45vw] sm:w-full sm:max-w-[350px] flex-col border-l border-[var(--border)] bg-[var(--surface)] transition-transform duration-200 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

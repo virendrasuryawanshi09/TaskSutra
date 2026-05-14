@@ -165,114 +165,33 @@ const MyTasksWorkspace = ({
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
         <div className="grid min-h-[calc(100vh-9rem)] lg:grid-cols-[232px_minmax(0,1fr)]">
-          <aside className="border-b border-[var(--border)] bg-[var(--bg-soft)]/30 px-4 py-4 lg:border-b-0 lg:border-r">
-            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)] text-sm font-semibold text-[var(--accent)]">
-                {user?.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt={user?.name || "User"} className="h-full w-full object-cover" />
-                ) : (
-                  userInitial
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[var(--text)]">
-                  {user?.name || "User"}
-                </p>
-                <p className="truncate text-xs text-[var(--text-muted)]">
-                  Personal queue
+          <main className="min-w-0 w-full px-4 py-6 sm:px-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">
+                  Tasks
+                </h1>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Manage your workflow efficiently
                 </p>
               </div>
-            </div>
 
-            <div className="mt-5">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                Focus
-              </p>
-              <div className="mt-3 space-y-1">
-                {overviewItems.map(({ key, label, icon: Icon }) => {
-                  const isActive = activeTab === key;
-
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => onTabChange(key)}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
-                        isActive
-                          ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:bg-[var(--surface)]/70 hover:text-[var(--text)]"
-                      }`}
-                    >
-                      <span className="flex items-center gap-3">
-                        <Icon className="text-base text-[var(--accent)]" />
-                        <span className="text-sm font-medium">{label}</span>
-                      </span>
-                      <span className="text-sm font-semibold">{counts[key] || 0}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
-          <main className="min-w-0">
-            <div className="border-b border-[var(--border)] px-4 py-4 sm:px-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="shrink-0">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    {getTimeGreeting()}
-                  </p>
-                  <h1 className="mt-2 text-2xl font-semibold text-[var(--text)]">
-                    {activeViewContent.title}
-                  </h1>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {loading ? "Loading queue..." : activeViewContent.caption}
-                  </p>
-                </div>
-
-                <div className="flex w-full flex-col gap-3 xl:max-w-[760px]">
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-soft)]/55 p-2">
-                    <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_160px_40px] xl:items-end">
-                      <div className="relative">
-                    <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)]" />
-                    <input
-                      type="search"
-                      value={searchQuery}
-                      onChange={(event) => onSearchChange(event.target.value)}
-                      placeholder="Search by title, status, priority, or tag"
-                      className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-10 pr-14 text-sm text-[var(--text)] outline-none transition-all duration-200 placeholder:text-[var(--text-muted)] hover:border-[var(--text-muted)] focus:border-[var(--accent)] focus:shadow-[0_0_0_1px_var(--accent)]"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] sm:flex">
-                      <HiOutlineCommandLine className="text-xs" />
-                      K
-                    </span>
-                      </div>
-
-                      <div>
-                        <SelectDropdown
-                          label="Sort"
-                          options={SORT_OPTIONS}
-                          value={sortBy}
-                          onChange={onSortChange}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={onRefresh}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-all duration-200 hover:border-[var(--text-muted)] hover:text-[var(--text)]"
-                        aria-label="Refresh tasks"
-                      >
-                        <HiOutlineArrowPath className="text-base" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <Tabs activeTab={activeTab} counts={counts} onChange={onTabChange} />
-                </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
+                >
+                  <HiOutlineArrowPath className="text-base" />
+                  Export
+                </button>
               </div>
             </div>
 
-            <div className="px-4 py-4 sm:px-5">
+            <div className="mb-6">
+              <Tabs activeTab={activeTab} counts={counts} onChange={onTabChange} />
+            </div>
+
+            <div>
               {activeTab === "upcoming" ? (
                 <UpcomingTaskList
                   tasks={tasks}
@@ -313,14 +232,14 @@ const Tabs = ({ activeTab, counts, onChange }) => (
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`relative flex min-h-10 items-center gap-2 pb-2 text-sm font-medium transition-colors duration-200 ${
+            className={`relative flex min-h-10 items-center gap-2 pb-3 text-[15px] font-semibold transition-colors duration-200 ${
               isActive ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
             }`}
           >
             {isActive ? (
               <motion.span
                 layoutId="myTasksActiveTab"
-                className="absolute bottom-0 left-0 h-[2px] w-full rounded-full bg-[var(--accent)]"
+                className="absolute bottom-0 left-0 h-[3px] w-full bg-[var(--accent)]"
                 transition={{ duration: 0.2, ease: "easeOut" }}
               />
             ) : null}

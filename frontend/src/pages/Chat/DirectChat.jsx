@@ -17,7 +17,7 @@ const DirectChat = () => {
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
+  const [directChats, setDirectChats] = useState([]);
 
   // Auto scroll
   const scrollToBottom = () => {
@@ -30,18 +30,32 @@ const DirectChat = () => {
     scrollToBottom();
   }, [messages, typingStatus]);
 
-  // Fetch all users to display in sidebar
+  // Fetch all users and direct chats to display in sidebar
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchSidebarData = async () => {
       try {
-        const res = await axiosInstance.get('/api/users');
-        // Exclude current user from the list
-        setUsers(res.data.filter(u => u._id !== (user?._id || user?.id)));
+        const usersRes = await axiosInstance.get('/api/users');
+        let fetchedUsers = usersRes.data.filter(u => String(u._id) !== String(user?._id || user?.id));
+
+        const directChatsRes = await axiosInstance.get('/api/direct-chats');
+        const chats = directChatsRes.data || [];
+        setDirectChats(chats);
+
+        // Inject Admins from existing chats
+        chats.forEach(chat => {
+           chat.participants.forEach(p => {
+              if (String(p._id) !== String(user?._id || user?.id) && !fetchedUsers.find(u => String(u._id) === String(p._id))) {
+                 fetchedUsers.push(p);
+              }
+           });
+        });
+
+        setUsers(fetchedUsers);
       } catch (error) {
-        console.error('Failed to fetch users:', error);
+        console.error('Failed to fetch sidebar data:', error);
       }
     };
-    if (user) fetchUsers();
+    if (user) fetchSidebarData();
   }, [user]);
 
   // Fetch messages when active user changes
@@ -54,13 +68,21 @@ const DirectChat = () => {
         // Mark as read
         if (res.data.chat) {
           await axiosInstance.put(`/api/direct-chats/${res.data.chat._id}/read`);
+          
+          // Clear local unread count
+          setDirectChats(prev => prev.map(c => {
+             if (String(c._id) === String(res.data.chat._id)) {
+                return { ...c, unreadCounts: { ...c.unreadCounts, [user?._id || user?.id]: 0 } };
+             }
+             return c;
+          }));
         }
       } catch (error) {
         console.error('Failed to fetch DMs:', error);
       }
     };
     fetchDirectMessages();
-  }, [activeUser]);
+  }, [activeUser, user]);
 
   // Socket setup
   useEffect(() => {

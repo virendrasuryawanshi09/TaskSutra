@@ -102,8 +102,7 @@ const MyTasksPage = () => {
   const visibleTasks = useMemo(() => {
     const tabFilteredTasks = filterTasksByTab(taskViewModel, activeTab);
     const searchedTasks = filterTasksBySearch(tabFilteredTasks, searchQuery);
-    const effectiveSort = activeTab === "upcoming" && sortBy === "custom" ? "due-date" : sortBy;
-    return sortTasks(searchedTasks, effectiveSort);
+    return sortTasks(searchedTasks, sortBy);
   }, [activeTab, searchQuery, sortBy, taskViewModel]);
 
   const handleTaskClick = (task) => {

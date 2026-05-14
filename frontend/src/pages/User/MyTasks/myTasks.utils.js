@@ -13,11 +13,10 @@ const PRIORITY_LABELS = {
 };
 
 export const TASK_TABS = [
-  { key: "all", label: "All Tasks" },
-  { key: "upcoming", label: "Upcoming" },
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
   { key: "in-progress", label: "In Progress" },
   { key: "completed", label: "Completed" },
-  { key: "overdue", label: "Overdue" },
 ];
 
 export const SORT_OPTIONS = [
@@ -90,19 +89,15 @@ export const getInitialTab = (viewParam) => {
   const normalizedValue = String(viewParam || "").trim().toLowerCase();
 
   if (normalizedValue === "completed") return "completed";
-  if (normalizedValue === "upcoming") return "upcoming";
+  if (normalizedValue === "pending") return "pending";
+  if (normalizedValue === "in-progress") return "in-progress";
 
   return "all";
 };
 
 export const filterTasksByTab = (tasks = [], activeTab = "all") => {
-  if (activeTab === "upcoming") {
-    return tasks.filter(
-      (task) =>
-        task.dueDateValue &&
-        task.dueDateValue.getTime() >= Date.now() &&
-        !task.isCompleted
-    );
+  if (activeTab === "pending") {
+    return tasks.filter((task) => task.status === "Pending");
   }
 
   if (activeTab === "completed") {
@@ -111,10 +106,6 @@ export const filterTasksByTab = (tasks = [], activeTab = "all") => {
 
   if (activeTab === "in-progress") {
     return tasks.filter((task) => task.isInProgress);
-  }
-
-  if (activeTab === "overdue") {
-    return tasks.filter((task) => task.isOverdue);
   }
 
   return tasks;
@@ -171,15 +162,9 @@ export const sortTasks = (tasks = [], sortBy = "due-date") => {
 
 export const getTaskCounts = (tasks = []) => ({
   all: tasks.length,
-  upcoming: tasks.filter(
-    (task) =>
-      task.dueDateValue &&
-      task.dueDateValue.getTime() >= Date.now() &&
-      !task.isCompleted
-  ).length,
+  pending: tasks.filter((task) => task.status === "Pending").length,
   "in-progress": tasks.filter((task) => task.isInProgress).length,
   completed: tasks.filter((task) => task.isCompleted).length,
-  overdue: tasks.filter((task) => task.isOverdue).length,
 });
 
 export const formatTaskDate = (value, options = {}) => {

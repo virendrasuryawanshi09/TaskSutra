@@ -13,6 +13,7 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlinePaperClip,
   HiOutlineSparkles,
+  HiOutlineChatBubbleLeftEllipsis,
 } from "react-icons/hi2";
 import SelectDropdown from "../../../../components/input/SelectDropdown";
 import AvatarGroup from "../../../../components/AvatarGroup";
@@ -498,11 +499,19 @@ const TaskCard = ({
            />
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-[12px] font-medium text-[var(--text-muted)]">
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[13px] font-medium text-[var(--text-muted)]">
             {formatTaskDate(task.createdAt, { month: "short", day: "2-digit" })}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button 
+              type="button" 
+              onClick={(e) => { e.stopPropagation(); /* Optional: handle quick open discussion here if needed */ }}
+              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
+              title="Discussion"
+            >
+              <HiOutlineChatBubbleLeftEllipsis className="text-[18px]" />
+            </button>
             <AvatarGroup avatars={task.assignedUsers} max={3} />
           </div>
         </div>

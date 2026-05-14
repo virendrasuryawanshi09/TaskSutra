@@ -338,17 +338,22 @@ const TaskCard = ({
     >
       <div>
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <span className={`text-xs font-semibold ${
-               task.status === "Completed" ? "text-green-600" : 
-               task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
-            }`}>
-              {task.status}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-semibold ${
+                 task.status === "Completed" ? "text-green-600" : 
+                 task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
+              }`}>
+                {task.status}
+              </span>
+              <span className={`h-1.5 w-1.5 rounded-full ${
+                 task.status === "Completed" ? "bg-green-600" : 
+                 task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
+              }`} />
+            </div>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
+              {task.priority}
             </span>
-            <span className={`h-1.5 w-1.5 rounded-full ${
-               task.status === "Completed" ? "bg-green-600" : 
-               task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
-            }`} />
           </div>
           <span className="text-xs font-medium text-[var(--text-muted)]">
             Due : {formatTaskDate(task.dueDateValue, { year: undefined, month: "short", day: "2-digit" })}

@@ -88,6 +88,10 @@ const TaskCard = ({
           </span>
 
           <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDot()}`} />
+          
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium border border-[var(--border)] text-[var(--text-muted)]`}>
+            {priority}
+          </span>
 
         </div>
 

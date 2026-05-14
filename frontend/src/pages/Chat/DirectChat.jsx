@@ -100,14 +100,49 @@ const DirectChat = () => {
     });
 
     socketRef.current.on('receive_direct_message', (message) => {
+      const senderId = String(message.sender?._id || message.sender);
+      
       // Only append if the message belongs to the current active chat
       setMessages((prev) => {
-        // Checking if we are currently chatting with the sender
-        if (activeUser && message.sender._id === activeUser._id) {
+        if (activeUser && senderId === String(activeUser._id)) {
+          // Prevent duplicates
+          if (prev.find(m => String(m._id) === String(message._id))) return prev;
           return [...prev, message];
         }
-        return prev; // If from someone else, we ideally show an unread badge (handled in DB/refresh)
+        return prev;
       });
+
+      // Update unread badges and sidebar ordering
+      if (!activeUser || senderId !== String(activeUser._id)) {
+        setDirectChats(prev => {
+          const existingChat = prev.find(c => c.participants.some(p => String(p._id || p) === senderId));
+          if (existingChat) {
+             return prev.map(c => {
+                if (String(c._id) === String(existingChat._id)) {
+                   const currentUnread = c.unreadCounts?.[user?._id || user?.id] || 0;
+                   return { 
+                      ...c, 
+                      unreadCounts: { ...c.unreadCounts, [user?._id || user?.id]: currentUnread + 1 },
+                      updatedAt: new Date().toISOString()
+                   };
+                }
+                return c;
+             });
+          } else {
+             // New chat entirely
+             axiosInstance.get('/api/direct-chats').then(res => {
+                setDirectChats(res.data || []);
+                setUsers(prevUsers => {
+                   if (!prevUsers.find(u => String(u._id) === senderId)) {
+                      return [...prevUsers, message.sender];
+                   }
+                   return prevUsers;
+                });
+             });
+             return prev;
+          }
+        });
+      }
     });
 
     socketRef.current.on('userOnline', (data) => {
@@ -149,6 +184,14 @@ const DirectChat = () => {
       
       // Append locally
       setMessages(prev => [...prev, savedMessage]);
+
+      // Update local directChats to bump to top
+      setDirectChats(prev => prev.map(c => {
+         if (c.participants.some(p => String(p._id || p) === String(activeUser._id))) {
+            return { ...c, updatedAt: new Date().toISOString() };
+         }
+         return c;
+      }));
       
       // Emit to server to route to receiver
       socketRef.current.emit('send_direct_message', {
@@ -209,20 +252,41 @@ const DirectChat = () => {
                 Colleagues
               </div>
               <div className="space-y-0.5 mt-2">
-                {users.map((u) => {
+                {[...users].sort((a, b) => {
+                  const chatA = directChats.find(c => c.participants.some(p => String(p._id || p) === String(a._id)));
+                  const chatB = directChats.find(c => c.participants.some(p => String(p._id || p) === String(b._id)));
+                  const dateA = chatA ? new Date(chatA.updatedAt).getTime() : 0;
+                  const dateB = chatB ? new Date(chatB.updatedAt).getTime() : 0;
+                  return dateB - dateA;
+                }).map((u) => {
                   const isOnline = onlineUsers.includes(u._id.toString());
                   const isActive = activeUser?._id === u._id;
+                  const chat = directChats.find(c => c.participants.some(p => String(p._id || p) === String(u._id)));
+                  const unreadCount = chat?.unreadCounts?.[user?._id || user?.id] || 0;
+
                   return (
                     <div 
                       key={u._id} 
                       onClick={() => setActiveUser(u)}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${isActive ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${isActive ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
                     >
-                      <div className="relative flex items-center justify-center w-5 h-5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
-                        {u.name.charAt(0).toUpperCase()}
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border-[1.5px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative flex items-center justify-center w-5 h-5 shrink-0 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
+                          {u.name.charAt(0).toUpperCase()}
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border-[1.5px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                        </div>
+                        <span className={`text-[13px] font-medium truncate flex items-center gap-1.5 ${isActive ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                          {u.name}
+                          {u.role && u.role.toLowerCase() === 'admin' && (
+                             <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)] hidden md:inline-block">Admin</span>
+                          )}
+                        </span>
                       </div>
-                      <span className={`text-[13px] font-medium truncate ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>{u.name}</span>
+                      {unreadCount > 0 && !isActive && (
+                        <div className="bg-[var(--accent)] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                           {unreadCount}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -1,6 +1,7 @@
 import React from "react";
 import AvatarGroup from "../AvatarGroup";
 import { LuPaperclip } from "react-icons/lu";
+import { HiOutlineChatBubbleLeftEllipsis } from "react-icons/hi2";
 import moment from "moment";
 
 const TaskCard = ({
@@ -87,6 +88,10 @@ const TaskCard = ({
           </span>
 
           <span className={`w-1.5 h-1.5 rounded-full ${getPriorityDot()}`} />
+          
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium border border-[var(--border)] text-[var(--text-muted)]`}>
+            {priority}
+          </span>
 
         </div>
 
@@ -144,7 +149,17 @@ const TaskCard = ({
 
         </div>
 
-        <AvatarGroup avatars={assignedTo} />
+        <div className="flex items-center gap-2">
+          <button 
+            type="button" 
+            onClick={(e) => { e.stopPropagation(); /* handle open discussion */ }}
+            className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
+            title="Discussion"
+          >
+            <HiOutlineChatBubbleLeftEllipsis className="text-[16px]" />
+          </button>
+          <AvatarGroup avatars={assignedTo} />
+        </div>
 
       </div>
 

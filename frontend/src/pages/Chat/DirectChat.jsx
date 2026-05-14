@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { io } from 'socket.io-client';
+import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../../components/Layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
@@ -9,20 +10,27 @@ import { LuSend, LuMessageSquare } from 'react-icons/lu';
 const DirectChat = () => {
   const { user } = useContext(UserContext);
   const [users, setUsers] = useState([]);
-  const [activeUser, setActiveUser] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [activeChat, setActiveChat] = useState(null); // { type: 'user', data: userObj }, { type: 'task', data: taskObj }, { type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } }
+  
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [typingStatus, setTypingStatus] = useState(null); // String: "User is typing..."
   
+  const location = useLocation();
   const socketRef = useRef(null);
-  const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const [directChats, setDirectChats] = useState([]);
 
   // Auto scroll
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+      messagesEndRef.current.scrollTo({
+         top: messagesEndRef.current.scrollHeight,
+         behavior: "smooth"
+      });
     }
   };
 
@@ -30,37 +38,90 @@ const DirectChat = () => {
     scrollToBottom();
   }, [messages, typingStatus]);
 
-  // Fetch all users to display in sidebar
+  // Fetch all users and direct chats to display in sidebar
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchSidebarData = async () => {
       try {
-        const res = await axiosInstance.get('/api/users');
-        // Exclude current user from the list
-        setUsers(res.data.filter(u => u._id !== (user?._id || user?.id)));
-      } catch (error) {
-        console.error('Failed to fetch users:', error);
-      }
-    };
-    if (user) fetchUsers();
-  }, [user]);
+        const usersRes = await axiosInstance.get('/api/users');
+        let fetchedUsers = usersRes.data.filter(u => String(u._id) !== String(user?._id || user?.id));
 
-  // Fetch messages when active user changes
-  useEffect(() => {
-    const fetchDirectMessages = async () => {
-      if (!activeUser) return;
-      try {
-        const res = await axiosInstance.get(`/api/direct-chats/${activeUser._id}`);
-        setMessages(res.data.messages || []);
-        // Mark as read
-        if (res.data.chat) {
-          await axiosInstance.put(`/api/direct-chats/${res.data.chat._id}/read`);
+        const directChatsRes = await axiosInstance.get('/api/direct-chats');
+        const chats = directChatsRes.data || [];
+        setDirectChats(chats);
+
+        // Inject Admins from existing chats
+        chats.forEach(chat => {
+           chat.participants.forEach(p => {
+              if (String(p._id) !== String(user?._id || user?.id) && !fetchedUsers.find(u => String(u._id) === String(p._id))) {
+                 fetchedUsers.push(p);
+              }
+           });
+        });
+
+        // Fetch tasks
+        const tasksRes = await axiosInstance.get('/api/tasks');
+        const fetchedTasks = tasksRes.data.tasks || tasksRes.data || [];
+        setTasks(fetchedTasks);
+
+        setUsers(fetchedUsers);
+        
+        if (location.state?.activeTask) {
+           const t = fetchedTasks.find(t => String(t._id) === String(location.state.activeTask._id));
+           if (t) {
+              setActiveChat({ type: 'task', data: t });
+           } else {
+              setActiveChat({ type: 'task', data: location.state.activeTask });
+           }
+           window.history.replaceState({}, document.title)
         }
       } catch (error) {
-        console.error('Failed to fetch DMs:', error);
+        console.error('Failed to fetch sidebar data:', error);
       }
     };
-    fetchDirectMessages();
-  }, [activeUser]);
+    if (user) fetchSidebarData();
+  }, [user]);
+
+  // Fetch messages when active chat changes
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!activeChat) return;
+      try {
+        if (activeChat.type === 'user') {
+           const res = await axiosInstance.get(`/api/direct-chats/${activeChat.data._id}`);
+           setMessages(res.data.messages || []);
+           // Mark as read
+           if (res.data.chat) {
+             await axiosInstance.put(`/api/direct-chats/${res.data.chat._id}/read`);
+             
+             if (socketRef.current) {
+                socketRef.current.emit('mark_messages_seen', {
+                   chatId: res.data.chat._id,
+                   readerId: user?._id || user?.id,
+                   senderId: activeChat.data._id
+                });
+             }
+
+             // Clear local unread count
+             setDirectChats(prev => prev.map(c => {
+                if (String(c._id) === String(res.data.chat._id)) {
+                   return { ...c, unreadCounts: { ...c.unreadCounts, [user?._id || user?.id]: 0 } };
+                }
+                return c;
+             }));
+           }
+        } else if (activeChat.type === 'task') {
+           const res = await axiosInstance.get(`/api/task-discussions/${activeChat.data._id}`);
+           setMessages(res.data.messages || []);
+        } else if (activeChat.type === 'community') {
+           const res = await axiosInstance.get('/api/chat');
+           setMessages(res.data.messages || res.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch messages:', error);
+      }
+    };
+    fetchMessages();
+  }, [activeChat, user]);
 
   // Socket setup
   useEffect(() => {
@@ -78,13 +139,68 @@ const DirectChat = () => {
     });
 
     socketRef.current.on('receive_direct_message', (message) => {
+      const senderId = String(message.sender?._id || message.sender);
+      
       // Only append if the message belongs to the current active chat
       setMessages((prev) => {
-        // Checking if we are currently chatting with the sender
-        if (activeUser && message.sender._id === activeUser._id) {
+        if (activeChat?.type === 'user' && senderId === String(activeChat.data._id)) {
+          // Prevent duplicates
+          if (prev.find(m => String(m._id) === String(message._id))) return prev;
           return [...prev, message];
         }
-        return prev; // If from someone else, we ideally show an unread badge (handled in DB/refresh)
+        return prev;
+      });
+
+      // Update unread badges and sidebar ordering
+      if (!activeChat || activeChat.type !== 'user' || senderId !== String(activeChat.data._id)) {
+        setDirectChats(prev => {
+          const existingChat = prev.find(c => c.participants.some(p => String(p._id || p) === senderId));
+          if (existingChat) {
+             return prev.map(c => {
+                if (String(c._id) === String(existingChat._id)) {
+                   const currentUnread = c.unreadCounts?.[user?._id || user?.id] || 0;
+                   return { 
+                      ...c, 
+                      unreadCounts: { ...c.unreadCounts, [user?._id || user?.id]: currentUnread + 1 },
+                      updatedAt: new Date().toISOString()
+                   };
+                }
+                return c;
+             });
+          } else {
+             // New chat entirely
+             axiosInstance.get('/api/direct-chats').then(res => {
+                setDirectChats(res.data || []);
+                setUsers(prevUsers => {
+                   if (!prevUsers.find(u => String(u._id) === senderId)) {
+                      return [...prevUsers, message.sender];
+                   }
+                   return prevUsers;
+                });
+             });
+             return prev;
+          }
+        });
+      }
+    });
+
+    socketRef.current.on('receive_task_message', (message) => {
+      setMessages((prev) => {
+        if (activeChat?.type === 'task' && String(message.discussionId) === String(activeChat.data.discussionId || message.discussionId)) {
+          if (prev.find(m => String(m._id) === String(message._id))) return prev;
+          return [...prev, message];
+        }
+        return prev;
+      });
+    });
+
+    socketRef.current.on('receive_message', (message) => {
+      setMessages((prev) => {
+        if (activeChat?.type === 'community') {
+          if (prev.find(m => String(m._id) === String(message._id))) return prev;
+          return [...prev, message];
+        }
+        return prev;
       });
     });
 
@@ -97,60 +213,143 @@ const DirectChat = () => {
     });
 
     socketRef.current.on('dm_typing', (data) => {
-      if (activeUser && data.senderId === activeUser._id) {
+      if (activeChat?.type === 'user' && data.senderId === activeChat.data._id) {
          setTypingStatus(`${data.name} is typing...`);
       }
     });
 
     socketRef.current.on('dm_stop_typing', (data) => {
-      if (activeUser && data.senderId === activeUser._id) {
+      if (activeChat?.type === 'user' && data.senderId === activeChat.data._id) {
          setTypingStatus(null);
+      }
+    });
+
+    socketRef.current.on('task_typing', (data) => {
+      if (activeChat?.type === 'task' && data.taskId === activeChat.data._id && data.userId !== (user?._id || user?.id)) {
+         setTypingStatus(`${data.name} is typing...`);
+      }
+    });
+
+    socketRef.current.on('task_stop_typing', (data) => {
+      if (activeChat?.type === 'task' && data.taskId === activeChat.data._id) {
+         setTypingStatus(null);
+      }
+    });
+
+    socketRef.current.on('typing', (data) => {
+      if (activeChat?.type === 'community' && data.userId !== (user?._id || user?.id)) {
+         setTypingStatus(`${data.name} is typing...`);
+      }
+    });
+
+    socketRef.current.on('stop_typing', (data) => {
+      if (activeChat?.type === 'community') {
+         setTypingStatus(null);
+      }
+    });
+
+    socketRef.current.on('messages_seen', (data) => {
+      if (activeChat?.type === 'user' && data.readerId === activeChat.data._id) {
+         setMessages(prev => prev.map(m => 
+            m.sender?._id === (user?._id || user?.id) ? { ...m, isRead: true } : m
+         ));
       }
     });
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
-  }, [user, activeUser]);
+  }, [user, activeChat]);
+
+  // Handle task room join/leave
+  useEffect(() => {
+     if (socketRef.current) {
+         if (activeChat?.type === 'task') {
+             socketRef.current.emit('joinTaskRoom', activeChat.data._id);
+         }
+     }
+     return () => {
+         if (socketRef.current && activeChat?.type === 'task') {
+             socketRef.current.emit('leaveTaskRoom', activeChat.data._id);
+         }
+     };
+  }, [activeChat]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeUser) return;
+    if (!newMessage.trim() || !activeChat) return;
 
     try {
-      const response = await axiosInstance.post('/api/direct-chats', {
-        receiverId: activeUser._id,
-        content: newMessage
-      });
-      
-      const savedMessage = response.data.message;
-      
-      // Append locally
-      setMessages(prev => [...prev, savedMessage]);
-      
-      // Emit to server to route to receiver
-      socketRef.current.emit('send_direct_message', {
-        receiverId: activeUser._id,
-        messageData: savedMessage
-      });
+      if (activeChat.type === 'user') {
+          const response = await axiosInstance.post('/api/direct-chats', {
+            receiverId: activeChat.data._id,
+            content: newMessage
+          });
+          
+          const savedMessage = response.data.message;
+          setMessages(prev => [...prev, savedMessage]);
+
+          setDirectChats(prev => prev.map(c => {
+             if (c.participants.some(p => String(p._id || p) === String(activeChat.data._id))) {
+                return { ...c, updatedAt: new Date().toISOString() };
+             }
+             return c;
+          }));
+          
+          socketRef.current.emit('send_direct_message', {
+            receiverId: activeChat.data._id,
+            messageData: savedMessage
+          });
+      } else if (activeChat.type === 'task') {
+          const response = await axiosInstance.post(`/api/task-discussions/${activeChat.data._id}`, {
+            content: newMessage
+          });
+          
+          const savedMessage = response.data.message;
+          setMessages(prev => [...prev, savedMessage]);
+          
+          // Emit to room
+          socketRef.current.emit('send_task_message', {
+             taskId: activeChat.data._id,
+             messageData: { ...savedMessage, discussionId: response.data.discussion._id }
+          });
+      } else if (activeChat.type === 'community') {
+          const response = await axiosInstance.post('/api/chat', { content: newMessage });
+          socketRef.current.emit('send_message', response.data);
+          setMessages(prev => prev.find(m => m._id === response.data._id) ? prev : [...prev, response.data]);
+      }
       
       setNewMessage('');
       handleStopTyping();
     } catch (error) {
-      console.error('Failed to send DM:', error);
+      console.error('Failed to send message:', error);
     }
   };
 
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
 
-    if (socketRef.current && user && activeUser) {
+    if (socketRef.current && user && activeChat) {
       const userId = user._id || user.id;
-      socketRef.current.emit('dm_typing', { 
-        receiverId: activeUser._id, 
-        senderId: userId, 
-        name: user.name 
-      });
+      
+      if (activeChat.type === 'user') {
+          socketRef.current.emit('dm_typing', { 
+            receiverId: activeChat.data._id, 
+            senderId: userId, 
+            name: user.name 
+          });
+      } else if (activeChat.type === 'task') {
+          socketRef.current.emit('task_typing', {
+             taskId: activeChat.data._id,
+             userId: userId,
+             name: user.name
+          });
+      } else if (activeChat.type === 'community') {
+          socketRef.current.emit('typing', {
+             userId: userId,
+             name: user.name
+          });
+      }
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
@@ -161,12 +360,23 @@ const DirectChat = () => {
   };
 
   const handleStopTyping = () => {
-    if (socketRef.current && user && activeUser) {
+    if (socketRef.current && user && activeChat) {
       const userId = user._id || user.id;
-      socketRef.current.emit('dm_stop_typing', { 
-        receiverId: activeUser._id, 
-        senderId: userId 
-      });
+      if (activeChat.type === 'user') {
+          socketRef.current.emit('dm_stop_typing', { 
+            receiverId: activeChat.data._id, 
+            senderId: userId 
+          });
+      } else if (activeChat.type === 'task') {
+          socketRef.current.emit('task_stop_typing', {
+             taskId: activeChat.data._id,
+             userId: userId
+          });
+      } else if (activeChat.type === 'community') {
+          socketRef.current.emit('stop_typing', {
+             userId: userId
+          });
+      }
     }
   };
 
@@ -182,29 +392,93 @@ const DirectChat = () => {
           </div>
           
           <div className="flex-1 overflow-y-auto py-4 scrollbar-thin">
+            {/* Channels Section */}
+            <div className="px-3 mb-6">
+              <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 px-2 flex justify-between items-center">
+                <span>Channels</span>
+              </div>
+              <div 
+                onClick={() => setActiveChat({ type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } })}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${activeChat?.type === 'community' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]'}`}
+              >
+                <LuMessageSquare className="text-[16px]" />
+                <span className="text-[13px] truncate"># community-chat</span>
+              </div>
+            </div>
+
             <div className="px-3 mb-2">
               <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 px-2">
                 Colleagues
               </div>
               <div className="space-y-0.5 mt-2">
-                {users.map((u) => {
+                {[...users].sort((a, b) => {
+                  const chatA = directChats.find(c => c.participants.some(p => String(p._id || p) === String(a._id)));
+                  const chatB = directChats.find(c => c.participants.some(p => String(p._id || p) === String(b._id)));
+                  const dateA = chatA ? new Date(chatA.updatedAt).getTime() : 0;
+                  const dateB = chatB ? new Date(chatB.updatedAt).getTime() : 0;
+                  return dateB - dateA;
+                }).map((u) => {
                   const isOnline = onlineUsers.includes(u._id.toString());
-                  const isActive = activeUser?._id === u._id;
+                  const isActive = activeChat?.type === 'user' && activeChat.data._id === u._id;
+                  const chat = directChats.find(c => c.participants.some(p => String(p._id || p) === String(u._id)));
+                  const unreadCount = chat?.unreadCounts?.[user?._id || user?.id] || 0;
+
                   return (
                     <div 
                       key={u._id} 
-                      onClick={() => setActiveUser(u)}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${isActive ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                      onClick={() => setActiveChat({ type: 'user', data: u })}
+                      className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${isActive ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
                     >
-                      <div className="relative flex items-center justify-center w-5 h-5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
-                        {u.name.charAt(0).toUpperCase()}
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border-[1.5px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative flex items-center justify-center w-5 h-5 shrink-0 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
+                          {u.name.charAt(0).toUpperCase()}
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border-[1.5px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                        </div>
+                        <span className={`text-[13px] font-medium truncate flex items-center gap-1.5 ${isActive ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                          {u.name}
+                          {u.role && u.role.toLowerCase() === 'admin' && (
+                             <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)] hidden md:inline-block">Admin</span>
+                          )}
+                        </span>
                       </div>
-                      <span className={`text-[13px] font-medium truncate ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>{u.name}</span>
+                      {unreadCount > 0 && !isActive && (
+                        <div className="bg-[var(--accent)] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                           {unreadCount}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
+
+              {tasks.length > 0 && (
+                 <>
+                   <div className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase mb-2 mt-6 px-2">
+                     Task Discussions
+                   </div>
+                   <div className="space-y-0.5 mt-2">
+                     {tasks.map(t => {
+                        const isActive = activeChat?.type === 'task' && activeChat.data._id === t._id;
+                        return (
+                           <div 
+                             key={t._id} 
+                             onClick={() => setActiveChat({ type: 'task', data: t })}
+                             className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${isActive ? 'bg-[var(--accent-soft)]' : 'hover:bg-[var(--bg-soft)]'}`}
+                           >
+                             <div className="flex items-center gap-2 min-w-0">
+                               <div className="relative flex items-center justify-center w-5 h-5 shrink-0 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
+                                 #
+                               </div>
+                               <span className={`text-[13px] font-medium truncate flex items-center gap-1.5 ${isActive ? 'text-[var(--accent)] font-bold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
+                                 {t.title}
+                               </span>
+                             </div>
+                           </div>
+                        )
+                     })}
+                   </div>
+                 </>
+              )}
             </div>
           </div>
         </div>
@@ -212,73 +486,91 @@ const DirectChat = () => {
         {/* Main Chat Area */}
         <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0">
           
-          {!activeUser ? (
-             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center overflow-y-auto">
-                 <div className="w-16 h-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center mb-4 shadow-sm hidden md:flex">
-                    <LuMessageSquare className="text-3xl text-[var(--accent)]" />
+          {!activeChat ? (
+             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center bg-gradient-to-b from-[var(--surface)] to-[var(--bg)]">
+                 <div className="relative mb-6 hidden md:flex">
+                    <div className="absolute inset-0 bg-[var(--accent)] blur-2xl opacity-10 rounded-full"></div>
+                    <div className="w-20 h-20 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-center justify-center shadow-lg relative z-10">
+                       <LuMessageSquare className="text-4xl text-[var(--accent)]" />
+                    </div>
                  </div>
-                 <h2 className="text-xl font-bold text-[var(--text)] tracking-tight mb-2 hidden md:block">Your Direct Messages</h2>
-                 <p className="text-[14px] max-w-sm hidden md:block">Select a colleague from the sidebar to start a private conversation. Direct messages are encrypted and secure.</p>
-                 
-                 {/* Mobile User List */}
-                 <div className="md:hidden w-full flex flex-col items-start text-left space-y-2 mt-4">
-                    <h2 className="text-lg font-bold text-[var(--text)] mb-2">Select a Colleague</h2>
-                    {users.map((u) => {
-                      const isOnline = onlineUsers.includes(u._id.toString());
-                      return (
-                        <div 
-                          key={u._id} 
-                          onClick={() => setActiveUser(u)}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-sm active:scale-[0.98] transition-transform"
-                        >
-                           <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] font-bold text-[var(--text-muted)]">
-                            {u.name.charAt(0).toUpperCase()}
-                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 border-[2px] border-[var(--surface)] rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                           </div>
-                           <span className="font-semibold text-[var(--text)]">{u.name}</span>
-                        </div>
-                      );
-                    })}
-                 </div>
+                 <h2 className="text-2xl font-black text-[var(--text)] tracking-tight mb-3 hidden md:block">Unified Workspace Messaging</h2>
+                 <p className="text-[15px] max-w-md hidden md:block leading-relaxed">
+                    Select a colleague or task from the sidebar to start collaborating. Direct messages and task discussions are real-time, encrypted, and seamlessly integrated into your workflow.
+                 </p>
              </div>
           ) : (
              <>
               {/* Header */}
-              <div className="h-14 px-4 md:px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-sm shrink-0">
-                <div className="flex items-center gap-2 md:gap-3">
+              <div className="h-16 px-4 md:px-6 flex justify-between items-center bg-[var(--surface)] border-b border-[var(--border)] shadow-[0_1px_2px_rgba(0,0,0,0.02)] shrink-0 z-10">
+                <div className="flex items-center gap-3 md:gap-4">
                   <button 
-                     onClick={() => setActiveUser(null)}
-                     className="md:hidden mr-1 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)]"
+                     onClick={() => setActiveChat(null)}
+                     className="md:hidden mr-1 p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-soft)] active:bg-[var(--border)] transition-colors"
                   >
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                   </button>
-                  <div className="relative flex items-center justify-center w-7 h-7 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[11px] font-bold text-[var(--text-muted)]">
-                        {activeUser.name.charAt(0).toUpperCase()}
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-[var(--surface)] rounded-full ${onlineUsers.includes(activeUser._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] text-[13px] font-bold text-[var(--text-muted)] shadow-sm">
+                        {activeChat.type === 'user' ? activeChat.data.name.charAt(0).toUpperCase() : '#'}
+                        {activeChat.type === 'user' && (
+                           <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-[2.5px] border-[var(--surface)] rounded-full ${onlineUsers.includes(activeChat.data._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                        )}
                   </div>
-                  <h2 className="text-[15px] font-bold text-[var(--text)] tracking-tight">{activeUser.name}</h2>
-                  <span className="text-[12px] text-[var(--text-muted)] ml-2">{activeUser.email}</span>
+                  <div className="flex flex-col justify-center">
+                     <h2 className="text-[16px] font-black text-[var(--text)] tracking-tight leading-tight flex items-center gap-2">
+                        {activeChat.type === 'user' ? activeChat.data.name : activeChat.type === 'community' ? activeChat.data.name : activeChat.data.title}
+                     </h2>
+                     <span className="text-[12px] font-medium text-[var(--text-muted)] flex items-center gap-1.5">
+                        {activeChat.type === 'user' ? (
+                           <>
+                             <span className={`w-1.5 h-1.5 rounded-full ${onlineUsers.includes(activeChat.data._id.toString()) ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                             {onlineUsers.includes(activeChat.data._id.toString()) ? 'Active now' : 'Offline'}
+                           </>
+                        ) : activeChat.type === 'community' ? (
+                           <span>Global Channel</span>
+                        ) : (
+                           <span>Task Discussion Room</span>
+                        )}
+                     </span>
+                  </div>
                 </div>
               </div>
 
               {/* Messages Feed */}
               <div ref={messagesEndRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-1 scrollbar-thin">
                 
-                <div className="pb-10 pt-4 max-w-3xl">
-                  <div className="w-12 h-12 bg-[var(--bg-soft)] rounded-xl flex items-center justify-center mb-4 border border-[var(--border)] text-[20px] font-bold text-[var(--text)]">
-                    {activeUser.name.charAt(0).toUpperCase()}
+                <div className="pb-8 pt-6 max-w-3xl">
+                  <div className="w-16 h-16 bg-[var(--surface)] rounded-2xl flex items-center justify-center mb-5 border border-[var(--border)] shadow-sm text-[28px] font-black text-[var(--text)]">
+                    {activeChat.type === 'user' ? activeChat.data.name.charAt(0).toUpperCase() : '#'}
                   </div>
-                  <h1 className="text-2xl font-bold text-[var(--text)] mb-2 tracking-tight">{activeUser.name}</h1>
-                  <p className="text-[14px] text-[var(--text-muted)]">This is the very beginning of your direct message history with {activeUser.name}.</p>
+                  <h1 className="text-[28px] font-black text-[var(--text)] mb-3 tracking-tight leading-none">
+                     {activeChat.type === 'user' ? activeChat.data.name : activeChat.type === 'community' ? activeChat.data.name : activeChat.data.title}
+                  </h1>
+                  <p className="text-[15px] text-[var(--text-muted)] leading-relaxed">
+                     {activeChat.type === 'user' ? (
+                        <>This is the very beginning of your direct message history with <span className="font-bold text-[var(--text)]">@{activeChat.data.name}</span>. Only the two of you are in this conversation, and no one else can join it.</>
+                     ) : activeChat.type === 'community' ? (
+                        <>This is the start of the community chat channel. Messages here are seen by all active members.</>
+                     ) : (
+                        <>This is the beginning of the discussion for task <span className="font-bold text-[var(--text)]">#{activeChat.data.title}</span>. Anyone assigned to this task can collaborate here.</>
+                     )}
+                  </p>
                 </div>
 
-                <div className="h-px bg-[var(--border)] w-full my-6 flex items-center justify-center">
-                  <span className="bg-[var(--bg)] px-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Beginning of History</span>
+                <div className="relative w-full my-8 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                     <div className="w-full border-t border-[var(--border)]"></div>
+                  </div>
+                  <div className="relative bg-[var(--bg)] px-4">
+                     <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest bg-[var(--surface)] px-3 py-1 rounded-full border border-[var(--border)]">
+                        History Starts Here
+                     </span>
+                  </div>
                 </div>
 
                 {messages.map((msg, index) => {
                   const isMe = msg.sender?._id === (user?._id || user?.id);
-                  const senderName = isMe ? 'You' : activeUser.name;
+                  const senderName = isMe ? 'You' : (msg.sender?.name || 'Unknown');
                   const time = moment(msg.createdAt).format('h:mm A');
                   const date = moment(msg.createdAt).format('MM/DD/YYYY');
                   
@@ -288,18 +580,18 @@ const DirectChat = () => {
                     && moment(msg.createdAt).diff(moment(messages[index - 1].createdAt), 'minutes') < 5;
 
                   return (
-                    <div key={msg._id || index} className={`group flex gap-4 px-2 py-1 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-4'}`}>
+                    <div key={msg._id || index} className={`group flex gap-4 px-2 py-1.5 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-5'}`}>
                       
                       {/* Left Column (Avatar or Timestamp) */}
                       <div className="w-10 flex-shrink-0 flex justify-center">
                         {!isConsecutive ? (
                           <div className="mt-0.5">
-                              <div className={`w-10 h-10 rounded-md flex items-center justify-center text-[14px] font-bold text-white shadow-sm ${isMe ? 'bg-[#0f172a]' : 'bg-[var(--accent)]'}`}>
+                              <div className={`w-10 h-10 rounded-md flex items-center justify-center text-[14px] font-bold text-white shadow-sm transition-transform hover:scale-105 ${isMe ? 'bg-[#0f172a]' : 'bg-[var(--accent)]'}`}>
                                 {senderName.charAt(0).toUpperCase()}
                               </div>
                           </div>
                         ) : (
-                          <div className="opacity-0 group-hover:opacity-100 text-[10px] text-[var(--text-muted)] font-medium pt-1.5 select-none">
+                          <div className="opacity-0 group-hover:opacity-100 text-[10px] text-[var(--text-muted)] font-bold pt-1.5 select-none transition-opacity">
                             {time}
                           </div>
                         )}
@@ -309,16 +601,25 @@ const DirectChat = () => {
                       <div className="flex flex-col flex-1 min-w-0 pb-0.5">
                         {!isConsecutive && (
                           <div className="flex items-baseline gap-2 leading-tight mb-1">
-                            <span className="text-[15px] font-bold text-[var(--text)] tracking-tight">
+                            <span className="text-[15px] font-bold text-[var(--text)] tracking-tight hover:underline cursor-pointer">
                               {senderName}
                             </span>
-                            <span className="text-[11px] font-medium text-[var(--text-muted)] hover:underline cursor-pointer">
-                              {date} {time}
+                            <span className="text-[11px] font-medium text-[var(--text-muted)] flex items-center gap-1">
+                              {time}
                             </span>
                           </div>
                         )}
-                        <div className="text-[15px] text-[var(--text)] leading-[1.45] break-words whitespace-pre-wrap">
-                          {msg.content}
+                        <div className="text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2">
+                          <span>{msg.content}</span>
+                          {isMe && activeChat.type === 'user' && (
+                             <span className="text-[14px] leading-none mb-0.5 ml-1 inline-block" title={msg.isRead ? "Seen" : "Sent"}>
+                                {msg.isRead ? (
+                                   <span className="text-blue-500 font-bold">✓✓</span>
+                                ) : (
+                                   <span className="text-[var(--text-muted)]">✓</span>
+                                )}
+                             </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -327,16 +628,25 @@ const DirectChat = () => {
 
                 {/* Elite Typing Indicator */}
                 {typingStatus && (
-                  <div className="flex items-center gap-2 text-[13px] text-[var(--text-muted)] font-medium mt-2 px-2 animate-pulse">
-                    {typingStatus}
+                  <div className="flex gap-4 px-2 py-2 -mx-2 mt-2">
+                    <div className="w-10 flex-shrink-0 flex justify-center">
+                       <div className="w-8 h-8 rounded-md bg-[var(--bg-soft)] border border-[var(--border)] flex items-center justify-center animate-pulse">
+                          <span className="text-[10px]">💬</span>
+                       </div>
+                    </div>
+                    <div className="flex items-center">
+                       <span className="text-[13px] text-[var(--text-muted)] font-medium italic animate-pulse">
+                         {typingStatus}
+                       </span>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Input Area */}
-              <div className="p-5 pt-0 bg-[var(--bg)] shrink-0">
-                <form onSubmit={handleSendMessage} className="relative">
-                  <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all shadow-sm">
+              <div className="p-4 md:p-6 pt-2 bg-[var(--bg)] shrink-0 z-10">
+                <form onSubmit={handleSendMessage} className="relative max-w-5xl mx-auto">
+                  <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/20 transition-all shadow-sm">
                     
                     <textarea
                       value={newMessage}
@@ -347,37 +657,40 @@ const DirectChat = () => {
                           handleSendMessage(e);
                         }
                       }}
-                      placeholder={`Message ${activeUser.name}`}
+                      placeholder={activeChat.type === 'user' ? `Message ${activeChat.data.name}` : activeChat.type === 'community' ? `Message #community-chat` : `Message in #${activeChat.data.title}`}
                       rows={1}
-                      className="w-full max-h-32 min-h-[44px] bg-transparent text-[14px] text-[var(--text)] px-4 py-3 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
+                      className="w-full max-h-[40vh] min-h-[48px] bg-transparent text-[15px] text-[var(--text)] px-4 py-3.5 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
                       style={{ overflowY: 'auto' }}
                     />
                     
-                    <div className="flex items-center justify-between px-2 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
+                    <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
                       <div className="flex items-center gap-1 text-[var(--text-muted)]">
-                        <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
-                          <span className="font-bold font-mono text-[12px]">B</span>
-                        </div>
-                        <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
-                          <span className="italic font-serif text-[12px]">I</span>
-                        </div>
+                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" title="Bold">
+                          <span className="font-bold font-mono text-[13px]">B</span>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" title="Italic">
+                          <span className="italic font-serif text-[13px]">I</span>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors" title="Link">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        </button>
                         <div className="w-px h-4 bg-[var(--border)] mx-1"></div>
-                        <div className="px-2 py-1 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[11px] font-medium flex items-center gap-1">
-                          Press <span className="px-1 py-0.5 bg-[var(--border)] rounded text-[9px] font-bold text-[var(--text)] shadow-sm">Enter</span> to send
+                        <div className="px-2 py-1 rounded text-[11px] font-medium hidden sm:flex items-center gap-1">
+                          Press <kbd className="px-1.5 py-0.5 bg-[var(--border)] rounded text-[10px] font-bold text-[var(--text)] shadow-sm font-sans">Enter</kbd> to send
                         </div>
                       </div>
                       
                       <button
                         type="submit"
                         disabled={!newMessage.trim()}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold rounded-lg transition-all ${
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-bold rounded-lg transition-all ${
                           newMessage.trim() 
-                          ? 'bg-[var(--accent)] text-white hover:opacity-90 shadow-sm' 
+                          ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-sm active:scale-95' 
                           : 'bg-[var(--border)] text-[var(--text-muted)] cursor-not-allowed'
                         }`}
                       >
-                        <LuSend className="text-[14px]" />
-                        Send
+                        <LuSend className="text-[15px]" />
+                        <span className="hidden sm:inline">Send</span>
                       </button>
                     </div>
 

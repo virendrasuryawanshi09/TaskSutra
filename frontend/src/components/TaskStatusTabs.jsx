@@ -2,8 +2,8 @@ import React from "react";
 
 const TaskStatusTabs = ({ tabs, activeTab, setActiveTab }) => {
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex gap-6 sm:gap-8 border-b border-[var(--border)] min-w-max">
+    <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-nowrap min-w-max items-center gap-x-6 sm:gap-x-8 border-b border-[var(--border)]">
 
         {tabs.map((tab) => {
           const isActive = activeTab === tab.label;

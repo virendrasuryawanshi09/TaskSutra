@@ -94,6 +94,14 @@ module.exports = (io) => {
              }
         });
 
+        socket.on("mark_messages_seen", (data) => {
+             // data should contain { chatId, readerId, senderId }
+             const senderSocketId = getSocketId(String(data.senderId));
+             if (senderSocketId) {
+                 io.to(senderSocketId).emit("messages_seen", data);
+             }
+        });
+
         // --- Task Discussion Events ---
         socket.on("send_task_message", (data) => {
              // data should contain { taskId, messageData }

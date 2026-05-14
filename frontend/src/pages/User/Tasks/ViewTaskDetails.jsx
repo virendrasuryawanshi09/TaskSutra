@@ -213,7 +213,6 @@ const ViewTaskDetails = () => {
     fetchTaskDetails();
   }, [taskId]);
 
-  // Fetch real task discussion messages & setup socket
   useEffect(() => {
     if (!taskId) return;
 
@@ -248,9 +247,7 @@ const ViewTaskDetails = () => {
     });
 
     socketRef.current.on('receive_task_message', (msgData) => {
-       // Only add if it's not from us (since we append optimistically, or we can just rely on socket)
        setMessages((prev) => {
-          // Prevent duplicates if optimistic
           if (prev.find(m => m.id === msgData._id)) return prev;
           
           return [...prev, {

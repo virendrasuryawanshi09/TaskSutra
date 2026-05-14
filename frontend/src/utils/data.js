@@ -36,9 +36,9 @@ export const SIDE_MENU_DATA = [
     },
     {
         id: "chat-admin",
-        label: "Community Chat",
+        label: "Workspace Chat",
         icon: LuMessageSquare,
-        path: "/admin/chat",
+        path: "/admin/direct-chat",
     },
     {
         id: "05",
@@ -83,11 +83,11 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "chat-user",
-        label: "Community Chat",
+        label: "Workspace Chat",
         icon: LuMessageSquare,
-        path: "/user/chat",
+        path: "/user/direct-chat",
         section: "views",
-        description: "Global realtime chat for all community members.",
+        description: "Unified workspace messaging and task discussions.",
     },
     {
         id: "05",

@@ -288,9 +288,9 @@ const TaskList = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--border)]">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {tasks.map((task, index) => (
-        <TaskRow
+        <TaskCard
           key={task.id || `${task.title}-${index}`}
           task={task}
           index={index}
@@ -427,7 +427,7 @@ const UpcomingTaskList = ({ tasks, loading, selectedTaskId, onTaskClick }) => {
   );
 };
 
-const TaskRow = ({
+const TaskCard = ({
   task,
   index,
   updatingTaskId,
@@ -457,68 +457,55 @@ const TaskRow = ({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.02, duration: 0.2, ease: "easeOut" }}
-      className={`group grid w-full cursor-pointer grid-cols-1 gap-3 border-b border-[var(--border)] px-4 py-3.5 text-left transition-all duration-200 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_150px_110px_120px_34px] ${
+      className={`group flex flex-col justify-between w-full cursor-pointer rounded-xl border border-[var(--border)] p-4 text-left transition-all duration-300 hover:shadow-md ${
         selected
-          ? "bg-[rgba(31,111,120,0.08)] shadow-[inset_3px_0_0_var(--accent)]"
-          : "bg-[var(--surface)] hover:bg-[var(--bg-soft)]/55"
+          ? "border-[var(--accent)] bg-[rgba(31,111,120,0.04)]"
+          : "bg-[var(--surface)] hover:border-[var(--text-muted)]"
       }`}
     >
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${progressTone[task.status] || "bg-[var(--text-muted)]"}`} />
-          <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold text-[var(--text)]">
-              {task.title || "Untitled task"}
-            </h3>
-            <p className="mt-1 line-clamp-1 text-xs text-[var(--text-muted)]">
-              {task.description || "No description added yet."}
-            </p>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5">
+            <span className={`text-xs font-semibold ${
+               task.status === "Completed" ? "text-green-600" : 
+               task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
+            }`}>
+              {task.status}
+            </span>
+            <span className={`h-1.5 w-1.5 rounded-full ${
+               task.status === "Completed" ? "bg-green-600" : 
+               task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
+            }`} />
+          </div>
+          <span className="text-xs font-medium text-[var(--text-muted)]">
+            Due : {formatTaskDate(task.dueDateValue, { year: undefined, month: "short", day: "2-digit" })}
+          </span>
+        </div>
+
+        <h3 className="text-[15px] font-bold text-[var(--text)] leading-tight mb-1">
+          {task.title || "Untitled task"}
+        </h3>
+        <p className="line-clamp-2 text-[13px] text-[var(--text-muted)] mb-4">
+          {task.description || "No description added yet."}
+        </p>
+      </div>
+
+      <div>
+        <div className="h-[2px] w-full bg-[var(--bg-soft)] rounded-full mb-3 overflow-hidden">
+           <div 
+             className={`h-full rounded-full transition-all duration-500 ${task.status === "Completed" ? "bg-green-500" : task.status === "In Progress" ? "bg-blue-500" : "bg-gray-300"}`} 
+             style={{ width: task.status === "Completed" ? "100%" : task.status === "In Progress" ? "50%" : "25%" }}
+           />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-medium text-[var(--text-muted)]">
+            {formatTaskDate(task.createdAt, { month: "short", day: "2-digit" })}
+          </span>
+          <div className="flex items-center gap-2">
+            <AvatarGroup avatars={task.assignedUsers} max={3} />
           </div>
         </div>
-        <div className="mt-2 flex flex-wrap gap-2 pl-5">
-          {tags.map((tag) => (
-            <span key={tag} className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]">
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div onClick={(event) => event.stopPropagation()}>
-        <SelectDropdown
-          options={statusOptions}
-          value={task.status}
-          onChange={(value) => onStatusChange?.(task, value)}
-        />
-        {isUpdating ? <p className="mt-1 text-[11px] text-[var(--text-muted)]">Updating...</p> : null}
-      </div>
-
-      <div className="flex items-center lg:justify-start">
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
-          {task.priority}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2 text-xs">
-        <HiOutlineCalendarDays className="text-base text-[var(--text-muted)]" />
-        <span className={dueToneStyles[dueTone]}>
-          {formatTaskDate(task.dueDateValue, { year: "numeric" })}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between gap-3 lg:justify-end">
-        <div className="lg:hidden">
-          <AvatarGroup avatars={task.assignedUsers} />
-        </div>
-        <span className="hidden lg:block">
-          <HiOutlineChevronRight className="text-lg text-[var(--text-muted)] transition-colors duration-200 group-hover:text-[var(--accent)]" />
-        </span>
-        {task.attachmentCount > 0 ? (
-          <span className="flex items-center gap-1 text-xs text-[var(--text-muted)] lg:hidden">
-            <HiOutlinePaperClip />
-            {task.attachmentCount}
-          </span>
-        ) : null}
       </div>
     </motion.div>
   );

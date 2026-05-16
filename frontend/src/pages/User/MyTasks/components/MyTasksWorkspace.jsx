@@ -1,5 +1,7 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
+import { Menu, Transition } from "@headlessui/react";
+import { Fragment } from "react";
 import {
   HiArrowTrendingDown,
   HiArrowTrendingUp,
@@ -292,6 +294,52 @@ const TaskList = ({
   );
 };
 
+const InlineStatusDropdown = ({ status, onChange }) => {
+  return (
+    <Menu as="div" className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+      <Menu.Button className="flex items-center gap-1.5 rounded p-1 hover:bg-[var(--bg-soft)] transition-colors focus:outline-none">
+        <span className={`text-xs font-semibold ${
+           status === "Completed" ? "text-green-600" : 
+           status === "In Progress" ? "text-blue-500" : "text-gray-500"
+        }`}>
+          {status}
+        </span>
+        <span className={`h-1.5 w-1.5 rounded-full ${
+           status === "Completed" ? "bg-green-600" : 
+           status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
+        }`} />
+      </Menu.Button>
+      <Transition
+        as={Fragment}
+        enter="transition ease-out duration-100"
+        enterFrom="transform opacity-0 scale-95"
+        enterTo="transform opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="transform opacity-100 scale-100"
+        leaveTo="transform opacity-0 scale-95"
+      >
+        <Menu.Items className="absolute left-0 mt-1 w-36 origin-top-left rounded-md bg-[var(--surface)] border border-[var(--border)] shadow-lg focus:outline-none z-50 overflow-hidden">
+          {statusOptions.map((option) => (
+            <Menu.Item key={option.value}>
+              {({ active }) => (
+                <button
+                  type="button"
+                  onClick={() => onChange(option.value)}
+                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${
+                    active ? "bg-[var(--bg-soft)]" : ""
+                  } ${option.value === status ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
+                >
+                  {option.label}
+                </button>
+              )}
+            </Menu.Item>
+          ))}
+        </Menu.Items>
+      </Transition>
+    </Menu>
+  );
+};
+
 const TaskCard = ({
   task,
   index,
@@ -331,16 +379,10 @@ const TaskCard = ({
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className={`text-xs font-semibold ${task.status === "Completed" ? "text-green-600" :
-                task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
-                }`}>
-                {task.status}
-              </span>
-              <span className={`h-1.5 w-1.5 rounded-full ${task.status === "Completed" ? "bg-green-600" :
-                task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
-                }`} />
-            </div>
+            <InlineStatusDropdown 
+              status={task.status} 
+              onChange={(newStatus) => onStatusChange?.(task, newStatus)} 
+            />
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
               {task.priority}
             </span>

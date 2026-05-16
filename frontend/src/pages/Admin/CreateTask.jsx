@@ -14,6 +14,9 @@ import SelectUsers from "../../components/input/SelectUsers";
 import TodoListInput from "../../components/input/TodoListInput";
 import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 import DeleteAlert from "../../components/DeleteAlert";
+import { LuMessageSquare } from "react-icons/lu";
+import { io } from "socket.io-client";
+import TaskDiscussionPanel from "../User/Tasks/TaskDiscussionPanel";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -34,6 +37,101 @@ const CreateTask = () => {
 
   const [currentTask, setCurrentTask] = useState(null);
   const [error, setError] = useState("");
+
+  const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const socketRef = React.useRef(null);
+
+  useEffect(() => {
+    if (!taskId) return;
+
+    const fetchDiscussion = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/task-discussions/${taskId}`);
+        if (response.data && response.data.messages) {
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: msg._id,
+            user: msg.sender?.name || "Admin",
+            message: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching discussion", error);
+      }
+    };
+    fetchDiscussion();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on('connect', () => {
+       socketRef.current.emit("joinTaskRoom", taskId);
+    });
+
+    socketRef.current.on('receive_task_message', (msgData) => {
+       setMessages((prev) => {
+          if (prev.find(m => m.id === msgData._id)) return prev;
+          
+          return [...prev, {
+            id: msgData._id,
+            user: msgData.sender?.name || "Team Member",
+            message: msgData.content,
+            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+       });
+    });
+
+    return () => {
+       if (socketRef.current) {
+           socketRef.current.emit("leaveTaskRoom", taskId);
+           socketRef.current.disconnect();
+       }
+    };
+  }, [taskId]);
+
+  const handleSendMessage = async () => {
+    const trimmedMessage = queryInput.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
+        content: trimmedMessage
+      });
+      
+      const savedMessage = response.data.message;
+      
+      const newMsg = {
+         id: savedMessage._id,
+         user: "You",
+         message: savedMessage.content,
+         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setMessages((currentMessages) => [...currentMessages, newMsg]);
+      
+      if (socketRef.current) {
+        socketRef.current.emit("send_task_message", {
+           taskId,
+           messageData: savedMessage
+        });
+      }
+      
+      setQueryInput("");
+    } catch (error) {
+      toast.error("Failed to send message. Please ensure you are authorized.");
+    }
+  };
 
   useEffect(() => {
     if (error) {
@@ -279,13 +377,23 @@ const CreateTask = () => {
             </div>
 
             {taskId && (
-              <button
-                onClick={() => setOpenDeleteAlert(true)}
-                className="flex cursor-pointer items-center gap-2 text-sm text-red-500 transition hover:text-red-600"
-              >
-                <LuTrash2 className="text-lg" />
-                Delete
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsDiscussionOpen(true)}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-[var(--accent)] transition hover:text-[var(--accent-hover)]"
+                >
+                  <LuMessageSquare className="text-lg" />
+                  Discuss
+                </button>
+                <button
+                  onClick={() => setOpenDeleteAlert(true)}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-red-500 transition hover:text-red-600"
+                >
+                  <LuTrash2 className="text-lg" />
+                  Delete
+                </button>
+              </div>
             )}
           </div>
 
@@ -487,6 +595,16 @@ const CreateTask = () => {
         loading={loading}
         onClose={() => setOpenDeleteAlert(false)}
         onConfirm={deleteTask}
+      />
+
+      <TaskDiscussionPanel
+        task={currentTask}
+        isOpen={isDiscussionOpen}
+        onClose={() => setIsDiscussionOpen(false)}
+        messages={messages}
+        queryInput={queryInput}
+        onQueryInputChange={(e) => setQueryInput(e.target.value)}
+        onSend={handleSendMessage}
       />
     </DashboardLayout>
   );

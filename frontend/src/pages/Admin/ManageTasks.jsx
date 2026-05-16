@@ -8,12 +8,19 @@ import TaskStatusTabs from '../../components/TaskStatusTabs';
 import TaskCard from '../../components/Charts/TaskCard';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { io } from "socket.io-client";
+import TaskDiscussionPanel from '../User/Tasks/TaskDiscussionPanel';
 
 const ManageTasks = () => {
   const [allTasks, setAllTasks] = useState([]);
   const [tabs, setTabs] = useState([]);
   const [filterStatus, setFilterStatus] = useState('All');
   const [isExporting, setIsExporting] = useState(false);
+
+  const [discussionTask, setDiscussionTask] = useState(null);
+  const [discussionMessages, setDiscussionMessages] = useState([]);
+  const [discussionInput, setDiscussionInput] = useState("");
+  const socketRef = React.useRef(null);
 
   const navigate = useNavigate();
 
@@ -74,6 +81,102 @@ const ManageTasks = () => {
   useEffect(() => {
     getAllTasks();
   }, [filterStatus]);
+
+  useEffect(() => {
+    if (!discussionTask) {
+      if (socketRef.current) {
+         socketRef.current.disconnect();
+         socketRef.current = null;
+      }
+      return;
+    }
+
+    const taskId = discussionTask._id;
+    const fetchDiscussion = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/task-discussions/${taskId}`);
+        if (response.data && response.data.messages) {
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: msg._id,
+            user: msg.sender?.name || "Admin",
+            message: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          setDiscussionMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching discussion", error);
+      }
+    };
+    fetchDiscussion();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on('connect', () => {
+       socketRef.current.emit("joinTaskRoom", taskId);
+    });
+
+    socketRef.current.on('receive_task_message', (msgData) => {
+       setDiscussionMessages((prev) => {
+          if (prev.find(m => m.id === msgData._id)) return prev;
+          
+          return [...prev, {
+            id: msgData._id,
+            user: msgData.sender?.name || "Team Member",
+            message: msgData.content,
+            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+       });
+    });
+
+    return () => {
+       if (socketRef.current) {
+           socketRef.current.emit("leaveTaskRoom", taskId);
+           socketRef.current.disconnect();
+           socketRef.current = null;
+       }
+    };
+  }, [discussionTask]);
+
+  const handleSendDiscussionMessage = async () => {
+    const trimmedMessage = discussionInput.trim();
+    if (!trimmedMessage || !discussionTask) return;
+
+    const taskId = discussionTask._id;
+    try {
+      const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
+        content: trimmedMessage
+      });
+      
+      const savedMessage = response.data.message;
+      
+      const newMsg = {
+         id: savedMessage._id,
+         user: "You",
+         message: savedMessage.content,
+         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setDiscussionMessages((currentMessages) => [...currentMessages, newMsg]);
+      
+      if (socketRef.current) {
+        socketRef.current.emit("send_task_message", {
+           taskId,
+           messageData: savedMessage
+        });
+      }
+      
+      setDiscussionInput("");
+    } catch (error) {
+      toast.error("Failed to send message.");
+    }
+  };
 
   return (
     <DashboardLayout activeMenu="Manage Tasks">
@@ -181,6 +284,7 @@ const ManageTasks = () => {
                 completedTodoCount={item.completedChecklistCount || 0}
                 todoChecklist={item.todoChecklist || []}
                 onClick={() => handleClick(item)}
+                onDiscussionClick={() => setDiscussionTask(item)}
               />
             ))}
 
@@ -188,6 +292,16 @@ const ManageTasks = () => {
         )}
 
       </div>
+      
+      <TaskDiscussionPanel
+        task={discussionTask}
+        isOpen={Boolean(discussionTask)}
+        onClose={() => setDiscussionTask(null)}
+        messages={discussionMessages}
+        queryInput={discussionInput}
+        onQueryInputChange={(e) => setDiscussionInput(e.target.value)}
+        onSend={handleSendDiscussionMessage}
+      />
     </DashboardLayout>
   );
 };

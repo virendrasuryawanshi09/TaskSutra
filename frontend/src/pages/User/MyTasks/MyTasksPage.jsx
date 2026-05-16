@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { UserContext } from "../../../context/UserContextState";
@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import MyTasksWorkspace from "./components/MyTasksWorkspace";
 import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
 import TaskDiscussionPanel from "../Tasks/TaskDiscussionPanel";
+import { io } from "socket.io-client";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -32,6 +33,9 @@ const MyTasksPage = () => {
   const [updatingTaskId, setUpdatingTaskId] = useState("");
   const [taskOrder, setTaskOrder] = useState([]);
   const [draggedTaskId, setDraggedTaskId] = useState("");
+  const [discussionMessages, setDiscussionMessages] = useState([]);
+  const [discussionInput, setDiscussionInput] = useState("");
+  const socketRef = useRef(null);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -86,6 +90,64 @@ const MyTasksPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!discussionTask) return;
+    
+    const taskId = discussionTask.id || discussionTask._id;
+
+    const fetchDiscussion = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/task-discussions/${taskId}`);
+        if (response.data && response.data.messages) {
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: msg._id,
+            user: msg.sender?.name || "Team Member",
+            message: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          setDiscussionMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching discussion", error);
+      }
+    };
+    fetchDiscussion();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on('connect', () => {
+       socketRef.current.emit("joinTaskRoom", taskId);
+    });
+
+    socketRef.current.on('receive_task_message', (msgData) => {
+       setDiscussionMessages((prev) => {
+          if (prev.find(m => m.id === msgData._id)) return prev;
+          
+          return [...prev, {
+            id: msgData._id,
+            user: msgData.sender?.name || "Team Member",
+            message: msgData.content,
+            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+       });
+    });
+
+    return () => {
+       if (socketRef.current) {
+           socketRef.current.emit("leaveTaskRoom", taskId);
+           socketRef.current.disconnect();
+       }
+       setDiscussionMessages([]);
+       setDiscussionInput("");
+    };
+  }, [discussionTask]);
+
   const taskViewModel = useMemo(
     () => {
       const rank = new Map(taskOrder.map((taskId, index) => [taskId, index]));
@@ -113,6 +175,40 @@ const MyTasksPage = () => {
 
   const handleDiscussionClick = (task) => {
     setDiscussionTask(task);
+  };
+
+  const handleSendDiscussionMessage = async () => {
+    const trimmedMessage = discussionInput.trim();
+    if (!trimmedMessage || !discussionTask) return;
+
+    const taskId = discussionTask.id || discussionTask._id;
+
+    try {
+      const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
+        content: trimmedMessage
+      });
+      
+      const savedMessage = response.data.message;
+      
+      const newMsg = {
+         id: savedMessage._id,
+         user: "You",
+         message: savedMessage.content,
+         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setDiscussionMessages(prev => [...prev, newMsg]);
+      setDiscussionInput("");
+      
+      if (socketRef.current) {
+        socketRef.current.emit("send_task_message", {
+          taskId,
+          messageData: savedMessage
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to send message");
+    }
   };
 
   const handleOpenFullTask = (task) => {
@@ -229,10 +325,10 @@ const MyTasksPage = () => {
       <TaskDiscussionPanel
         isOpen={Boolean(discussionTask)}
         onClose={() => setDiscussionTask(null)}
-        messages={[]}
-        queryInput={""}
-        onQueryInputChange={() => {}}
-        onSend={() => {}}
+        messages={discussionMessages}
+        queryInput={discussionInput}
+        onQueryInputChange={(e) => setDiscussionInput(e.target.value)}
+        onSend={handleSendDiscussionMessage}
       />
     </DashboardLayout>
   );

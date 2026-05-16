@@ -377,12 +377,12 @@ const TaskCard = ({
                 e.stopPropagation(); 
                 onDiscussionClick?.(task); 
               }}
-              className="group relative flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-all duration-300 hover:bg-[var(--accent)] hover:text-white"
+              className="relative text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
               title="Open discussion"
             >
-              <HiOutlineChatBubbleLeftEllipsis className="text-[18px] transition-transform duration-300 group-hover:scale-110" />
+              <HiOutlineChatBubbleLeftEllipsis className="text-[18px]" />
               {task.unreadDiscussionCount > 0 && (
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-[var(--surface)] bg-red-500 transition-colors group-hover:border-[var(--accent)]"></span>
+                <span className="absolute top-0 right-0 h-1.5 w-1.5 rounded-full bg-red-500"></span>
               )}
             </button>
             <AvatarGroup avatars={task.assignedUsers} max={3} />

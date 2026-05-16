@@ -1,5 +1,10 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
+import { Menu, Transition } from "@headlessui/react";
+import { Fragment, forwardRef } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import moment from "moment";
 import {
   HiArrowTrendingDown,
   HiArrowTrendingUp,
@@ -14,6 +19,7 @@ import {
   HiOutlinePaperClip,
   HiOutlineSparkles,
   HiOutlineChatBubbleLeftEllipsis,
+  HiCheck,
 } from "react-icons/hi2";
 import SelectDropdown from "../../../../components/input/SelectDropdown";
 import AvatarGroup from "../../../../components/AvatarGroup";
@@ -45,6 +51,12 @@ const priorityStyles = {
   Medium: "bg-[rgba(194,139,44,0.16)] text-[#C28B2C]",
   High: "bg-[rgba(178,85,74,0.15)] text-[#B2554A]",
 };
+
+const priorityOptions = [
+  { label: "Low", value: "Low" },
+  { label: "Medium", value: "Medium" },
+  { label: "High", value: "High" },
+];
 
 const dueToneStyles = {
   completed: "text-[#4C7F6A]",
@@ -154,7 +166,10 @@ const MyTasksWorkspace = ({
   onSortChange,
   onRefresh,
   onTaskClick,
+  onDiscussionClick,
   onStatusChange,
+  onPriorityChange,
+  onDueDateChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -163,52 +178,44 @@ const MyTasksWorkspace = ({
   const activeViewContent = viewContent[activeTab] || viewContent.all;
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <div className="min-h-[calc(100vh-9rem)]">
-          <main className="min-w-0 w-full px-4 py-6 sm:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">
-                  Tasks
-                </h1>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Manage your workflow efficiently
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
-                >
-                  <HiOutlineArrowPath className="text-base" />
-                  Export
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <Tabs activeTab={activeTab} counts={counts} onChange={onTabChange} />
-            </div>
-
+    <div className="relative w-full sm:max-w-6xl sm:mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
+      <div className="min-h-[calc(100vh-9rem)]">
+        <main className="min-w-0 w-full">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <TaskList
-                tasks={tasks}
-                loading={loading}
-                updatingTaskId={updatingTaskId}
-                selectedTaskId={selectedTaskId}
-                canReorder={canReorder}
-                onTaskClick={onTaskClick}
-                onStatusChange={onStatusChange}
-                onDragStart={onDragStart}
-                onDragEnter={onDragEnter}
-                onDragEnd={onDragEnd}
-              />
+              <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">
+                Tasks
+              </h1>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                Manage your workflow efficiently
+              </p>
             </div>
-          </main>
-        </div>
-      </section>
+          </div>
+
+          <div className="mb-6">
+            <Tabs activeTab={activeTab} counts={counts} onChange={onTabChange} />
+          </div>
+
+          <div>
+            <TaskList
+              tasks={tasks}
+              loading={loading}
+              updatingTaskId={updatingTaskId}
+              selectedTaskId={selectedTaskId}
+              canReorder={canReorder}
+              onTaskClick={onTaskClick}
+              onDiscussionClick={onDiscussionClick}
+              onStatusChange={onStatusChange}
+              onPriorityChange={onPriorityChange}
+              onDueDateChange={onDueDateChange}
+              onDragStart={onDragStart}
+              onDragEnter={onDragEnter}
+              onDragEnd={onDragEnd}
+            />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
@@ -224,9 +231,8 @@ const Tabs = ({ activeTab, counts, onChange }) => (
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`relative flex min-h-10 items-center gap-2 pb-3 text-[15px] font-semibold transition-colors duration-200 ${
-              isActive ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
+            className={`relative flex min-h-10 items-center gap-2 pb-3 text-[15px] font-semibold transition-colors duration-200 ${isActive ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
           >
             {isActive ? (
               <motion.span
@@ -253,7 +259,10 @@ const TaskList = ({
   selectedTaskId,
   canReorder,
   onTaskClick,
+  onDiscussionClick,
   onStatusChange,
+  onPriorityChange,
+  onDueDateChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -290,12 +299,129 @@ const TaskList = ({
           selected={selectedTaskId === task.id}
           draggable={canReorder}
           onClick={onTaskClick}
+          onDiscussionClick={onDiscussionClick}
           onStatusChange={onStatusChange}
+          onPriorityChange={onPriorityChange}
+          onDueDateChange={onDueDateChange}
           onDragStart={onDragStart}
           onDragEnter={onDragEnter}
           onDragEnd={onDragEnd}
         />
       ))}
+    </div>
+  );
+};
+
+const InlineStatusDropdown = ({ status, onChange }) => {
+  return (
+    <Menu as="div" className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+      <Menu.Button className="flex items-center gap-1.5 rounded p-1 hover:bg-[var(--bg-soft)] transition-colors focus:outline-none">
+        <span className={`text-xs font-semibold ${
+           status === "Completed" ? "text-green-600" : 
+           status === "In Progress" ? "text-blue-500" : "text-gray-500"
+        }`}>
+          {status}
+        </span>
+        <span className={`h-1.5 w-1.5 rounded-full ${
+           status === "Completed" ? "bg-green-600" : 
+           status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
+        }`} />
+      </Menu.Button>
+      <Transition
+        as={Fragment}
+        enter="transition ease-out duration-100"
+        enterFrom="transform opacity-0 scale-95"
+        enterTo="transform opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="transform opacity-100 scale-100"
+        leaveTo="transform opacity-0 scale-95"
+      >
+        <Menu.Items className="absolute left-0 mt-1 w-36 origin-top-left rounded-md bg-[var(--surface)] border border-[var(--border)] shadow-lg focus:outline-none z-50 overflow-hidden">
+          {statusOptions.map((option) => (
+            <Menu.Item key={option.value}>
+              {({ active }) => (
+                <button
+                  type="button"
+                  onClick={() => onChange(option.value)}
+                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${
+                    active ? "bg-[var(--bg-soft)]" : ""
+                  } ${option.value === status ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
+                >
+                  {option.label}
+                </button>
+              )}
+            </Menu.Item>
+          ))}
+        </Menu.Items>
+      </Transition>
+    </Menu>
+  );
+};
+
+const InlinePriorityDropdown = ({ priority, onChange }) => {
+  return (
+    <Menu as="div" className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+      <Menu.Button className={`rounded-full px-2 py-0.5 text-[10px] font-medium hover:opacity-80 transition-opacity focus:outline-none ${priorityStyles[priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
+        {priority || "No Priority"}
+      </Menu.Button>
+      <Transition
+        as={Fragment}
+        enter="transition ease-out duration-100"
+        enterFrom="transform opacity-0 scale-95"
+        enterTo="transform opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="transform opacity-100 scale-100"
+        leaveTo="transform opacity-0 scale-95"
+      >
+        <Menu.Items className="absolute left-0 mt-1 w-32 origin-top-left rounded-md bg-[var(--surface)] border border-[var(--border)] shadow-lg focus:outline-none z-50 overflow-hidden">
+          {priorityOptions.map((option) => (
+            <Menu.Item key={option.value}>
+              {({ active }) => (
+                <button
+                  type="button"
+                  onClick={() => onChange(option.value)}
+                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${
+                    active ? "bg-[var(--bg-soft)]" : ""
+                  } ${option.value === priority ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
+                >
+                  {option.label}
+                </button>
+              )}
+            </Menu.Item>
+          ))}
+        </Menu.Items>
+      </Transition>
+    </Menu>
+  );
+};
+
+const InlineDateInput = forwardRef(({ value, onClick }, ref) => (
+  <button 
+    type="button"
+    className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors focus:outline-none" 
+    onClick={(e) => { e.stopPropagation(); onClick(e); }} 
+    ref={ref}
+  >
+    Due : {value || "Set date"}
+  </button>
+));
+InlineDateInput.displayName = "InlineDateInput";
+
+const InlineDatePicker = ({ date, onChange }) => {
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <DatePicker
+        selected={date}
+        onChange={(d) => {
+          if (d) {
+            onChange(moment(d).format("YYYY-MM-DD"));
+          }
+        }}
+        customInput={<InlineDateInput />}
+        dateFormat="MMM dd, yyyy"
+        popperPlacement="bottom-start"
+        popperClassName="tasksutra-datepicker-popper !z-50"
+      />
     </div>
   );
 };
@@ -307,7 +433,10 @@ const TaskCard = ({
   selected,
   draggable,
   onClick,
+  onDiscussionClick,
   onStatusChange,
+  onPriorityChange,
+  onDueDateChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -330,50 +459,65 @@ const TaskCard = ({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.02, duration: 0.2, ease: "easeOut" }}
-      className={`group flex flex-col justify-between w-full cursor-pointer rounded-xl border border-[var(--border)] p-4 text-left transition-all duration-300 hover:shadow-md ${
-        selected
-          ? "border-[var(--accent)] bg-[rgba(31,111,120,0.04)]"
-          : "bg-[var(--surface)] hover:border-[var(--text-muted)]"
-      }`}
+      className={`group flex flex-col justify-between w-full cursor-pointer rounded-xl border border-[var(--border)] p-4 text-left transition-all duration-300 hover:shadow-md ${selected
+        ? "border-[var(--accent)] bg-[rgba(31,111,120,0.04)]"
+        : "bg-[var(--surface)] hover:border-[var(--text-muted)]"
+        }`}
     >
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className={`text-xs font-semibold ${
-                 task.status === "Completed" ? "text-green-600" : 
-                 task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
-              }`}>
-                {task.status}
-              </span>
-              <span className={`h-1.5 w-1.5 rounded-full ${
-                 task.status === "Completed" ? "bg-green-600" : 
-                 task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
-              }`} />
-            </div>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
-              {task.priority}
-            </span>
+            <InlineStatusDropdown 
+              status={task.status} 
+              onChange={(newStatus) => onStatusChange?.(task, newStatus)} 
+            />
+            <InlinePriorityDropdown
+              priority={task.priority}
+              onChange={(newPriority) => onPriorityChange?.(task, newPriority)}
+            />
           </div>
-          <span className="text-xs font-medium text-[var(--text-muted)]">
-            Due : {formatTaskDate(task.dueDateValue, { year: undefined, month: "short", day: "2-digit" })}
-          </span>
+          <InlineDatePicker 
+            date={task.dueDateValue} 
+            onChange={(newDate) => onDueDateChange?.(task, newDate)}
+          />
         </div>
 
-        <h3 className="text-[15px] font-bold text-[var(--text)] leading-tight mb-1">
-          {task.title || "Untitled task"}
-        </h3>
-        <p className="line-clamp-2 text-[13px] text-[var(--text-muted)] mb-4">
-          {task.description || "No description added yet."}
-        </p>
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange?.(task, task.status === "Completed" ? "Pending" : "Completed");
+            }}
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none ${
+              task.status === "Completed"
+                ? "border-green-500 bg-green-500 text-white"
+                : "border-[var(--text-muted)] text-transparent hover:border-green-500 hover:text-green-500"
+            }`}
+            title={task.status === "Completed" ? "Mark as pending" : "Mark as completed"}
+          >
+            <HiCheck className="h-3.5 w-3.5" />
+          </button>
+          
+          <div>
+            <h3 className={`text-[15px] font-bold leading-tight mb-1 transition-colors ${
+              task.status === "Completed" ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
+            }`}>
+              {task.title || "Untitled task"}
+            </h3>
+            <p className="line-clamp-2 text-[13px] text-[var(--text-muted)] mb-4">
+              {task.description || "No description added yet."}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div>
         <div className="h-[2px] w-full bg-[var(--bg-soft)] rounded-full mb-3 overflow-hidden">
-           <div 
-             className={`h-full rounded-full transition-all duration-500 ${task.status === "Completed" ? "bg-green-500" : task.status === "In Progress" ? "bg-blue-500" : "bg-gray-300"}`} 
-             style={{ width: task.status === "Completed" ? "100%" : task.status === "In Progress" ? "50%" : "25%" }}
-           />
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${task.status === "Completed" ? "bg-green-500" : task.status === "In Progress" ? "bg-blue-500" : "bg-gray-300"}`}
+            style={{ width: task.status === "Completed" ? "100%" : task.status === "In Progress" ? "50%" : "25%" }}
+          />
         </div>
 
         <div className="flex items-center justify-between mt-1">
@@ -381,13 +525,19 @@ const TaskCard = ({
             {formatTaskDate(task.createdAt, { month: "short", day: "2-digit" })}
           </span>
           <div className="flex items-center gap-3">
-            <button 
-              type="button" 
-              onClick={(e) => { e.stopPropagation(); /* Optional: handle quick open discussion here if needed */ }}
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
-              title="Discussion"
+            <button
+              type="button"
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                onDiscussionClick?.(task); 
+              }}
+              className="relative text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
+              title="Open discussion"
             >
               <HiOutlineChatBubbleLeftEllipsis className="text-[18px]" />
+              {task.unreadDiscussionCount > 0 && (
+                <span className="absolute top-0 right-0 h-1.5 w-1.5 rounded-full bg-red-500"></span>
+              )}
             </button>
             <AvatarGroup avatars={task.assignedUsers} max={3} />
           </div>

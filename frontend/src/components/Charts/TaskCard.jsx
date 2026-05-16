@@ -17,6 +17,7 @@ const TaskCard = ({
   completedTodoCount = 0,
   todoChecklist = [],
   onClick,
+  onDiscussionClick,
 }) => {
 
   const getStatusColor = () => {
@@ -152,7 +153,10 @@ const TaskCard = ({
         <div className="flex items-center gap-2">
           <button 
             type="button" 
-            onClick={(e) => { e.stopPropagation(); /* handle open discussion */ }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onDiscussionClick) onDiscussionClick();
+            }}
             className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
             title="Discussion"
           >

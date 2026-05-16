@@ -163,52 +163,41 @@ const MyTasksWorkspace = ({
   const activeViewContent = viewContent[activeTab] || viewContent.all;
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <div className="min-h-[calc(100vh-9rem)]">
-          <main className="min-w-0 w-full px-4 py-6 sm:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">
-                  Tasks
-                </h1>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Manage your workflow efficiently
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
-                >
-                  <HiOutlineArrowPath className="text-base" />
-                  Export
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <Tabs activeTab={activeTab} counts={counts} onChange={onTabChange} />
-            </div>
-
+    <div className="relative w-full sm:max-w-6xl sm:mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
+      <div className="min-h-[calc(100vh-9rem)]">
+        <main className="min-w-0 w-full">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <TaskList
-                tasks={tasks}
-                loading={loading}
-                updatingTaskId={updatingTaskId}
-                selectedTaskId={selectedTaskId}
-                canReorder={canReorder}
-                onTaskClick={onTaskClick}
-                onStatusChange={onStatusChange}
-                onDragStart={onDragStart}
-                onDragEnter={onDragEnter}
-                onDragEnd={onDragEnd}
-              />
+              <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">
+                Tasks
+              </h1>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                Manage your workflow efficiently
+              </p>
             </div>
-          </main>
-        </div>
-      </section>
+          </div>
+
+          <div className="mb-6">
+            <Tabs activeTab={activeTab} counts={counts} onChange={onTabChange} />
+          </div>
+
+          <div>
+            <TaskList
+              tasks={tasks}
+              loading={loading}
+              updatingTaskId={updatingTaskId}
+              selectedTaskId={selectedTaskId}
+              canReorder={canReorder}
+              onTaskClick={onTaskClick}
+              onStatusChange={onStatusChange}
+              onDragStart={onDragStart}
+              onDragEnter={onDragEnter}
+              onDragEnd={onDragEnd}
+            />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
@@ -224,9 +213,8 @@ const Tabs = ({ activeTab, counts, onChange }) => (
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`relative flex min-h-10 items-center gap-2 pb-3 text-[15px] font-semibold transition-colors duration-200 ${
-              isActive ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
+            className={`relative flex min-h-10 items-center gap-2 pb-3 text-[15px] font-semibold transition-colors duration-200 ${isActive ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
           >
             {isActive ? (
               <motion.span
@@ -330,26 +318,23 @@ const TaskCard = ({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.02, duration: 0.2, ease: "easeOut" }}
-      className={`group flex flex-col justify-between w-full cursor-pointer rounded-xl border border-[var(--border)] p-4 text-left transition-all duration-300 hover:shadow-md ${
-        selected
-          ? "border-[var(--accent)] bg-[rgba(31,111,120,0.04)]"
-          : "bg-[var(--surface)] hover:border-[var(--text-muted)]"
-      }`}
+      className={`group flex flex-col justify-between w-full cursor-pointer rounded-xl border border-[var(--border)] p-4 text-left transition-all duration-300 hover:shadow-md ${selected
+        ? "border-[var(--accent)] bg-[rgba(31,111,120,0.04)]"
+        : "bg-[var(--surface)] hover:border-[var(--text-muted)]"
+        }`}
     >
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
-              <span className={`text-xs font-semibold ${
-                 task.status === "Completed" ? "text-green-600" : 
-                 task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
-              }`}>
+              <span className={`text-xs font-semibold ${task.status === "Completed" ? "text-green-600" :
+                task.status === "In Progress" ? "text-blue-500" : "text-gray-500"
+                }`}>
                 {task.status}
               </span>
-              <span className={`h-1.5 w-1.5 rounded-full ${
-                 task.status === "Completed" ? "bg-green-600" : 
-                 task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
-              }`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${task.status === "Completed" ? "bg-green-600" :
+                task.status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
+                }`} />
             </div>
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
               {task.priority}
@@ -370,10 +355,10 @@ const TaskCard = ({
 
       <div>
         <div className="h-[2px] w-full bg-[var(--bg-soft)] rounded-full mb-3 overflow-hidden">
-           <div 
-             className={`h-full rounded-full transition-all duration-500 ${task.status === "Completed" ? "bg-green-500" : task.status === "In Progress" ? "bg-blue-500" : "bg-gray-300"}`} 
-             style={{ width: task.status === "Completed" ? "100%" : task.status === "In Progress" ? "50%" : "25%" }}
-           />
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${task.status === "Completed" ? "bg-green-500" : task.status === "In Progress" ? "bg-blue-500" : "bg-gray-300"}`}
+            style={{ width: task.status === "Completed" ? "100%" : task.status === "In Progress" ? "50%" : "25%" }}
+          />
         </div>
 
         <div className="flex items-center justify-between mt-1">
@@ -381,8 +366,8 @@ const TaskCard = ({
             {formatTaskDate(task.createdAt, { month: "short", day: "2-digit" })}
           </span>
           <div className="flex items-center gap-3">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); /* Optional: handle quick open discussion here if needed */ }}
               className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
               title="Discussion"

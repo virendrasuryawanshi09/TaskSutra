@@ -260,6 +260,44 @@ const MyTasksPage = () => {
     }
   };
 
+  const handlePriorityChange = async (task, nextPriority) => {
+    if (!task?.id || task.priority === nextPriority) {
+      return;
+    }
+
+    setUpdatingTaskId(task.id);
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        (currentTask._id || currentTask.id) === task.id
+          ? { ...currentTask, priority: nextPriority }
+          : currentTask
+      )
+    );
+
+    try {
+      const response = await axiosInstance.put(
+        API_PATHS.TASKS.UPDATE_TASK(task.id),
+        { priority: nextPriority }
+      );
+      const updatedTask = response.data?.task;
+
+      if (updatedTask) {
+        setTasks((currentTasks) =>
+          currentTasks.map((currentTask) =>
+            (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
+          )
+        );
+      }
+
+      toast.success("Priority updated.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to update priority.");
+      loadTasks();
+    } finally {
+      setUpdatingTaskId("");
+    }
+  };
+
   const handleDragStart = (event, taskId) => {
     setDraggedTaskId(taskId);
     event.dataTransfer.effectAllowed = "move";
@@ -312,6 +350,7 @@ const MyTasksPage = () => {
         onTaskClick={handleTaskClick}
         onDiscussionClick={handleDiscussionClick}
         onStatusChange={handleStatusChange}
+        onPriorityChange={handlePriorityChange}
         onDragStart={handleDragStart}
         onDragEnter={handleDragEnter}
         onDragEnd={handleDragEnd}

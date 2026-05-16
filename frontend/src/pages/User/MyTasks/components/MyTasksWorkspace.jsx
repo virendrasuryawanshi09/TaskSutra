@@ -48,6 +48,12 @@ const priorityStyles = {
   High: "bg-[rgba(178,85,74,0.15)] text-[#B2554A]",
 };
 
+const priorityOptions = [
+  { label: "Low", value: "Low" },
+  { label: "Medium", value: "Medium" },
+  { label: "High", value: "High" },
+];
+
 const dueToneStyles = {
   completed: "text-[#4C7F6A]",
   overdue: "text-[#B2554A]",
@@ -158,6 +164,7 @@ const MyTasksWorkspace = ({
   onTaskClick,
   onDiscussionClick,
   onStatusChange,
+  onPriorityChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -195,6 +202,7 @@ const MyTasksWorkspace = ({
               onTaskClick={onTaskClick}
               onDiscussionClick={onDiscussionClick}
               onStatusChange={onStatusChange}
+              onPriorityChange={onPriorityChange}
               onDragStart={onDragStart}
               onDragEnter={onDragEnter}
               onDragEnd={onDragEnd}
@@ -247,6 +255,7 @@ const TaskList = ({
   onTaskClick,
   onDiscussionClick,
   onStatusChange,
+  onPriorityChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -285,6 +294,7 @@ const TaskList = ({
           onClick={onTaskClick}
           onDiscussionClick={onDiscussionClick}
           onStatusChange={onStatusChange}
+          onPriorityChange={onPriorityChange}
           onDragStart={onDragStart}
           onDragEnter={onDragEnter}
           onDragEnd={onDragEnd}
@@ -340,6 +350,43 @@ const InlineStatusDropdown = ({ status, onChange }) => {
   );
 };
 
+const InlinePriorityDropdown = ({ priority, onChange }) => {
+  return (
+    <Menu as="div" className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+      <Menu.Button className={`rounded-full px-2 py-0.5 text-[10px] font-medium hover:opacity-80 transition-opacity focus:outline-none ${priorityStyles[priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
+        {priority || "No Priority"}
+      </Menu.Button>
+      <Transition
+        as={Fragment}
+        enter="transition ease-out duration-100"
+        enterFrom="transform opacity-0 scale-95"
+        enterTo="transform opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="transform opacity-100 scale-100"
+        leaveTo="transform opacity-0 scale-95"
+      >
+        <Menu.Items className="absolute left-0 mt-1 w-32 origin-top-left rounded-md bg-[var(--surface)] border border-[var(--border)] shadow-lg focus:outline-none z-50 overflow-hidden">
+          {priorityOptions.map((option) => (
+            <Menu.Item key={option.value}>
+              {({ active }) => (
+                <button
+                  type="button"
+                  onClick={() => onChange(option.value)}
+                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${
+                    active ? "bg-[var(--bg-soft)]" : ""
+                  } ${option.value === priority ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
+                >
+                  {option.label}
+                </button>
+              )}
+            </Menu.Item>
+          ))}
+        </Menu.Items>
+      </Transition>
+    </Menu>
+  );
+};
+
 const TaskCard = ({
   task,
   index,
@@ -349,6 +396,7 @@ const TaskCard = ({
   onClick,
   onDiscussionClick,
   onStatusChange,
+  onPriorityChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -383,9 +431,10 @@ const TaskCard = ({
               status={task.status} 
               onChange={(newStatus) => onStatusChange?.(task, newStatus)} 
             />
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityStyles[task.priority] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
-              {task.priority}
-            </span>
+            <InlinePriorityDropdown
+              priority={task.priority}
+              onChange={(newPriority) => onPriorityChange?.(task, newPriority)}
+            />
           </div>
           <span className="text-xs font-medium text-[var(--text-muted)]">
             Due : {formatTaskDate(task.dueDateValue, { year: undefined, month: "short", day: "2-digit" })}

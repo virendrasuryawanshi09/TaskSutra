@@ -7,6 +7,7 @@ import { API_PATHS } from "../../../utils/apiPaths";
 import toast from "react-hot-toast";
 import MyTasksWorkspace from "./components/MyTasksWorkspace";
 import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
+import TaskDiscussionPanel from "../Tasks/TaskDiscussionPanel";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -26,6 +27,7 @@ const MyTasksPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState(getInitialTab(new URLSearchParams(location.search).get("view")));
   const [selectedTask, setSelectedTask] = useState(null);
+  const [discussionTask, setDiscussionTask] = useState(null);
   const [sortBy, setSortBy] = useState("custom");
   const [updatingTaskId, setUpdatingTaskId] = useState("");
   const [taskOrder, setTaskOrder] = useState([]);
@@ -107,6 +109,10 @@ const MyTasksPage = () => {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
+  };
+
+  const handleDiscussionClick = (task) => {
+    setDiscussionTask(task);
   };
 
   const handleOpenFullTask = (task) => {
@@ -208,6 +214,7 @@ const MyTasksPage = () => {
         onSortChange={setSortBy}
         onRefresh={loadTasks}
         onTaskClick={handleTaskClick}
+        onDiscussionClick={handleDiscussionClick}
         onStatusChange={handleStatusChange}
         onDragStart={handleDragStart}
         onDragEnter={handleDragEnter}
@@ -218,6 +225,14 @@ const MyTasksPage = () => {
         open={Boolean(selectedTask)}
         onClose={() => setSelectedTask(null)}
         onOpenTask={handleOpenFullTask}
+      />
+      <TaskDiscussionPanel
+        isOpen={Boolean(discussionTask)}
+        onClose={() => setDiscussionTask(null)}
+        messages={[]}
+        queryInput={""}
+        onQueryInputChange={() => {}}
+        onSend={() => {}}
       />
     </DashboardLayout>
   );

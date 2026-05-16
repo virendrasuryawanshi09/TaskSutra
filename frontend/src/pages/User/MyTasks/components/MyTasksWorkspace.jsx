@@ -154,6 +154,7 @@ const MyTasksWorkspace = ({
   onSortChange,
   onRefresh,
   onTaskClick,
+  onDiscussionClick,
   onStatusChange,
   onDragStart,
   onDragEnter,
@@ -190,6 +191,7 @@ const MyTasksWorkspace = ({
               selectedTaskId={selectedTaskId}
               canReorder={canReorder}
               onTaskClick={onTaskClick}
+              onDiscussionClick={onDiscussionClick}
               onStatusChange={onStatusChange}
               onDragStart={onDragStart}
               onDragEnter={onDragEnter}
@@ -241,6 +243,7 @@ const TaskList = ({
   selectedTaskId,
   canReorder,
   onTaskClick,
+  onDiscussionClick,
   onStatusChange,
   onDragStart,
   onDragEnter,
@@ -278,6 +281,7 @@ const TaskList = ({
           selected={selectedTaskId === task.id}
           draggable={canReorder}
           onClick={onTaskClick}
+          onDiscussionClick={onDiscussionClick}
           onStatusChange={onStatusChange}
           onDragStart={onDragStart}
           onDragEnter={onDragEnter}
@@ -295,6 +299,7 @@ const TaskCard = ({
   selected,
   draggable,
   onClick,
+  onDiscussionClick,
   onStatusChange,
   onDragStart,
   onDragEnter,
@@ -368,11 +373,17 @@ const TaskCard = ({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); /* Optional: handle quick open discussion here if needed */ }}
-              className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
-              title="Discussion"
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                onDiscussionClick?.(task); 
+              }}
+              className="group relative flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-all duration-300 hover:bg-[var(--accent)] hover:text-white"
+              title="Open discussion"
             >
-              <HiOutlineChatBubbleLeftEllipsis className="text-[18px]" />
+              <HiOutlineChatBubbleLeftEllipsis className="text-[18px] transition-transform duration-300 group-hover:scale-110" />
+              {task.unreadDiscussionCount > 0 && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-[var(--surface)] bg-red-500 transition-colors group-hover:border-[var(--accent)]"></span>
+              )}
             </button>
             <AvatarGroup avatars={task.assignedUsers} max={3} />
           </div>

@@ -298,6 +298,42 @@ const MyTasksPage = () => {
     }
   };
 
+  const handleDueDateChange = async (task, nextDate) => {
+    if (!task?.id) return;
+    
+    setUpdatingTaskId(task.id);
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        (currentTask._id || currentTask.id) === task.id
+          ? { ...currentTask, dueDate: nextDate, dueDateValue: new Date(nextDate) }
+          : currentTask
+      )
+    );
+
+    try {
+      const response = await axiosInstance.put(
+        API_PATHS.TASKS.UPDATE_TASK(task.id),
+        { dueDate: nextDate }
+      );
+      const updatedTask = response.data?.task;
+
+      if (updatedTask) {
+        setTasks((currentTasks) =>
+          currentTasks.map((currentTask) =>
+            (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
+          )
+        );
+      }
+
+      toast.success("Due date updated.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to update due date.");
+      loadTasks();
+    } finally {
+      setUpdatingTaskId("");
+    }
+  };
+
   const handleDragStart = (event, taskId) => {
     setDraggedTaskId(taskId);
     event.dataTransfer.effectAllowed = "move";
@@ -351,6 +387,7 @@ const MyTasksPage = () => {
         onDiscussionClick={handleDiscussionClick}
         onStatusChange={handleStatusChange}
         onPriorityChange={handlePriorityChange}
+        onDueDateChange={handleDueDateChange}
         onDragStart={handleDragStart}
         onDragEnter={handleDragEnter}
         onDragEnd={handleDragEnd}

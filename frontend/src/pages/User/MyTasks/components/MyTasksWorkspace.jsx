@@ -1,7 +1,10 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Menu, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, forwardRef } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import moment from "moment";
 import {
   HiArrowTrendingDown,
   HiArrowTrendingUp,
@@ -203,6 +206,7 @@ const MyTasksWorkspace = ({
               onDiscussionClick={onDiscussionClick}
               onStatusChange={onStatusChange}
               onPriorityChange={onPriorityChange}
+              onDueDateChange={onDueDateChange}
               onDragStart={onDragStart}
               onDragEnter={onDragEnter}
               onDragEnd={onDragEnd}
@@ -256,6 +260,7 @@ const TaskList = ({
   onDiscussionClick,
   onStatusChange,
   onPriorityChange,
+  onDueDateChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -295,6 +300,8 @@ const TaskList = ({
           onDiscussionClick={onDiscussionClick}
           onStatusChange={onStatusChange}
           onPriorityChange={onPriorityChange}
+          onDueDateChange={onDueDateChange}
+          onDueDateChange={onDueDateChange}
           onDragStart={onDragStart}
           onDragEnter={onDragEnter}
           onDragEnd={onDragEnd}
@@ -387,6 +394,37 @@ const InlinePriorityDropdown = ({ priority, onChange }) => {
   );
 };
 
+const InlineDateInput = forwardRef(({ value, onClick }, ref) => (
+  <button 
+    type="button"
+    className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors focus:outline-none" 
+    onClick={(e) => { e.stopPropagation(); onClick(e); }} 
+    ref={ref}
+  >
+    Due : {value || "Set date"}
+  </button>
+));
+InlineDateInput.displayName = "InlineDateInput";
+
+const InlineDatePicker = ({ date, onChange }) => {
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <DatePicker
+        selected={date}
+        onChange={(d) => {
+          if (d) {
+            onChange(moment(d).format("YYYY-MM-DD"));
+          }
+        }}
+        customInput={<InlineDateInput />}
+        dateFormat="MMM dd, yyyy"
+        popperPlacement="bottom-start"
+        popperClassName="tasksutra-datepicker-popper !z-50"
+      />
+    </div>
+  );
+};
+
 const TaskCard = ({
   task,
   index,
@@ -436,9 +474,10 @@ const TaskCard = ({
               onChange={(newPriority) => onPriorityChange?.(task, newPriority)}
             />
           </div>
-          <span className="text-xs font-medium text-[var(--text-muted)]">
-            Due : {formatTaskDate(task.dueDateValue, { year: undefined, month: "short", day: "2-digit" })}
-          </span>
+          <InlineDatePicker 
+            date={task.dueDateValue} 
+            onChange={(newDate) => onDueDateChange?.(task, newDate)}
+          />
         </div>
 
         <h3 className="text-[15px] font-bold text-[var(--text)] leading-tight mb-1">

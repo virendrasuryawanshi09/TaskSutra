@@ -783,6 +783,7 @@ const ViewTaskDetails = () => {
       </div>
 
       <TaskDiscussionPanel
+        task={task}
         isOpen={isDiscussionOpen}
         onClose={() => setIsDiscussionOpen(false)}
         messages={messages}

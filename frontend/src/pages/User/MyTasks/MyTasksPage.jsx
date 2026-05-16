@@ -399,6 +399,7 @@ const MyTasksPage = () => {
         onOpenTask={handleOpenFullTask}
       />
       <TaskDiscussionPanel
+        task={discussionTask}
         isOpen={Boolean(discussionTask)}
         onClose={() => setDiscussionTask(null)}
         messages={discussionMessages}

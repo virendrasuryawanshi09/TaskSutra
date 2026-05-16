@@ -19,6 +19,7 @@ import {
   HiOutlinePaperClip,
   HiOutlineSparkles,
   HiOutlineChatBubbleLeftEllipsis,
+  HiCheck,
 } from "react-icons/hi2";
 import SelectDropdown from "../../../../components/input/SelectDropdown";
 import AvatarGroup from "../../../../components/AvatarGroup";
@@ -168,6 +169,7 @@ const MyTasksWorkspace = ({
   onDiscussionClick,
   onStatusChange,
   onPriorityChange,
+  onDueDateChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -300,7 +302,6 @@ const TaskList = ({
           onDiscussionClick={onDiscussionClick}
           onStatusChange={onStatusChange}
           onPriorityChange={onPriorityChange}
-          onDueDateChange={onDueDateChange}
           onDueDateChange={onDueDateChange}
           onDragStart={onDragStart}
           onDragEnter={onDragEnter}
@@ -435,6 +436,7 @@ const TaskCard = ({
   onDiscussionClick,
   onStatusChange,
   onPriorityChange,
+  onDueDateChange,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -480,12 +482,34 @@ const TaskCard = ({
           />
         </div>
 
-        <h3 className="text-[15px] font-bold text-[var(--text)] leading-tight mb-1">
-          {task.title || "Untitled task"}
-        </h3>
-        <p className="line-clamp-2 text-[13px] text-[var(--text-muted)] mb-4">
-          {task.description || "No description added yet."}
-        </p>
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange?.(task, task.status === "Completed" ? "Pending" : "Completed");
+            }}
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none ${
+              task.status === "Completed"
+                ? "border-green-500 bg-green-500 text-white"
+                : "border-[var(--text-muted)] text-transparent hover:border-green-500 hover:text-green-500"
+            }`}
+            title={task.status === "Completed" ? "Mark as pending" : "Mark as completed"}
+          >
+            <HiCheck className="h-3.5 w-3.5" />
+          </button>
+          
+          <div>
+            <h3 className={`text-[15px] font-bold leading-tight mb-1 transition-colors ${
+              task.status === "Completed" ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
+            }`}>
+              {task.title || "Untitled task"}
+            </h3>
+            <p className="line-clamp-2 text-[13px] text-[var(--text-muted)] mb-4">
+              {task.description || "No description added yet."}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div>

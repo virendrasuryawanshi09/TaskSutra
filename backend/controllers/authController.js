@@ -92,12 +92,14 @@ const updateUserProfile = async (req, res) => {
         const user = await User.findById(req.user._id); 
         if(!user) {
             return res.status(404).json({ message: 'User not found' });
-
         }
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
         user.profileImageUrl = req.body.profileImageUrl || user.profileImageUrl;
         user.skills = req.body.skills || user.skills;
+        user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
+        user.title = req.body.title !== undefined ? req.body.title : user.title;
+        user.company = req.body.company !== undefined ? req.body.company : user.company;
 
         if(req.body.password){
             const salt = await bcrypt.genSalt(10);
@@ -113,6 +115,9 @@ const updateUserProfile = async (req, res) => {
             role: updatedUser.role,
             profileImageUrl: updatedUser.profileImageUrl,
             skills: updatedUser.skills,
+            bio: updatedUser.bio,
+            title: updatedUser.title,
+            company: updatedUser.company,
             token: generateToken(updatedUser._id),
         });
     }catch(error){

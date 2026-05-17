@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useCallback } from "react";
+import { useContext, useEffect, useRef, useState, useCallback } from "react";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { UserContext } from "../../../context/UserContextState.js";
 import axiosInstance from "../../../utils/axiosInstance";
@@ -27,11 +27,18 @@ const EditProfile = () => {
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [avatarRemoved, setAvatarRemoved] = useState(false);
+  const justSavedRef = useRef(false); // prevents user-effect from overwriting avatarPreview post-save
 
   useEffect(() => {
     if (user) {
       setForm(blank());
-      setAvatarPreview(user.profileImageUrl || null);
+      if (!justSavedRef.current) {
+        // Only reset avatar preview on initial load / context change, not right after save
+        setAvatarPreview(user.profileImageUrl ?? null);
+      }
+      justSavedRef.current = false;
+      setAvatarRemoved(false);
     }
   }, [user]);
 
@@ -45,9 +52,10 @@ const EditProfile = () => {
       form.bio !== (user.bio || "") ||
       JSON.stringify(form.skills) !== JSON.stringify(Array.isArray(user.skills) ? user.skills : []) ||
       avatarFile !== null ||
+      avatarRemoved ||
       password.next !== "";
     setDirty(changed);
-  }, [form, avatarFile, password.next]);
+  }, [form, avatarFile, avatarRemoved, password.next]);
 
   const uploadAvatar = async () => {
     if (!avatarFile) return avatarPreview;
@@ -73,7 +81,7 @@ const EditProfile = () => {
     setSaving(true);
     const tid = toast.loading("Saving…");
     try {
-      const imageUrl = await uploadAvatar();
+      const imageUrl = avatarRemoved ? null : await uploadAvatar();
       const payload = {
         name: form.name.trim(),
         profileImageUrl: imageUrl,
@@ -84,8 +92,13 @@ const EditProfile = () => {
       };
       if (password.next) payload.password = password.next;
       const res = await axiosInstance.put(API_PATHS.AUTH.UPDATE_PROFILE, payload);
-      updateUser({ ...user, ...res.data });
+      const updatedUser = { ...user, ...res.data };
+      justSavedRef.current = true; // skip avatar reset in useEffect
+      updateUser(updatedUser);
+      // Explicitly sync avatar preview from server response
+      setAvatarPreview(res.data.profileImageUrl ?? null);
       setAvatarFile(null);
+      setAvatarRemoved(false);
       setPassword({ next: "", confirm: "" });
       setDirty(false);
       setSaved(true);
@@ -102,8 +115,15 @@ const EditProfile = () => {
     setForm(blank());
     setAvatarPreview(user?.profileImageUrl || null);
     setAvatarFile(null);
+    setAvatarRemoved(false);
     setPassword({ next: "", confirm: "" });
     setDirty(false);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarPreview(null);
+    setAvatarFile(null);
+    setAvatarRemoved(true);
   };
 
   const isBusy = saving || uploading;
@@ -180,6 +200,7 @@ const EditProfile = () => {
             setAvatarPreview={setAvatarPreview}
             setAvatarFile={setAvatarFile}
             password={password} setPassword={setPassword}
+            onRemoveAvatar={handleRemoveAvatar}
           />
 
           {/* Rail on right for desktop */}

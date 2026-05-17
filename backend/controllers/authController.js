@@ -95,7 +95,7 @@ const updateUserProfile = async (req, res) => {
         }
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
-        user.profileImageUrl = req.body.profileImageUrl || user.profileImageUrl;
+        user.profileImageUrl = req.body.profileImageUrl !== undefined ? req.body.profileImageUrl : user.profileImageUrl;
         user.skills = req.body.skills || user.skills;
         user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
         user.title = req.body.title !== undefined ? req.body.title : user.title;
@@ -113,11 +113,12 @@ const updateUserProfile = async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             role: updatedUser.role,
-            profileImageUrl: updatedUser.profileImageUrl,
+            profileImageUrl: updatedUser.profileImageUrl ?? null,
             skills: updatedUser.skills,
             bio: updatedUser.bio,
             title: updatedUser.title,
             company: updatedUser.company,
+            createdAt: updatedUser.createdAt,
             token: generateToken(updatedUser._id),
         });
     }catch(error){

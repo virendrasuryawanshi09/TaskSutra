@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { LuCamera, LuUser, LuMail, LuBriefcase, LuBuilding2, LuLock, LuShield, LuBadgeCheck } from "react-icons/lu";
+import { LuCamera, LuUser, LuMail, LuBriefcase, LuBuilding2, LuLock, LuShield, LuBadgeCheck, LuX } from "react-icons/lu";
 import StyledInput, { StyledTextarea } from "./StyledInput";
 import SkillTagInput from "./SkillTagInput";
 
@@ -35,7 +35,7 @@ const InlineField = ({ label, hint, locked, children }) => (
   </div>
 );
 
-const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setAvatarFile, password, setPassword, email }) => {
+const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setAvatarFile, password, setPassword, email, onDeleteRequest, onRemoveAvatar }) => {
   const fileRef = useRef(null);
   const pwMatch = password.next && password.confirm && password.next === password.confirm;
   const pwMismatch = password.next && password.confirm && password.next !== password.confirm;
@@ -59,19 +59,29 @@ const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setA
             <StyledInput icon={LuBuilding2} value={form.company} onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))} placeholder="e.g. Acme Inc." />
           </InlineField>
           <InlineField label="Photo">
-            <div className="flex items-center gap-3 py-1.5">
+            <div className="flex items-center gap-3 py-1.5 flex-wrap">
               {avatarPreview ? (
-                <img src={avatarPreview} alt="" className="h-9 w-9 rounded-lg object-cover border border-[var(--border)]" />
+                <img src={avatarPreview} alt="" className="h-9 w-9 rounded-lg object-cover border border-[var(--border)] shrink-0" />
               ) : (
-                <div className="h-9 w-9 rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] flex items-center justify-center text-[13px] font-bold text-[var(--accent)]">
+                <div className="h-9 w-9 rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] flex items-center justify-center text-[13px] font-bold text-[var(--accent)] shrink-0">
                   {form.name?.charAt(0)?.toUpperCase() || "U"}
                 </div>
               )}
               <button type="button" onClick={() => fileRef.current?.click()}
                 className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
                 <LuCamera className="text-[13px]" />
-                {avatarPreview ? "Change photo" : "Upload photo"}
+                {avatarPreview ? "Change" : "Upload photo"}
               </button>
+              {avatarPreview && (
+                <button
+                  type="button"
+                  onClick={onRemoveAvatar}
+                  className="flex items-center gap-1 text-[12px] font-medium text-[var(--text-muted)] hover:text-red-500 transition-colors border-l border-[var(--border)] pl-3"
+                >
+                  <LuX className="text-[12px]" />
+                  Remove
+                </button>
+              )}
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;

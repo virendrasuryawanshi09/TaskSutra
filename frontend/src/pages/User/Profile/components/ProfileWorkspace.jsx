@@ -3,47 +3,54 @@ import { LuCamera, LuUser, LuMail, LuBriefcase, LuBuilding2, LuLock, LuShield, L
 import StyledInput, { StyledTextarea } from "./StyledInput";
 import SkillTagInput from "./SkillTagInput";
 
-/* ── Section block with editorial number index ── */
 const Section = ({ index, title, children }) => (
-  <div className="py-8 border-b border-[var(--border)] last:border-none">
+  <div className="py-7 border-b border-[var(--border)] last:border-none">
     <div className="flex items-center gap-3 mb-6">
-      <span className="text-[10px] font-mono font-bold text-[var(--accent)]/60 tracking-widest w-5 shrink-0">
+      <span className="text-[10px] font-mono font-bold text-[var(--accent)]/60 tracking-widest shrink-0">
         {String(index).padStart(2, "0")}
       </span>
-      <h2 className="text-[13px] font-semibold text-[var(--text)] tracking-tight">{title}</h2>
+      <h2 className="text-[13px] font-semibold text-[var(--text)] tracking-tight shrink-0">{title}</h2>
       <div className="flex-1 h-px bg-[var(--border)]" />
     </div>
     {children}
   </div>
 );
 
-/* ── Inline field: label left, input right ── */
-const InlineField = ({ label, hint, children }) => (
-  <div className="grid grid-cols-[140px_1fr] gap-4 items-start py-1">
-    <div>
+/* Label stacks on mobile, inline on sm+ */
+const InlineField = ({ label, hint, locked, children }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-1 sm:gap-4 items-start py-2">
+    <div className="flex items-center gap-1.5">
       <span className="text-[11.5px] font-medium text-[var(--text-muted)]">{label}</span>
-      {hint && <span className="block text-[10.5px] text-[var(--text-muted)]/50 mt-0.5">{hint}</span>}
+      {locked && (
+        <span className="text-[9.5px] font-bold uppercase tracking-wide text-[var(--text-muted)]/50 border border-[var(--border)] rounded px-1 py-0.5">
+          locked
+        </span>
+      )}
+      {hint && <span className="text-[10px] text-[var(--text-muted)]/50 ml-auto sm:hidden">{hint}</span>}
     </div>
-    <div>{children}</div>
+    <div>
+      {children}
+      {hint && <span className="hidden sm:block text-[10px] text-[var(--text-muted)]/50 mt-1">{hint}</span>}
+    </div>
   </div>
 );
 
-const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setAvatarFile, password, setPassword }) => {
+const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setAvatarFile, password, setPassword, email }) => {
   const fileRef = useRef(null);
   const pwMatch = password.next && password.confirm && password.next === password.confirm;
   const pwMismatch = password.next && password.confirm && password.next !== password.confirm;
 
   return (
-    <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm px-8">
+    <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm px-5 sm:px-8">
 
-      {/* ── 01 · Identity ───────────────────────────────── */}
+      {/* 01 · Identity */}
       <Section index={1} title="Identity">
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <InlineField label="Display Name">
             <StyledInput icon={LuUser} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Your full name" />
           </InlineField>
-          <InlineField label="Email">
-            <StyledInput icon={LuMail} type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="you@company.com" />
+          <InlineField label="Email" >
+            <StyledInput icon={LuMail} type="email" value={email} disabled placeholder="—" />
           </InlineField>
           <InlineField label="Job Title">
             <StyledInput icon={LuBriefcase} value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Frontend Developer" />
@@ -60,11 +67,8 @@ const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setA
                   {form.name?.charAt(0)?.toUpperCase() || "U"}
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
-              >
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
                 <LuCamera className="text-[13px]" />
                 {avatarPreview ? "Change photo" : "Upload photo"}
               </button>
@@ -79,21 +83,13 @@ const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setA
         </div>
       </Section>
 
-      {/* ── 02 · About ──────────────────────────────────── */}
+      {/* 02 · About */}
       <Section index={2} title="About">
-        <div className="space-y-1">
-          <InlineField label="Bio" hint="max 280 chars">
-            <div>
-              <StyledTextarea
-                value={form.bio}
-                maxLength={280}
-                onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                placeholder="A short professional summary…"
-              />
-              <span className="text-[10.5px] text-[var(--text-muted)]/50 mt-1 block text-right">
-                {form.bio.length} / 280
-              </span>
-            </div>
+        <div className="space-y-0.5">
+          <InlineField label="Bio" hint={`${form.bio.length}/280`}>
+            <StyledTextarea value={form.bio} maxLength={280}
+              onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
+              placeholder="A short professional summary…" />
           </InlineField>
           <InlineField label="Skills" hint="Enter to add">
             <SkillTagInput skills={form.skills} onChange={(skills) => setForm((p) => ({ ...p, skills }))} />
@@ -101,23 +97,25 @@ const ProfileWorkspace = ({ form, setForm, avatarPreview, setAvatarPreview, setA
         </div>
       </Section>
 
-      {/* ── 03 · Security ───────────────────────────────── */}
+      {/* 03 · Security */}
       <Section index={3} title="Security">
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <InlineField label="New Password">
-            <StyledInput icon={LuLock} type="password" value={password.next} onChange={(e) => setPassword((p) => ({ ...p, next: e.target.value }))} placeholder="Enter new password" />
+            <StyledInput type="password" value={password.next}
+              onChange={(e) => setPassword((p) => ({ ...p, next: e.target.value }))} placeholder="Enter new password" />
           </InlineField>
           <InlineField label="Confirm">
-            <StyledInput icon={LuShield} type="password" value={password.confirm} onChange={(e) => setPassword((p) => ({ ...p, confirm: e.target.value }))} placeholder="Confirm new password" />
+            <StyledInput type="password" value={password.confirm}
+              onChange={(e) => setPassword((p) => ({ ...p, confirm: e.target.value }))} placeholder="Confirm new password" />
           </InlineField>
         </div>
-        {pwMismatch && <p className="mt-4 ml-[156px] text-[11.5px] font-medium text-red-500">Passwords do not match.</p>}
+        {pwMismatch && <p className="mt-3 text-[11.5px] font-medium text-red-500 sm:ml-[156px]">Passwords do not match.</p>}
         {pwMatch && (
-          <p className="mt-4 ml-[156px] flex items-center gap-1.5 text-[11.5px] font-semibold text-emerald-600">
+          <p className="mt-3 flex items-center gap-1.5 text-[11.5px] font-semibold text-emerald-600 sm:ml-[156px]">
             <LuBadgeCheck className="text-sm" /> Passwords match
           </p>
         )}
-        <p className="mt-4 ml-[156px] text-[11px] text-[var(--text-muted)]/50">
+        <p className="mt-3 text-[11px] text-[var(--text-muted)]/50 sm:ml-[156px]">
           Leave blank to keep your current password.
         </p>
       </Section>

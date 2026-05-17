@@ -21,6 +21,7 @@ import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
 import CommunityChat from "./pages/Chat/CommunityChat";
 import DirectChat from "./pages/Chat/DirectChat";
 import useUserAuth from "./hooks/useUserAuth";
+import EditProfile from "./pages/User/Profile/EditProfile";
 
 const RootRedirect = () => {
   const { isAuthenticated, role } = useUserAuth();
@@ -134,6 +135,7 @@ const App = () => {
             <Route path="/user/my-tasks" element={<MyTasks />} />
             <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
             <Route path="/user/team-members" element={<UserTeamMembers />} />
+            <Route path="/user/profile" element={<EditProfile />} />
             <Route path="/user/chat" element={<CommunityChat />} />
             <Route path="/user/direct-chat" element={<DirectChat />} />
           </Route>

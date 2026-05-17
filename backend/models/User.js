@@ -8,6 +8,9 @@ const userSchema = new mongoose.Schema(
         profileImageUrl: { type: String, default: null },
         role: { type: String, enum: ['admin', 'member'], default: 'member' },
         skills: { type: [String], default: [] },
+        bio: { type: String, default: '' },
+        title: { type: String, default: '' },
+        company: { type: String, default: '' },
     },
     { timestamps: true }
 );

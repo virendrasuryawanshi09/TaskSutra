@@ -69,9 +69,7 @@ const TaskTable = ({ tasks = [] }) => {
     navigate(`/user/task-details/${taskId}`);
   };
 
-  const handleAsk = () => {
-    toast("Ask feature coming soon.");
-  };
+
 
   return (
     <>
@@ -114,13 +112,6 @@ const TaskTable = ({ tasks = [] }) => {
                   className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--text)] transition-colors duration-200 hover:bg-[var(--bg-soft)]"
                 >
                   View
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAsk}
-                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--text)] transition-colors duration-200 hover:bg-[var(--bg-soft)]"
-                >
-                  Ask
                 </button>
               </div>
             </div>
@@ -186,13 +177,6 @@ const TaskTable = ({ tasks = [] }) => {
                         className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--text)] transition-colors duration-200 hover:bg-[var(--bg-soft)]"
                       >
                         View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAsk}
-                        className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--text)] transition-colors duration-200 hover:bg-[var(--bg-soft)]"
-                      >
-                        Ask
                       </button>
                     </div>
                   </td>

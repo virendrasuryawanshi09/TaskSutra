@@ -92,12 +92,14 @@ const updateUserProfile = async (req, res) => {
         const user = await User.findById(req.user._id); 
         if(!user) {
             return res.status(404).json({ message: 'User not found' });
-
         }
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
-        user.profileImageUrl = req.body.profileImageUrl || user.profileImageUrl;
+        user.profileImageUrl = req.body.profileImageUrl !== undefined ? req.body.profileImageUrl : user.profileImageUrl;
         user.skills = req.body.skills || user.skills;
+        user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
+        user.title = req.body.title !== undefined ? req.body.title : user.title;
+        user.company = req.body.company !== undefined ? req.body.company : user.company;
 
         if(req.body.password){
             const salt = await bcrypt.genSalt(10);
@@ -111,11 +113,26 @@ const updateUserProfile = async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             role: updatedUser.role,
-            profileImageUrl: updatedUser.profileImageUrl,
+            profileImageUrl: updatedUser.profileImageUrl ?? null,
             skills: updatedUser.skills,
+            bio: updatedUser.bio,
+            title: updatedUser.title,
+            company: updatedUser.company,
+            createdAt: updatedUser.createdAt,
             token: generateToken(updatedUser._id),
         });
     }catch(error){
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+const deleteAccount = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        await User.findByIdAndDelete(req.user._id);
+        res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
@@ -125,4 +142,5 @@ module.exports = {
     loginUser,
     getUserProfile,
     updateUserProfile,
+    deleteAccount,
 };

@@ -10,35 +10,39 @@ const SkillTagInput = ({ skills, onChange }) => {
     setInput("");
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(input); }
-    if (e.key === "Backspace" && !input && skills.length > 0) onChange(skills.slice(0, -1));
-  };
-
   return (
-    <div className="flex flex-wrap items-center gap-2 min-h-[46px] rounded-xl border border-[var(--border)] bg-[var(--bg-soft)] px-3 py-2 transition-all duration-150 focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/10 focus-within:bg-[var(--surface)] hover:border-[var(--text-muted)]/40">
-      {skills.map((skill) => (
-        <span
-          key={skill}
-          className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-[12px] font-semibold text-[var(--text)] shadow-sm"
-        >
-          {skill}
-          <button
-            type="button"
-            onClick={() => onChange(skills.filter((s) => s !== skill))}
-            className="text-[var(--text-muted)] hover:text-red-500 transition-colors"
-          >
-            <LuX className="text-[10px]" />
-          </button>
-        </span>
-      ))}
+    <div className="mt-1">
+      {/* Tags */}
+      {skills.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {skills.map((skill) => (
+            <span
+              key={skill}
+              className="group flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--bg-soft)] px-2.5 py-1 text-[11.5px] font-semibold text-[var(--text)] tracking-tight"
+            >
+              {skill}
+              <button
+                type="button"
+                onClick={() => onChange(skills.filter((s) => s !== skill))}
+                className="text-[var(--text-muted)] hover:text-red-500 transition-colors"
+              >
+                <LuX className="text-[9px]" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Input */}
       <input
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(input); }
+          if (e.key === "Backspace" && !input && skills.length > 0) onChange(skills.slice(0, -1));
+        }}
         onBlur={() => input && addSkill(input)}
-        placeholder={skills.length === 0 ? "Type a skill, press Enter…" : "Add more…"}
-        className="flex-1 min-w-[130px] bg-transparent text-[13px] font-medium text-[var(--text)] placeholder:text-[var(--text-muted)] placeholder:font-normal outline-none"
+        placeholder="Type a skill, press Enter…"
+        className="w-full bg-transparent border-b border-[var(--border)] py-2.5 text-[13.5px] font-medium text-[var(--text)] placeholder:text-[var(--text-muted)]/50 placeholder:font-normal outline-none transition-all duration-200 focus:border-[var(--accent)]"
       />
     </div>
   );

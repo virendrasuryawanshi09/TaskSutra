@@ -94,3 +94,70 @@ exports.sendTaskMessage = async (req, res) => {
     res.status(500).json({ message: "Server error sending task message" });
   }
 };
+
+// @desc    Edit a task discussion message
+// @route   PUT /api/task-discussions/message/:messageId
+// @access  Private
+exports.editTaskMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { content } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (!content) return res.status(400).json({ message: "Message content is required" });
+
+    const message = await TaskMessage.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    // Only sender can edit
+    if (message.sender.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Not authorized to edit this message" });
+    }
+
+    message.content = content;
+    message.isEdited = true;
+    await message.save();
+
+    const populatedMessage = await TaskMessage.findById(message._id).populate(
+      "sender",
+      "name profilePicture email"
+    );
+
+    res.status(200).json({ message: populatedMessage });
+  } catch (error) {
+    console.error("Error editing task message:", error);
+    res.status(500).json({ message: "Server error editing task message" });
+  }
+};
+
+// @desc    Delete a task discussion message
+// @route   DELETE /api/task-discussions/message/:messageId
+// @access  Private
+exports.deleteTaskMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id || req.user._id;
+
+    const message = await TaskMessage.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    // Sender or admin can delete
+    if (message.sender.toString() !== userId.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to delete this message" });
+    }
+
+    await TaskMessage.findByIdAndDelete(messageId);
+
+    const discussion = await TaskDiscussion.findById(message.discussionId);
+    if (discussion && discussion.lastMessage && discussion.lastMessage.toString() === messageId) {
+      const prevMessage = await TaskMessage.findOne({ discussionId: discussion._id }).sort({ createdAt: -1 });
+      discussion.lastMessage = prevMessage ? prevMessage._id : null;
+      await discussion.save();
+    }
+
+    res.status(200).json({ message: "Message deleted successfully", messageId, taskId: discussion ? discussion.task : null });
+  } catch (error) {
+    console.error("Error deleting task message:", error);
+    res.status(500).json({ message: "Server error deleting task message" });
+  }
+};

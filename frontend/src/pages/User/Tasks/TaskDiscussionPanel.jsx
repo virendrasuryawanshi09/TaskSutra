@@ -17,6 +17,7 @@ const TaskDiscussionPanel = ({
 }) => {
   const messagesEndRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); // { x: number, y: number, messageId: string, content: string, isMe: boolean }
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editInput, setEditInput] = useState("");
   const longPressTimeout = useRef(null);
@@ -36,6 +37,7 @@ const TaskDiscussionPanel = ({
 
   const handleContextMenu = (e, item, isMe) => {
     e.preventDefault();
+    if (window.innerWidth < 1024) return;
     const canManage = isMe || (currentUser && currentUser.role === "admin");
     if (!canManage) return;
 
@@ -49,6 +51,7 @@ const TaskDiscussionPanel = ({
   };
 
   const handleTouchStart = (e, item, isMe) => {
+    if (window.innerWidth >= 1024) return;
     const canManage = isMe || (currentUser && currentUser.role === "admin");
     if (!canManage) return;
 
@@ -301,9 +304,7 @@ const TaskDiscussionPanel = ({
             <button
               type="button"
               onClick={() => {
-                if (window.confirm("Are you sure you want to delete this message?")) {
-                  if (onDeleteMessage) onDeleteMessage(contextMenu.messageId);
-                }
+                setDeleteConfirmId(contextMenu.messageId);
                 setContextMenu(null);
               }}
               className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-500/10 transition-colors"
@@ -312,6 +313,40 @@ const TaskDiscussionPanel = ({
             </button>
           </div>
         </>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity"
+            onClick={() => setDeleteConfirmId(null)}
+          />
+          <div className="relative w-full max-w-sm rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-left">
+            <h3 className="text-sm font-bold text-[var(--text)]">Delete Message</h3>
+            <p className="mt-2 text-xs text-[var(--text-muted)] leading-[1.6]">
+              Are you sure you want to delete this message? This action is permanent and cannot be undone.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[var(--text-muted)] hover:bg-[var(--bg-soft)] border border-[var(--border)] transition-all duration-200 active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeleteMessage) onDeleteMessage(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-red-500 hover:bg-red-600 shadow-sm shadow-red-500/20 transition-all duration-200 active:scale-[0.98]"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -204,7 +204,7 @@ const ManageUsers = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 text-left">
                       <span className="text-[13px] font-medium text-[var(--text)] truncate">
                         {user.name || "Unnamed"}
                       </span>
@@ -212,6 +212,19 @@ const ManageUsers = () => {
                       <span className="text-[12px] text-[var(--text-muted)] truncate">
                         {user.email}
                       </span>
+
+                      {user.skills && user.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {user.skills.map((skill, index) => (
+                            <span
+                              key={index}
+                              className="px-1.5 py-0.5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

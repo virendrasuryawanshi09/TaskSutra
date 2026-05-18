@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { HiOutlineXMark, HiPaperAirplane, HiOutlineChatBubbleOvalLeftEllipsis, HiOutlineClock } from "react-icons/hi2";
 import AvatarGroup from "../../../components/AvatarGroup";
 import moment from "moment";
@@ -11,8 +11,15 @@ const TaskDiscussionPanel = ({
   queryInput = "",
   onQueryInputChange,
   onSend,
+  onEditMessage,
+  onDeleteMessage,
+  currentUser,
 }) => {
   const messagesEndRef = useRef(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x: number, y: number, messageId: string, content: string, isMe: boolean }
+  const [editingId, setEditingId] = useState(null);
+  const [editInput, setEditInput] = useState("");
+  const longPressTimeout = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -24,6 +31,51 @@ const TaskDiscussionPanel = ({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSend();
+    }
+  };
+
+  const handleContextMenu = (e, item, isMe) => {
+    e.preventDefault();
+    const canManage = isMe || (currentUser && currentUser.role === "admin");
+    if (!canManage) return;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      messageId: item.id,
+      content: item.message,
+      isMe
+    });
+  };
+
+  const handleTouchStart = (e, item, isMe) => {
+    const canManage = isMe || (currentUser && currentUser.role === "admin");
+    if (!canManage) return;
+
+    longPressTimeout.current = setTimeout(() => {
+      const touch = e.touches[0];
+      setContextMenu({
+        x: touch.clientX,
+        y: touch.clientY,
+        messageId: item.id,
+        content: item.message,
+        isMe
+      });
+      if (navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+    }, 600);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
     }
   };
 
@@ -95,7 +147,9 @@ const TaskDiscussionPanel = ({
             <div className="space-y-7">
               {messages.map((item, index) => {
                 const initial = item.user?.charAt(0).toUpperCase() || "U";
-                const isMe = item.user === "You";
+                const isMe = item.senderId === (currentUser?._id || currentUser?.id) || item.user === "You";
+                const isEditing = editingId === item.id;
+
                 return (
                   <div key={item.id || index} className={`flex items-start gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-soft)] border border-[var(--border)] text-[11px] font-bold text-[var(--text)]">
@@ -107,14 +161,75 @@ const TaskDiscussionPanel = ({
                         <span className="text-[11px] font-medium text-[var(--text-muted)]">{item.timestamp}</span>
                       </div>
                       <div
+                        onContextMenu={(e) => handleContextMenu(e, item, isMe)}
+                        onTouchStart={(e) => handleTouchStart(e, item, isMe)}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchMove={handleTouchMove}
+                        style={{ cursor: (isMe || (currentUser && currentUser.role === "admin")) ? "context-menu" : "default" }}
                         className={`relative max-w-[95%] sm:max-w-[90%] rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 text-[13px] sm:text-[14px] leading-relaxed break-words ${isMe
                           ? "bg-[var(--accent)] text-white rounded-tr-sm ml-auto"
                           : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] shadow-sm rounded-tl-sm mr-auto"
                           }`}
                       >
-                        <div className="text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap">
-                          {item.message}
-                        </div>
+                        {isEditing ? (
+                          <div className="flex flex-col gap-2 w-full min-w-[200px] py-1 text-left">
+                            <textarea
+                              value={editInput}
+                              onChange={(e) => setEditInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (editInput.trim() && onEditMessage) {
+                                    onEditMessage(item.id, editInput.trim());
+                                  }
+                                  setEditingId(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingId(null);
+                                }
+                              }}
+                              className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] p-2 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
+                              rows={2}
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(null)}
+                                className={`px-2 py-1 rounded text-[10px] font-bold bg-transparent transition-all ${
+                                  isMe ? "text-white/80 hover:text-white" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                                }`}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editInput.trim() && onEditMessage) {
+                                    onEditMessage(item.id, editInput.trim());
+                                  }
+                                  setEditingId(null);
+                                }}
+                                disabled={!editInput.trim()}
+                                className={`px-2 py-1 rounded text-[10px] font-bold transition-all shadow-sm ${
+                                  isMe ? "bg-white text-[var(--accent)] hover:bg-white/95" : "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]"
+                                } disabled:opacity-50`}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap flex flex-col text-left">
+                            <span>{item.message}</span>
+                            {item.isEdited && (
+                              <span className={`text-[9px] mt-1 select-none text-right block font-medium tracking-tight ${
+                                isMe ? "text-white/60" : "text-[var(--text-muted)]"
+                              }`}>
+                                edited
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -155,6 +270,49 @@ const TaskDiscussionPanel = ({
           </div>
         </div>
       </aside>
+
+      {/* Context Menu Overlay */}
+      {contextMenu && (
+        <>
+          <div 
+            className="fixed inset-0 z-[100] bg-transparent" 
+            onClick={() => setContextMenu(null)}
+          />
+          <div 
+            className="fixed z-[101] w-40 rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-xl py-1 flex flex-col"
+            style={{ 
+              top: `${Math.min(contextMenu.y, window.innerHeight - 100)}px`, 
+              left: `${Math.min(contextMenu.x, window.innerWidth - 170)}px` 
+            }}
+          >
+            {contextMenu.isMe && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(contextMenu.messageId);
+                  setEditInput(contextMenu.content);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--bg-soft)] transition-colors"
+              >
+                Edit Message
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this message?")) {
+                  if (onDeleteMessage) onDeleteMessage(contextMenu.messageId);
+                }
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-500/10 transition-colors"
+            >
+              Delete Message
+            </button>
+          </div>
+        </>
+      )}
     </>
   );
 };

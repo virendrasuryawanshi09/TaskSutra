@@ -6,6 +6,7 @@ import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
 import moment from 'moment';
 import { LuSend, LuMessageSquare } from 'react-icons/lu';
+import toast from 'react-hot-toast';
 
 const DirectChat = () => {
   const { user } = useContext(UserContext);
@@ -23,6 +24,10 @@ const DirectChat = () => {
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const [directChats, setDirectChats] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editInput, setEditInput] = useState("");
+  const longPressTimeout = useRef(null);
 
   // Auto scroll
   const scrollToBottom = () => {
@@ -248,6 +253,42 @@ const DirectChat = () => {
       }
     });
 
+    socketRef.current.on('receive_edit_message', (msgData) => {
+       if (activeChat?.type === 'community') {
+          setMessages(prev => prev.map(m => m._id === msgData._id ? { ...m, content: msgData.content, isEdited: msgData.isEdited } : m));
+       }
+    });
+
+    socketRef.current.on('receive_delete_message', (data) => {
+       if (activeChat?.type === 'community') {
+          setMessages(prev => prev.filter(m => m._id !== data.messageId));
+       }
+    });
+
+    socketRef.current.on('receive_edit_direct_message', (msgData) => {
+       if (activeChat?.type === 'user') {
+          setMessages(prev => prev.map(m => m._id === msgData._id ? { ...m, content: msgData.content, isEdited: msgData.isEdited } : m));
+       }
+    });
+
+    socketRef.current.on('receive_delete_direct_message', (data) => {
+       if (activeChat?.type === 'user') {
+          setMessages(prev => prev.filter(m => m._id !== data.messageId));
+       }
+    });
+
+    socketRef.current.on('receive_edit_task_message', (msgData) => {
+       if (activeChat?.type === 'task') {
+          setMessages(prev => prev.map(m => m._id === msgData._id ? { ...m, content: msgData.content, isEdited: msgData.isEdited } : m));
+       }
+    });
+
+    socketRef.current.on('receive_delete_task_message', (data) => {
+       if (activeChat?.type === 'task') {
+          setMessages(prev => prev.filter(m => m._id !== data.messageId));
+       }
+    });
+
     socketRef.current.on('messages_seen', (data) => {
       if (activeChat?.type === 'user' && data.readerId === activeChat.data._id) {
          setMessages(prev => prev.map(m => 
@@ -274,6 +315,119 @@ const DirectChat = () => {
          }
      };
   }, [activeChat]);
+
+  const handleContextMenu = (e, msg, isMe) => {
+    e.preventDefault();
+    const canManage = isMe || (user && user.role === 'admin');
+    if (!canManage) return;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      messageId: msg._id,
+      content: msg.content,
+      isMe
+    });
+  };
+
+  const handleTouchStart = (e, msg, isMe) => {
+    const canManage = isMe || (user && user.role === 'admin');
+    if (!canManage) return;
+
+    longPressTimeout.current = setTimeout(() => {
+      const touch = e.touches[0];
+      setContextMenu({
+        x: touch.clientX,
+        y: touch.clientY,
+        messageId: msg._id,
+        content: msg.content,
+        isMe
+      });
+      if (navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+    }, 600);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+  };
+
+  const handleEditMessage = async (messageId, newContent) => {
+    try {
+      if (activeChat.type === 'community') {
+        const res = await axiosInstance.put(`/api/chat/${messageId}`, { content: newContent });
+        const updatedMessage = res.data;
+        setMessages(prev => prev.map(m => m._id === messageId ? updatedMessage : m));
+        if (socketRef.current) {
+          socketRef.current.emit('edit_message', updatedMessage);
+        }
+      } else if (activeChat.type === 'user') {
+        const res = await axiosInstance.put(`/api/direct-chats/message/${messageId}`, { content: newContent });
+        const updatedMessage = res.data.message;
+        setMessages(prev => prev.map(m => m._id === messageId ? updatedMessage : m));
+        if (socketRef.current) {
+          socketRef.current.emit('edit_direct_message', {
+             receiverId: activeChat.data._id,
+             messageData: updatedMessage
+          });
+        }
+      } else if (activeChat.type === 'task') {
+        const res = await axiosInstance.put(`/api/task-discussions/message/${messageId}`, { content: newContent });
+        const updatedMessage = res.data.message;
+        setMessages(prev => prev.map(m => m._id === messageId ? updatedMessage : m));
+        if (socketRef.current) {
+          socketRef.current.emit('edit_task_message', {
+             taskId: activeChat.data._id,
+             messageData: updatedMessage
+          });
+        }
+      }
+      toast.success('Message updated');
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      toast.error('Failed to edit message');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      if (activeChat.type === 'community') {
+        await axiosInstance.delete(`/api/chat/${messageId}`);
+        setMessages(prev => prev.filter(m => m._id !== messageId));
+        if (socketRef.current) {
+          socketRef.current.emit('delete_message', { messageId });
+        }
+      } else if (activeChat.type === 'user') {
+        await axiosInstance.delete(`/api/direct-chats/message/${messageId}`);
+        setMessages(prev => prev.filter(m => m._id !== messageId));
+        if (socketRef.current) {
+          socketRef.current.emit('delete_direct_message', {
+             receiverId: activeChat.data._id,
+             messageId,
+             chatId: activeChat.data.chatId
+          });
+        }
+      } else if (activeChat.type === 'task') {
+        await axiosInstance.delete(`/api/task-discussions/message/${messageId}`);
+        setMessages(prev => prev.filter(m => m._id !== messageId));
+        if (socketRef.current) {
+          socketRef.current.emit('delete_task_message', {
+             taskId: activeChat.data._id,
+             messageId
+          });
+        }
+      }
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      toast.error('Failed to delete message');
+    }
+  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -569,18 +723,26 @@ const DirectChat = () => {
                 </div>
 
                 {messages.map((msg, index) => {
-                  const isMe = msg.sender?._id === (user?._id || user?.id);
+                  const isMe = (msg.sender?._id || msg.sender) === (user?._id || user?.id);
                   const senderName = isMe ? 'You' : (msg.sender?.name || 'Unknown');
                   const time = moment(msg.createdAt).format('h:mm A');
                   const date = moment(msg.createdAt).format('MM/DD/YYYY');
                   
                   // Group consecutive messages
                   const isConsecutive = index > 0 
-                    && messages[index - 1].sender?._id === msg.sender?._id 
+                    && (messages[index - 1].sender?._id || messages[index - 1].sender) === (msg.sender?._id || msg.sender) 
                     && moment(msg.createdAt).diff(moment(messages[index - 1].createdAt), 'minutes') < 5;
 
                   return (
-                    <div key={msg._id || index} className={`group flex gap-4 px-2 py-1.5 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-5'}`}>
+                    <div 
+                      key={msg._id || index} 
+                      className={`group flex gap-4 px-2 py-1.5 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-5'}`}
+                      onContextMenu={(e) => handleContextMenu(e, msg, isMe)}
+                      onTouchStart={(e) => handleTouchStart(e, msg, isMe)}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchMove={handleTouchMove}
+                      style={{ cursor: (isMe || (user && user.role === 'admin')) ? "context-menu" : "default" }}
+                    >
                       
                       {/* Left Column (Avatar or Timestamp) */}
                       <div className="w-10 flex-shrink-0 flex justify-center">
@@ -609,18 +771,68 @@ const DirectChat = () => {
                             </span>
                           </div>
                         )}
-                        <div className="text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2">
-                          <span>{msg.content}</span>
-                          {isMe && activeChat.type === 'user' && (
-                             <span className="text-[14px] leading-none mb-0.5 ml-1 inline-block" title={msg.isRead ? "Seen" : "Sent"}>
-                                {msg.isRead ? (
-                                   <span className="text-blue-500 font-bold">✓✓</span>
-                                ) : (
-                                   <span className="text-[var(--text-muted)]">✓</span>
-                                )}
-                             </span>
-                          )}
-                        </div>
+                        {editingId === msg._id ? (
+                          <div className="flex flex-col gap-2 w-full min-w-[200px] py-1 text-left">
+                            <textarea
+                              value={editInput}
+                              onChange={(e) => setEditInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (editInput.trim()) {
+                                    handleEditMessage(msg._id, editInput.trim());
+                                  }
+                                  setEditingId(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingId(null);
+                                }
+                              }}
+                              className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg-soft)] p-2 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
+                              rows={2}
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(null)}
+                                className="px-2.5 py-1 rounded text-[10px] font-bold bg-transparent text-[var(--text-muted)] hover:text-[var(--text)] transition-all"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editInput.trim()) {
+                                    handleEditMessage(msg._id, editInput.trim());
+                                  }
+                                  setEditingId(null);
+                                }}
+                                disabled={!editInput.trim()}
+                                className="px-2.5 py-1 rounded text-[10px] font-bold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2 text-left">
+                            <span>{msg.content}</span>
+                            {msg.isEdited && (
+                              <span className="text-[9px] select-none text-[var(--text-muted)] font-semibold tracking-tight mt-1.5" title="Edited message">
+                                (edited)
+                              </span>
+                            )}
+                            {isMe && activeChat.type === 'user' && (
+                               <span className="text-[14px] leading-none mb-0.5 ml-1 inline-block" title={msg.isRead ? "Seen" : "Sent"}>
+                                  {msg.isRead ? (
+                                     <span className="text-blue-500 font-bold">✓✓</span>
+                                  ) : (
+                                     <span className="text-[var(--text-muted)]">✓</span>
+                                  )}
+                               </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -702,6 +914,48 @@ const DirectChat = () => {
           
         </div>
       </div>
+
+      {contextMenu && (
+        <>
+          <div 
+            className="fixed inset-0 z-[100] bg-transparent" 
+            onClick={() => setContextMenu(null)}
+          />
+          <div 
+            className="fixed z-[101] w-40 rounded-lg bg-[var(--surface)] border border-[var(--border)] shadow-xl py-1 flex flex-col"
+            style={{ 
+              top: `${Math.min(contextMenu.y, window.innerHeight - 100)}px`, 
+              left: `${Math.min(contextMenu.x, window.innerWidth - 170)}px` 
+            }}
+          >
+            {contextMenu.isMe && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(contextMenu.messageId);
+                  setEditInput(contextMenu.content);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--bg-soft)] transition-colors"
+              >
+                Edit Message
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this message?")) {
+                  handleDeleteMessage(contextMenu.messageId);
+                }
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-500/10 transition-colors"
+            >
+              Delete Message
+            </button>
+          </div>
+        </>
+      )}
     </DashboardLayout>
   );
 };

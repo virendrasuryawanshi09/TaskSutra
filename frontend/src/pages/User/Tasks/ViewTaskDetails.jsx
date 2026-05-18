@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -10,6 +10,7 @@ import TaskDiscussionPanel from "./TaskDiscussionPanel";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import { io } from "socket.io-client";
+import { UserContext } from "../../../context/UserContextState";
 
 const statusOptions = [
   { label: "Pending" },
@@ -127,6 +128,7 @@ const deriveProgressValue = (status, checklist, fallbackProgress = 0) => {
 };
 
 const ViewTaskDetails = () => {
+  const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const location = useLocation();
   const { id: taskId } = useParams();
@@ -222,8 +224,10 @@ const ViewTaskDetails = () => {
         if (response.data && response.data.messages) {
           const formattedMessages = response.data.messages.map(msg => ({
             id: msg._id,
+            senderId: msg.sender?._id || msg.sender,
             user: msg.sender?.name || "Team Member",
             message: msg.content,
+            isEdited: msg.isEdited,
             timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }));
           setMessages(formattedMessages);
@@ -252,11 +256,23 @@ const ViewTaskDetails = () => {
           
           return [...prev, {
             id: msgData._id,
+            senderId: msgData.sender?._id || msgData.sender,
             user: msgData.sender?.name || "Team Member",
             message: msgData.content,
+            isEdited: msgData.isEdited,
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
+    });
+
+    socketRef.current.on('receive_edit_task_message', (msgData) => {
+       setMessages((prev) =>
+          prev.map(m => m.id === msgData._id ? { ...m, message: msgData.content, isEdited: msgData.isEdited } : m)
+       );
+    });
+
+    socketRef.current.on('receive_delete_task_message', (data) => {
+       setMessages((prev) => prev.filter(m => m.id !== data.messageId));
     });
 
     return () => {
@@ -295,8 +311,10 @@ const ViewTaskDetails = () => {
       
       const newMsg = {
          id: savedMessage._id,
+         senderId: user?._id || user?.id,
          user: "You",
          message: savedMessage.content,
+         isEdited: savedMessage.isEdited,
          timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
@@ -312,6 +330,49 @@ const ViewTaskDetails = () => {
       setQueryInput("");
     } catch (error) {
       toast.error("Failed to send message. Please ensure you are authorized.");
+    }
+  };
+
+  const handleEditDiscussionMessage = async (messageId, newContent) => {
+    try {
+      const response = await axiosInstance.put(`/api/task-discussions/message/${messageId}`, {
+        content: newContent
+      });
+      const updatedMessage = response.data.message;
+
+      setMessages(prev => prev.map(m => m.id === messageId ? {
+        ...m,
+        message: updatedMessage.content,
+        isEdited: true
+      } : m));
+
+      if (socketRef.current) {
+        socketRef.current.emit("edit_task_message", {
+          taskId,
+          messageData: updatedMessage
+        });
+      }
+      toast.success("Comment updated");
+    } catch (error) {
+      toast.error("Failed to edit comment");
+    }
+  };
+
+  const handleDeleteDiscussionMessage = async (messageId) => {
+    try {
+      await axiosInstance.delete(`/api/task-discussions/message/${messageId}`);
+
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+
+      if (socketRef.current) {
+        socketRef.current.emit("delete_task_message", {
+          taskId,
+          messageId
+        });
+      }
+      toast.success("Comment deleted");
+    } catch (error) {
+      toast.error("Failed to delete comment");
     }
   };
 
@@ -790,6 +851,9 @@ const ViewTaskDetails = () => {
         queryInput={queryInput}
         onQueryInputChange={(event) => setQueryInput(event.target.value)}
         onSend={handleSendMessage}
+        onEditMessage={handleEditDiscussionMessage}
+        onDeleteMessage={handleDeleteDiscussionMessage}
+        currentUser={user}
       />
     </DashboardLayout>
   );

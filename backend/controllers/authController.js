@@ -38,6 +38,11 @@ const registerUser = async (req, res) => {
             email: user.email,
             role: user.role,
             profileImageUrl: user.profileImageUrl,
+            skills: user.skills || [],
+            bio: user.bio || "",
+            title: user.title || "",
+            company: user.company || "",
+            createdAt: user.createdAt,
             token: generateToken(user._id),
         }); 
     }catch(error){
@@ -66,6 +71,11 @@ const loginUser = async (req, res) => {
             email: user.email,
             role: user.role,
             profileImageUrl: user.profileImageUrl,
+            skills: user.skills || [],
+            bio: user.bio || "",
+            title: user.title || "",
+            company: user.company || "",
+            createdAt: user.createdAt,
             token: generateToken(user._id),
         });
     }catch(error){

@@ -126,3 +126,77 @@ exports.markAsRead = async (req, res) => {
     res.status(500).json({ message: "Server error marking chat as read" });
   }
 };
+
+// @desc    Edit a direct message
+// @route   PUT /api/direct-chats/message/:messageId
+// @access  Private
+exports.editDirectMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { content } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (!content) {
+      return res.status(400).json({ message: "Message content is required" });
+    }
+
+    const message = await DirectMessage.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Only sender can edit
+    if (message.sender.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Not authorized to edit this message" });
+    }
+
+    message.content = content;
+    message.isEdited = true;
+    await message.save();
+
+    const populatedMessage = await DirectMessage.findById(message._id).populate(
+      "sender",
+      "name profilePicture email"
+    );
+
+    res.status(200).json({ message: populatedMessage });
+  } catch (error) {
+    console.error("Error editing direct message:", error);
+    res.status(500).json({ message: "Server error editing direct message" });
+  }
+};
+
+// @desc    Delete a direct message
+// @route   DELETE /api/direct-chats/message/:messageId
+// @access  Private
+exports.deleteDirectMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id || req.user._id;
+
+    const message = await DirectMessage.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Sender or admin can delete
+    if (message.sender.toString() !== userId.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to delete this message" });
+    }
+
+    await DirectMessage.findByIdAndDelete(messageId);
+
+    const chat = await DirectChat.findById(message.chatId);
+    if (chat && chat.lastMessage && chat.lastMessage.toString() === messageId) {
+      // Find the previous message
+      const prevMessage = await DirectMessage.findOne({ chatId: chat._id }).sort({ createdAt: -1 });
+      chat.lastMessage = prevMessage ? prevMessage._id : null;
+      await chat.save();
+    }
+
+    res.status(200).json({ message: "Message deleted successfully", messageId, chatId: message.chatId });
+  } catch (error) {
+    console.error("Error deleting direct message:", error);
+    res.status(500).json({ message: "Server error deleting direct message" });
+  }
+};

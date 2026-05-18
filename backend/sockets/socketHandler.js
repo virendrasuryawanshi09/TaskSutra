@@ -120,6 +120,41 @@ module.exports = (io) => {
              socket.to(`task_${data.taskId}`).emit("task_stop_typing", data);
         });
 
+        // --- Edit/Delete Message Events ---
+        socket.on("edit_message", (messageData) => {
+            io.emit("receive_edit_message", messageData);
+        });
+
+        socket.on("delete_message", (data) => {
+            io.emit("receive_delete_message", data); // { messageId }
+        });
+
+        socket.on("edit_direct_message", (data) => {
+            const { receiverId, messageData } = data;
+            const receiverSocketId = getSocketId(String(receiverId));
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("receive_edit_direct_message", messageData);
+            }
+        });
+
+        socket.on("delete_direct_message", (data) => {
+            const { receiverId, messageId, chatId } = data;
+            const receiverSocketId = getSocketId(String(receiverId));
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("receive_delete_direct_message", { messageId, chatId });
+            }
+        });
+
+        socket.on("edit_task_message", (data) => {
+             const { taskId, messageData } = data;
+             io.to(`task_${taskId}`).emit("receive_edit_task_message", messageData);
+        });
+
+        socket.on("delete_task_message", (data) => {
+             const { taskId, messageId } = data;
+             io.to(`task_${taskId}`).emit("receive_delete_task_message", { messageId });
+        });
+
         socket.on("error", (error) => {
             console.error(`Socket error for ${socket.id}:`, error);
         });

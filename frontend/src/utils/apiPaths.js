@@ -17,14 +17,6 @@ export const API_PATHS = {
     DELETE_USER: (userId) => `/api/users/${userId}`,
   },
 
-  WORKSPACE: {
-    GET_ALL_MEMBERS: "/api/users/workspace/members",
-    GET_STATS: "/api/users/workspace/stats",
-    ADD_MEMBER: "/api/workspace/members",
-    REMOVE_MEMBER: (userId) => `/api/workspace/members/${userId}`,
-    UPDATE_MEMBER: (userId) => `/api/workspace/members/${userId}`,
-  },
-
   TASKS: {
     GET_DASHBOARD_DATA: "/api/tasks/dashboard-data",
     GET_USER_DASHBOARD_DATA: "/api/tasks/user-dashboard-data",

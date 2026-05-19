@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import DashboardLayout from '../../components/Layouts/DashboardLayout';
+import DashboardLayout from '../../components/layouts/DashboardLayout';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import { downloadReport } from '../../utils/downloadReport';
@@ -41,8 +41,8 @@ const ManageTasks = () => {
     } catch (error) {
       toast.error(
         error?.message ||
-          error?.response?.data?.message ||
-          'Failed to download tasks report.',
+        error?.response?.data?.message ||
+        'Failed to download tasks report.',
         { id: toastId }
       );
     } finally {
@@ -85,8 +85,8 @@ const ManageTasks = () => {
   useEffect(() => {
     if (!discussionTask) {
       if (socketRef.current) {
-         socketRef.current.disconnect();
-         socketRef.current = null;
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
       return;
     }
@@ -119,28 +119,28 @@ const ManageTasks = () => {
     });
 
     socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
+      socketRef.current.emit("joinTaskRoom", taskId);
     });
 
     socketRef.current.on('receive_task_message', (msgData) => {
-       setDiscussionMessages((prev) => {
-          if (prev.find(m => m.id === msgData._id)) return prev;
-          
-          return [...prev, {
-            id: msgData._id,
-            user: msgData.sender?.name || "Team Member",
-            message: msgData.content,
-            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }];
-       });
+      setDiscussionMessages((prev) => {
+        if (prev.find(m => m.id === msgData._id)) return prev;
+
+        return [...prev, {
+          id: msgData._id,
+          user: msgData.sender?.name || "Team Member",
+          message: msgData.content,
+          timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }];
+      });
     });
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
-           socketRef.current = null;
-       }
+      if (socketRef.current) {
+        socketRef.current.emit("leaveTaskRoom", taskId);
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [discussionTask]);
 
@@ -153,25 +153,25 @@ const ManageTasks = () => {
       const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
         content: trimmedMessage
       });
-      
+
       const savedMessage = response.data.message;
-      
+
       const newMsg = {
-         id: savedMessage._id,
-         user: "You",
-         message: savedMessage.content,
-         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        id: savedMessage._id,
+        user: "You",
+        message: savedMessage.content,
+        timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      
+
       setDiscussionMessages((currentMessages) => [...currentMessages, newMsg]);
-      
+
       if (socketRef.current) {
         socketRef.current.emit("send_task_message", {
-           taskId,
-           messageData: savedMessage
+          taskId,
+          messageData: savedMessage
         });
       }
-      
+
       setDiscussionInput("");
     } catch (error) {
       toast.error("Failed to send message.");
@@ -274,7 +274,7 @@ const ManageTasks = () => {
                 createdAt={item.createdAt}
                 dueDate={item.dueDate}
 
-                
+
                 assignedTo={item.assignedTo?.map((u) => ({
                   image: u.profileImageUrl,
                   name: u.name || u.email || "User"
@@ -292,7 +292,7 @@ const ManageTasks = () => {
         )}
 
       </div>
-      
+
       <TaskDiscussionPanel
         task={discussionTask}
         isOpen={Boolean(discussionTask)}

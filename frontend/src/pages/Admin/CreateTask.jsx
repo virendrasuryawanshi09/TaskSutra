@@ -73,27 +73,27 @@ const CreateTask = () => {
     });
 
     socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
+      socketRef.current.emit("joinTaskRoom", taskId);
     });
 
     socketRef.current.on('receive_task_message', (msgData) => {
-       setMessages((prev) => {
-          if (prev.find(m => m.id === msgData._id)) return prev;
-          
-          return [...prev, {
-            id: msgData._id,
-            user: msgData.sender?.name || "Team Member",
-            message: msgData.content,
-            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }];
-       });
+      setMessages((prev) => {
+        if (prev.find(m => m.id === msgData._id)) return prev;
+
+        return [...prev, {
+          id: msgData._id,
+          user: msgData.sender?.name || "Team Member",
+          message: msgData.content,
+          timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }];
+      });
     });
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
-       }
+      if (socketRef.current) {
+        socketRef.current.emit("leaveTaskRoom", taskId);
+        socketRef.current.disconnect();
+      }
     };
   }, [taskId]);
 
@@ -108,25 +108,25 @@ const CreateTask = () => {
       const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
         content: trimmedMessage
       });
-      
+
       const savedMessage = response.data.message;
-      
+
       const newMsg = {
-         id: savedMessage._id,
-         user: "You",
-         message: savedMessage.content,
-         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        id: savedMessage._id,
+        user: "You",
+        message: savedMessage.content,
+        timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      
+
       setMessages((currentMessages) => [...currentMessages, newMsg]);
-      
+
       if (socketRef.current) {
         socketRef.current.emit("send_task_message", {
-           taskId,
-           messageData: savedMessage
+          taskId,
+          messageData: savedMessage
         });
       }
-      
+
       setQueryInput("");
     } catch (error) {
       toast.error("Failed to send message. Please ensure you are authorized.");
@@ -260,7 +260,7 @@ const CreateTask = () => {
 
       toast.success("Task Updated Successfully.");
       navigate("/admin/tasks");
-    }catch (error) {
+    } catch (error) {
       console.error("Error updating task:", error);
       toast.error(error.response?.data?.message || "Failed to update task. Please try again.");
     } finally {
@@ -323,7 +323,7 @@ const CreateTask = () => {
           attachments: taskInfo?.attachments || [],
         });
       }
-    } catch(error) {
+    } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
@@ -350,7 +350,7 @@ const CreateTask = () => {
       getTaskDetailsByID();
     }
 
-    return () => {};
+    return () => { };
   }, [taskId]);
 
   return (

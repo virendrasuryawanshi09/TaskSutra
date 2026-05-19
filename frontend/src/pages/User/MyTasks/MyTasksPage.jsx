@@ -101,8 +101,10 @@ const MyTasksPage = () => {
         if (response.data && response.data.messages) {
           const formattedMessages = response.data.messages.map(msg => ({
             id: msg._id,
+            senderId: msg.sender?._id || msg.sender,
             user: msg.sender?.name || "Team Member",
             message: msg.content,
+            isEdited: msg.isEdited,
             timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }));
           setDiscussionMessages(formattedMessages);
@@ -131,11 +133,23 @@ const MyTasksPage = () => {
           
           return [...prev, {
             id: msgData._id,
+            senderId: msgData.sender?._id || msgData.sender,
             user: msgData.sender?.name || "Team Member",
             message: msgData.content,
+            isEdited: msgData.isEdited,
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
+    });
+
+    socketRef.current.on('receive_edit_task_message', (msgData) => {
+       setDiscussionMessages((prev) =>
+          prev.map(m => m.id === msgData._id ? { ...m, message: msgData.content, isEdited: msgData.isEdited } : m)
+       );
+    });
+
+    socketRef.current.on('receive_delete_task_message', (data) => {
+       setDiscussionMessages((prev) => prev.filter(m => m.id !== data.messageId));
     });
 
     return () => {
@@ -192,8 +206,10 @@ const MyTasksPage = () => {
       
       const newMsg = {
          id: savedMessage._id,
+         senderId: user?._id || user?.id,
          user: "You",
          message: savedMessage.content,
+         isEdited: savedMessage.isEdited,
          timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
@@ -208,6 +224,49 @@ const MyTasksPage = () => {
       }
     } catch (error) {
       toast.error("Failed to send message");
+    }
+  };
+
+  const handleEditDiscussionMessage = async (messageId, newContent) => {
+    try {
+      const response = await axiosInstance.put(`/api/task-discussions/message/${messageId}`, {
+        content: newContent
+      });
+      const updatedMessage = response.data.message;
+
+      setDiscussionMessages(prev => prev.map(m => m.id === messageId ? {
+        ...m,
+        message: updatedMessage.content,
+        isEdited: true
+      } : m));
+
+      if (socketRef.current) {
+        socketRef.current.emit("edit_task_message", {
+          taskId: discussionTask.id || discussionTask._id,
+          messageData: updatedMessage
+        });
+      }
+      toast.success("Comment updated");
+    } catch (error) {
+      toast.error("Failed to edit comment");
+    }
+  };
+
+  const handleDeleteDiscussionMessage = async (messageId) => {
+    try {
+      await axiosInstance.delete(`/api/task-discussions/message/${messageId}`);
+
+      setDiscussionMessages(prev => prev.filter(m => m.id !== messageId));
+
+      if (socketRef.current) {
+        socketRef.current.emit("delete_task_message", {
+          taskId: discussionTask.id || discussionTask._id,
+          messageId
+        });
+      }
+      toast.success("Comment deleted");
+    } catch (error) {
+      toast.error("Failed to delete comment");
     }
   };
 
@@ -406,6 +465,9 @@ const MyTasksPage = () => {
         queryInput={discussionInput}
         onQueryInputChange={(e) => setDiscussionInput(e.target.value)}
         onSend={handleSendDiscussionMessage}
+        onEditMessage={handleEditDiscussionMessage}
+        onDeleteMessage={handleDeleteDiscussionMessage}
+        currentUser={user}
       />
     </DashboardLayout>
   );

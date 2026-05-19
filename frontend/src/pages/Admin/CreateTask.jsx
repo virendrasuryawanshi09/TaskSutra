@@ -260,7 +260,7 @@ const CreateTask = () => {
 
       toast.success("Task Updated Successfully.");
       navigate("/admin/tasks");
-    }catch (error) {
+    } catch (error) {
       console.error("Error updating task:", error);
       toast.error(error.response?.data?.message || "Failed to update task. Please try again.");
     } finally {
@@ -323,7 +323,7 @@ const CreateTask = () => {
           attachments: taskInfo?.attachments || [],
         });
       }
-    } catch(error) {
+    } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
@@ -350,7 +350,7 @@ const CreateTask = () => {
       getTaskDetailsByID();
     }
 
-    return () => {};
+    return () => { };
   }, [taskId]);
 
   return (

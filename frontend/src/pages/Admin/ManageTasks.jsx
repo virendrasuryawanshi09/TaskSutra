@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import DashboardLayout from '../../components/Layouts/DashboardLayout';
+import DashboardLayout from '../../components/layouts/DashboardLayout';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import { downloadReport } from '../../utils/downloadReport';
@@ -41,8 +41,8 @@ const ManageTasks = () => {
     } catch (error) {
       toast.error(
         error?.message ||
-          error?.response?.data?.message ||
-          'Failed to download tasks report.',
+        error?.response?.data?.message ||
+        'Failed to download tasks report.',
         { id: toastId }
       );
     } finally {
@@ -274,7 +274,7 @@ const ManageTasks = () => {
                 createdAt={item.createdAt}
                 dueDate={item.dueDate}
 
-                
+
                 assignedTo={item.assignedTo?.map((u) => ({
                   image: u.profileImageUrl,
                   name: u.name || u.email || "User"

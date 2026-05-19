@@ -542,7 +542,7 @@ const DirectChat = () => {
       <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4">
         
         {/* Left Sidebar - Users List */}
-        <div className="hidden md:flex w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10">
+        <div className={`${activeChat ? 'hidden' : 'flex'} md:flex w-full md:w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10`}>
           <div className="h-14 px-5 flex items-center border-b border-[var(--border)] shadow-sm">
             <h1 className="text-[14px] font-bold tracking-tight text-[var(--text)]">Direct Messages</h1>
           </div>
@@ -640,7 +640,7 @@ const DirectChat = () => {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0">
+        <div className={`${activeChat ? 'flex' : 'hidden'} md:flex flex-1 flex-col bg-[var(--bg)] min-w-0`}>
           
           {!activeChat ? (
              <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center bg-gradient-to-b from-[var(--surface)] to-[var(--bg)]">

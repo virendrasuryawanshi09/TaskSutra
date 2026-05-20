@@ -18,6 +18,19 @@ const companySchema = new mongoose.Schema(
       themeColor: { type: String, default: "#1f6f78" },
       maxUsers: { type: Number, default: 50 },
     },
+    isVerified: { 
+      type: Boolean, 
+      default: false 
+    },
+    verificationMethod: { 
+      type: String, 
+      enum: ["otp", "dns", "none"], 
+      default: "none" 
+    },
+    verificationCode: { 
+      type: String, 
+      default: "" 
+    },
   },
   { timestamps: true }
 );

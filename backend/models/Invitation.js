@@ -31,4 +31,7 @@ const invitationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// TTL index to automatically delete expired invitation documents
+invitationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 module.exports = mongoose.model("Invitation", invitationSchema);

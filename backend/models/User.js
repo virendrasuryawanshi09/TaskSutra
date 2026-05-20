@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
         bio: { type: String, default: '' },
         title: { type: String, default: '' },
         company: { type: String, default: '' },
+        companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
+        status: { type: String, enum: ['active', 'suspended'], default: 'active' },
     },
     { timestamps: true }
 );

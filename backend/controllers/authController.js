@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Company = require('../models/Company');
+const Invitation = require('../models/Invitation');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -9,7 +11,7 @@ const generateToken = (userId) => {
 
 const registerUser = async (req, res) => {
     try{
-        const { name, email, password, profileImageUrl, adminInviteToken } = req.body;
+        const { name, email, password, profileImageUrl, adminInviteToken, inviteToken } = req.body;
 
         const userExists = await User.findOne({ email });
         if (userExists) {
@@ -21,6 +23,36 @@ const registerUser = async (req, res) => {
             role = "admin";
         }
 
+        let companyId = null;
+        let companyName = "";
+
+        if (inviteToken) {
+            const invitation = await Invitation.findOne({ token: inviteToken }).populate("companyId");
+            if (!invitation || invitation.status !== "pending" || new Date() > invitation.expiresAt) {
+                return res.status(400).json({ message: "Invitation token has expired or is invalid" });
+            }
+            if (invitation.email.toLowerCase() !== email.toLowerCase()) {
+                return res.status(400).json({ message: "Invitation email does not match registering email" });
+            }
+            
+            companyId = invitation.companyId?._id || null;
+            companyName = invitation.companyId?.name || "";
+            
+            // Mark invitation as accepted
+            invitation.status = "accepted";
+            await invitation.save();
+        } else {
+            // Auto-join via domain check fallback
+            const emailDomain = email.split('@')[1]?.toLowerCase();
+            if (emailDomain) {
+                const matchingCompany = await Company.findOne({ domain: emailDomain, isVerified: true });
+                if (matchingCompany) {
+                    companyId = matchingCompany._id;
+                    companyName = matchingCompany.name;
+                }
+            }
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -30,6 +62,8 @@ const registerUser = async (req, res) => {
             password: hashedPassword,
             profileImageUrl,
             role,
+            companyId,
+            company: companyName,
         });
 
         res.status(201).json({
@@ -91,7 +125,6 @@ const getUserProfile = async (req, res) => {
         }else{
             res.status(404).json({ message: 'User not found' });
         }
-        res.json(user);
     }catch(error){
         res.status(500).json({ message: 'Server error', error: error.message });
     }

@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
-const Input = ({ value, onChange, type, label }) => {
+const Input = ({ value, onChange, type, label, ...rest }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
   const isPassword = type === "password";
-  const isActive = isFocused || value.length > 0;
+  const isActive = isFocused || (value && value.toString().length > 0);
 
   return (
     <div className="relative mb-7">
@@ -23,7 +23,9 @@ const Input = ({ value, onChange, type, label }) => {
           text-[var(--text)]
           focus:border-[var(--accent)]
           transition-all duration-200
+          disabled:opacity-60 disabled:cursor-not-allowed
         "
+        {...rest}
       />
 
       <label

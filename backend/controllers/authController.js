@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Company = require('../models/Company');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -21,6 +22,18 @@ const registerUser = async (req, res) => {
             role = "admin";
         }
 
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+        let companyId = null;
+        let companyName = "";
+
+        if (emailDomain) {
+            const matchingCompany = await Company.findOne({ domain: emailDomain, isVerified: true });
+            if (matchingCompany) {
+                companyId = matchingCompany._id;
+                companyName = matchingCompany.name;
+            }
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -30,6 +43,8 @@ const registerUser = async (req, res) => {
             password: hashedPassword,
             profileImageUrl,
             role,
+            companyId,
+            company: companyName,
         });
 
         res.status(201).json({

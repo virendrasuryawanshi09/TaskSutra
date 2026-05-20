@@ -4,6 +4,8 @@ const {
   addWorkspaceMember,
   removeWorkspaceMember,
   updateWorkspaceMember,
+  verifyDomain,
+  confirmDomain,
 } = require("../controllers/workspaceController");
 
 const router = express.Router();
@@ -16,5 +18,9 @@ router.use(adminOnly);
 router.post("/members", addWorkspaceMember);
 router.delete("/members/:id", removeWorkspaceMember);
 router.put("/members/:id", updateWorkspaceMember);
+
+// Domain Verification Endpoints
+router.post("/verify-domain", verifyDomain);
+router.post("/confirm-domain", confirmDomain);
 
 module.exports = router;

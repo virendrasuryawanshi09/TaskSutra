@@ -1,6 +1,8 @@
 const workspaceService = require("../services/workspaceService");
 const Company = require("../models/Company");
+const Invitation = require("../models/Invitation");
 const dns = require("dns");
+const crypto = require("crypto");
 
 /**
  * Exposes controllers for enterprise workspace membership actions
@@ -105,6 +107,75 @@ const confirmDomain = async (req, res) => {
   }
 };
 
+const createInvitation = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: "User is not associated with any company workspace" });
+    }
+
+    // Check if there is already a pending invitation for this email
+    const existingInvite = await Invitation.findOne({ email, status: "pending", expiresAt: { $gt: new Date() } });
+    if (existingInvite) {
+      return res.status(400).json({ success: false, message: "A pending invitation already exists for this email" });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await Invitation.create({
+      email,
+      companyId: req.user.companyId,
+      token,
+      expiresAt,
+    });
+
+    const inviteLink = `http://localhost:5173/signup?token=${token}`;
+    console.log(`\n[DEMO INVITE] Generated 10-minute invitation for ${email}:\nLink: ${inviteLink}\n`);
+
+    res.status(201).json({
+      success: true,
+      message: "Invitation created successfully",
+      inviteLink,
+      expiresAt
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const validateInvitation = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const invitation = await Invitation.findOne({ token }).populate("companyId", "name domain");
+    
+    if (!invitation) {
+      return res.status(404).json({ success: false, message: "Invitation not found or invalid" });
+    }
+
+    if (invitation.status !== "pending" || new Date() > invitation.expiresAt) {
+      if (invitation.status === "pending") {
+        invitation.status = "expired";
+        await invitation.save();
+      }
+      return res.status(400).json({ success: false, message: "Invitation has expired or already been accepted" });
+    }
+
+    res.status(200).json({
+      success: true,
+      email: invitation.email,
+      company: invitation.companyId?.name || "",
+      companyId: invitation.companyId?._id || null,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const addWorkspaceMember = async (req, res) => {
   try {
     const { name, email, password, role, title, company, skills } = req.body;
@@ -181,4 +252,6 @@ module.exports = {
   updateWorkspaceMember,
   verifyDomain,
   confirmDomain,
+  createInvitation,
+  validateInvitation,
 };

@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Company = require('../models/Company');
+const Invitation = require('../models/Invitation');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -10,7 +11,7 @@ const generateToken = (userId) => {
 
 const registerUser = async (req, res) => {
     try{
-        const { name, email, password, profileImageUrl, adminInviteToken } = req.body;
+        const { name, email, password, profileImageUrl, adminInviteToken, inviteToken } = req.body;
 
         const userExists = await User.findOne({ email });
         if (userExists) {
@@ -22,15 +23,33 @@ const registerUser = async (req, res) => {
             role = "admin";
         }
 
-        const emailDomain = email.split('@')[1]?.toLowerCase();
         let companyId = null;
         let companyName = "";
 
-        if (emailDomain) {
-            const matchingCompany = await Company.findOne({ domain: emailDomain, isVerified: true });
-            if (matchingCompany) {
-                companyId = matchingCompany._id;
-                companyName = matchingCompany.name;
+        if (inviteToken) {
+            const invitation = await Invitation.findOne({ token: inviteToken }).populate("companyId");
+            if (!invitation || invitation.status !== "pending" || new Date() > invitation.expiresAt) {
+                return res.status(400).json({ message: "Invitation token has expired or is invalid" });
+            }
+            if (invitation.email.toLowerCase() !== email.toLowerCase()) {
+                return res.status(400).json({ message: "Invitation email does not match registering email" });
+            }
+            
+            companyId = invitation.companyId?._id || null;
+            companyName = invitation.companyId?.name || "";
+            
+            // Mark invitation as accepted
+            invitation.status = "accepted";
+            await invitation.save();
+        } else {
+            // Auto-join via domain check fallback
+            const emailDomain = email.split('@')[1]?.toLowerCase();
+            if (emailDomain) {
+                const matchingCompany = await Company.findOne({ domain: emailDomain, isVerified: true });
+                if (matchingCompany) {
+                    companyId = matchingCompany._id;
+                    companyName = matchingCompany.name;
+                }
             }
         }
 

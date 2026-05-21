@@ -244,6 +244,14 @@ const updateWorkspaceMember = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // If trying to change role, ensure caller is CEO
+    if (updateData.role !== undefined && req.user.role !== "ceo") {
+      return res.status(403).json({
+        success: false,
+        message: "Operation Denied: Only the CEO/Workspace Owner can change member roles",
+      });
+    }
+
     const updatedMember = await workspaceService.updateMemberDetails(id, updateData);
 
     res.status(200).json({

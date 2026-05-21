@@ -25,4 +25,20 @@ const adminOnly = (req, res, next) => {
     }
 };
 
-module.exports = { protect, adminOnly };
+const ceoOnly = (req, res, next) => {
+    if (req.user && req.user.role === "ceo") {
+        next();
+    } else {
+        res.status(403).json({ message: 'Access denied, CEO privileges required' });
+    }
+};
+
+const adminOrCeo = (req, res, next) => {
+    if (req.user && (req.user.role === "admin" || req.user.role === "ceo")) {
+        next();
+    } else {
+        res.status(403).json({ message: 'Access denied, Admin or CEO privileges required' });
+    }
+};
+
+module.exports = { protect, adminOnly, ceoOnly, adminOrCeo };

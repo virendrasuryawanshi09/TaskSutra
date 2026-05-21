@@ -1,6 +1,7 @@
 const workspaceService = require("../services/workspaceService");
 const Company = require("../models/Company");
 const Invitation = require("../models/Invitation");
+const User = require("../models/User");
 const dns = require("dns");
 const crypto = require("crypto");
 
@@ -215,6 +216,18 @@ const removeWorkspaceMember = async (req, res) => {
       });
     }
 
+    // Prevent deleting the CEO/Workspace Owner
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "Workspace member not found" });
+    }
+    if (targetUser.role === "ceo") {
+      return res.status(400).json({
+        success: false,
+        message: "Operation Denied: The CEO/Workspace Owner account cannot be removed from this workspace",
+      });
+    }
+
     const cleanupResult = await workspaceService.removeMember(id);
 
     res.status(200).json(cleanupResult);
@@ -231,6 +244,14 @@ const updateWorkspaceMember = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // If trying to change role, ensure caller is CEO
+    if (updateData.role !== undefined && req.user.role !== "ceo") {
+      return res.status(403).json({
+        success: false,
+        message: "Operation Denied: Only the CEO/Workspace Owner can change member roles",
+      });
+    }
+
     const updatedMember = await workspaceService.updateMemberDetails(id, updateData);
 
     res.status(200).json({
@@ -246,6 +267,69 @@ const updateWorkspaceMember = async (req, res) => {
   }
 };
 
+const getCompanyDetails = async (req, res) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(200).json({ success: true, company: null });
+    }
+    const company = await Company.findById(req.user.companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Workspace company not found" });
+    }
+    res.status(200).json({ success: true, company });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const createCompany = async (req, res) => {
+  try {
+    const { name, domain } = req.body;
+    if (!name || !domain) {
+      return res.status(400).json({ success: false, message: "Workspace name and domain are required" });
+    }
+
+    const cleanDomain = domain.trim().toLowerCase();
+
+    // Check if domain is already registered
+    const existingCompany = await Company.findOne({ domain: cleanDomain });
+    if (existingCompany) {
+      return res.status(400).json({ success: false, message: "A workspace with this domain already exists" });
+    }
+
+    // Create company
+    const company = await Company.create({
+      name: name.trim(),
+      domain: cleanDomain,
+      ownerId: req.user._id,
+      isVerified: false,
+    });
+
+    // Update user: role -> ceo, company/companyId set
+    const user = await User.findById(req.user._id);
+    user.role = "ceo";
+    user.companyId = company._id;
+    user.company = company.name;
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Workspace created successfully. You are now the CEO/Owner.",
+      company,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        company: user.company,
+        companyId: user.companyId,
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   addWorkspaceMember,
   removeWorkspaceMember,
@@ -254,4 +338,6 @@ module.exports = {
   confirmDomain,
   createInvitation,
   validateInvitation,
+  getCompanyDetails,
+  createCompany,
 };

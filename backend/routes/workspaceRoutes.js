@@ -1,5 +1,5 @@
 const express = require("express");
-const { protect, adminOnly } = require("../middlewares/authMiddleware");
+const { protect, ceoOnly, adminOrCeo } = require("../middlewares/authMiddleware");
 const {
   addWorkspaceMember,
   removeWorkspaceMember,
@@ -8,6 +8,8 @@ const {
   confirmDomain,
   createInvitation,
   validateInvitation,
+  getCompanyDetails,
+  createCompany,
 } = require("../controllers/workspaceController");
 
 const router = express.Router();
@@ -15,20 +17,23 @@ const router = express.Router();
 // Public invitation validation path (accessible without JWT)
 router.get("/invitations/validate/:token", validateInvitation);
 
-// Apply global middlewares to secure workspace management endpoints
+// Apply protect middleware to all routes below
 router.use(protect);
-router.use(adminOnly);
 
-// Workspace Member Endpoints
-router.post("/members", addWorkspaceMember);
-router.delete("/members/:id", removeWorkspaceMember);
-router.put("/members/:id", updateWorkspaceMember);
+// Company Info Endpoints (available to Admin & CEO, creation only checks JWT)
+router.get("/company", adminOrCeo, getCompanyDetails);
+router.post("/company", createCompany);
 
-// Domain Verification Endpoints
-router.post("/verify-domain", verifyDomain);
-router.post("/confirm-domain", confirmDomain);
+// Workspace Member Endpoints (requires Admin or CEO)
+router.post("/members", adminOrCeo, addWorkspaceMember);
+router.delete("/members/:id", adminOrCeo, removeWorkspaceMember);
+router.put("/members/:id", adminOrCeo, updateWorkspaceMember);
 
-// Secure Invitation Endpoints
-router.post("/invitations", createInvitation);
+// Domain Verification Endpoints (requires CEO Only)
+router.post("/verify-domain", ceoOnly, verifyDomain);
+router.post("/confirm-domain", ceoOnly, confirmDomain);
+
+// Secure Invitation Endpoints (requires Admin or CEO)
+router.post("/invitations", adminOrCeo, createInvitation);
 
 module.exports = router;

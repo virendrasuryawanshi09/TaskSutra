@@ -23,7 +23,6 @@ const SignUp = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [adminInviteToken, setAdminInviteToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false); 
 
@@ -62,7 +61,6 @@ const SignUp = () => {
 
     const trimmedName = fullName.trim();
     const normalizedEmail = normalizeEmail(email);
-    const trimmedInviteToken = adminInviteToken.trim();
 
     if (!trimmedName || !normalizedEmail || !password.trim()) {
       const message = "Name, email, and password are required.";
@@ -94,7 +92,6 @@ const SignUp = () => {
         email: normalizedEmail,
         password,
         profileImageUrl,
-        adminInviteToken: trimmedInviteToken || undefined,
         inviteToken: inviteToken || undefined,
       });
 
@@ -179,15 +176,6 @@ const SignUp = () => {
             type="password"
             label="Password"
           />
-
-          {!inviteToken && (
-            <Input
-              value={adminInviteToken}
-              onChange={(e) => setAdminInviteToken(e.target.value)}
-              type="text"
-              label="Admin Invite Token (Optional)"
-            />
-          )}
 
           {error && (
             <p className="text-sm text-red-500 mt-2 mb-3">

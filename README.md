@@ -1,6 +1,6 @@
 <div align="center">
   
-  <h1>🚀 TaskSutra</h1>
+  <h1>TaskSutra</h1>
   <p><strong>An Enterprise-Grade, Real-Time Task Orchestration & Team Intelligence Workspace</strong></p>
   <p>
     <em>Engineered to transform complex project workflows into granular, real-time actionable feedback loops with workspace intelligence and seamless collaboration.</em>
@@ -26,7 +26,7 @@
 
 ---
 
-## 🎯 Overview
+## Overview
 
 **TaskSutra** is a production-grade, multi-tenant team collaboration platform designed for enterprises that demand:
 - **Zero-latency real-time synchronization** across distributed teams
@@ -38,7 +38,7 @@ Unlike traditional CRUD task managers, TaskSutra treats tasks as **execution int
 
 ---
 
-## 🔧 The Engineering Problems We Solve
+## The Engineering Problems We Solve
 
 ### 1. **The Out-of-Sync Dashboard Problem**
 Traditional REST-based dashboards suffer from stale data. TaskSutra uses a **Socket.io event matrix** to push real-time updates:
@@ -74,9 +74,9 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 
 ---
 
-## ✨ Core Features
+## Core Features
 
-### 🏢 **Workspace Intelligence**
+### **Workspace Intelligence**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Multi-Tenant Architecture** | Company domain-based data isolation, company scoped queries | Enterprise-grade data hermiticity |
@@ -84,7 +84,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Domain Verification** | Email/DNS-based company domain validation | Prevents domain spoofing, ensures authorized company access |
 | **Role Hierarchy** | CEO → Admin → Member with cascading permissions | Clear organizational accountability |
 
-### 📊 **Task Execution Intelligence**
+### **Task Execution Intelligence**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Transactional Checklists** | Sub-documents in Task schema with atomic updates | Granular micro-milestone tracking |
@@ -93,7 +93,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Dynamic Progress Calculation** | Checklist completion % + status state | Real-time burndown on admin dashboard |
 | **Due Date Monitoring** | Automatic overdue classification and alerts | Identify blocked work immediately |
 
-### 💬 **Real-Time Collaboration Hub**
+### **Real-Time Collaboration Hub**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Task-Scoped Discussions** | Embedded TaskDiscussion + TaskMessage models | Context-aware conversations tied to work items |
@@ -101,14 +101,14 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Community Chat** | Shared Message repository accessed by all users | Broadcast announcements, team-wide decisions |
 | **Socket-Powered Sync** | Binary JSON frames via Socket.io for sub-100ms latency | Live message delivery without polling |
 
-### 📈 **Operational Analytics**
+### **Operational Analytics**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Dashboard Analytics** | Recharts visualizations of completion velocity, overdue ratios, workload distribution | Fast operational insights at a glance |
 | **Excel Export Reports** | ExcelJS multivariable report generation (background streaming) | Offline resource auditing, capacity planning |
 | **User Workload View** | Task assignment distribution and completion rates per team member | Identify overloaded vs underutilized resources |
 
-### 👤 **Elite User Profiles**
+### **Elite User Profiles**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Profile Image Upload** | Multer + file storage with URL serving | High-fidelity team roster visibility |
@@ -118,7 +118,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### **Backend Stack**
 ```
@@ -190,16 +190,16 @@ React 19 + Vite
 
 ---
 
-## 📋 Implemented Features
+## Implemented Features
 
-### ✅ Authentication & Access Control
+### Authentication & Access Control
 - [x] JWT-based login/signup with bcryptjs password hashing
 - [x] Protected routes with middleware-based authorization
 - [x] Role-based access (CEO → Admin → Member)
 - [x] Company-based data isolation on login
 - [x] Invite token validation and workspace assignment
 
-### ✅ Task Management
+### Task Management
 - [x] Create, read, update, delete tasks (CRUD)
 - [x] Multi-user task assignment with priority levels
 - [x] Status pipeline (Pending → In-Progress → Completed)
@@ -207,28 +207,28 @@ React 19 + Vite
 - [x] Due date tracking and overdue classification
 - [x] Progress percentage calculation
 
-### ✅ Team Collaboration
+### Team Collaboration
 - [x] Global community chat with real-time sync
 - [x] Direct 1-to-1 messaging with read receipts
 - [x] Task-scoped discussion threads
 - [x] Message editing and deletion
 - [x] Unread message counters
 
-### ✅ Workspace Management
+### Workspace Management
 - [x] Company creation and verification
 - [x] Domain-based company identification
 - [x] Invite-based member onboarding
 - [x] Role assignment on user creation
 - [x] Automatic TTL expiration for invites
 
-### ✅ Reporting & Analytics
+### Reporting & Analytics
 - [x] Task export to Excel (multivariable reports)
 - [x] User workload export to Excel
 - [x] Dashboard analytics (Recharts visualizations)
 - [x] Completion velocity tracking
 - [x] Overdue task monitoring
 
-### ✅ User Experience
+### User Experience
 - [x] Profile image upload and storage
 - [x] Skill tags and bio management
 - [x] Tenure auto-calculation
@@ -237,7 +237,7 @@ React 19 + Vite
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### **1. Clone the Repository**
 ```bash
@@ -293,7 +293,7 @@ npm run dev
 
 ---
 
-## 📚 API Documentation
+## API Documentation
 
 ### **Authentication Routes** (`/api/auth`)
 ```http
@@ -354,7 +354,7 @@ GET    /export/users      # Export users to Excel (admin/ceo only)
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 TaskSutra/
@@ -393,7 +393,7 @@ TaskSutra/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Dashboard.jsx      # Role-based dashboard
-│   │   ��   ├── TaskDetail.jsx     # Task + discussion view
+│   │   |   ├── TaskDetail.jsx     # Task + discussion view
 │   │   │   ├── Login.jsx
 │   │   │   ├── Register.jsx
 │   │   │   └── AdminPanel.jsx
@@ -415,7 +415,7 @@ TaskSutra/
 
 ---
 
-## 🎯 Key Differentiators
+## Key Differentiators
 
 ### Why TaskSutra vs. Standard Task Managers?
 
@@ -430,7 +430,7 @@ TaskSutra/
 
 ---
 
-## 📊 Performance Metrics
+## Performance Metrics
 
 - **Dashboard Load Time**: ~200ms (MongoDB indexes + in-memory cache)
 - **Real-Time Message Latency**: ~50-100ms (Socket.io binary frames)
@@ -440,19 +440,19 @@ TaskSutra/
 
 ---
 
-## 🔐 Security Features
+## Security Features
 
-- ✅ **JWT-based authentication** with secure token signing
-- ✅ **Bcryptjs password hashing** (10 rounds salt)
-- ✅ **CORS-protected endpoints** with origin whitelisting
-- ✅ **Role-based access control** on every protected route
-- ✅ **Company data isolation** — queries filtered by `companyId`
-- ✅ **Invite token TTL expiration** — automatic cleanup
-- ✅ **Protected file uploads** — authorized users only
+- **JWT-based authentication** with secure token signing
+- **Bcryptjs password hashing** (10 rounds salt)
+- **CORS-protected endpoints** with origin whitelisting
+- **Role-based access control** on every protected route
+- **Company data isolation** — queries filtered by `companyId`
+- **Invite token TTL expiration** — automatic cleanup
+- **Protected file uploads** — authorized users only
 
 ---
 
-## 🛣️ Roadmap
+## Roadmap
 
 ### **Phase 2: AI-Powered Execution**
 - [ ] Smart task assignment based on skill tags and workload
@@ -474,7 +474,7 @@ TaskSutra/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -486,13 +486,13 @@ We welcome contributions! Please follow these steps:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License — see the LICENSE file for details.
 
 ---
 
-## 👨‍💼 About the Author
+## About the Author
 
 Built by **Virendra Suryawanshi** — A full-stack engineer passionate about building production-grade team collaboration platforms that solve real operational problems.
 
@@ -506,7 +506,7 @@ Built by **Virendra Suryawanshi** — A full-stack engineer passionate about bui
 
 ---
 
-## 📞 Support & Questions
+## Support & Questions
 
 - **Issues & Bugs**: [GitHub Issues](https://github.com/virendrasuryawanshi09/TaskSutra/issues)
 - **Feature Requests**: [GitHub Discussions](https://github.com/virendrasuryawanshi09/TaskSutra/discussions)

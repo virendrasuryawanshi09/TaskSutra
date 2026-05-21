@@ -7,6 +7,12 @@ const companySchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true
+    },
     domain: { 
       type: String, 
       required: true, 

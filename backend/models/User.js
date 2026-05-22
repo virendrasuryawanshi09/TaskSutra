@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
         company: { type: String, default: '' },
         companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
         status: { type: String, enum: ['active', 'suspended'], default: 'active' },
+        taskOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: [] }],
     },
     { timestamps: true }
 );

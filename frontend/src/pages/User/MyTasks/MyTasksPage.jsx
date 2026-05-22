@@ -20,7 +20,7 @@ import {
 } from "./myTasks.utils";
 
 const MyTasksPage = () => {
-  const { user } = useContext(UserContext);
+  const { user, updateUser } = useContext(UserContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
@@ -44,7 +44,6 @@ const MyTasksPage = () => {
       const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
       const nextTasks = Array.isArray(response?.data?.tasks) ? response.data.tasks : [];
       setTasks(nextTasks);
-      setTaskOrder(nextTasks.map((task) => task._id || task.id).filter(Boolean));
     } catch (error) {
       console.error("Error fetching tasks:", error);
       setTasks([]);
@@ -68,7 +67,6 @@ const MyTasksPage = () => {
         if (isMounted) {
           const nextTasks = Array.isArray(response?.data?.tasks) ? response.data.tasks : [];
           setTasks(nextTasks);
-          setTaskOrder(nextTasks.map((task) => task._id || task.id).filter(Boolean));
         }
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -89,6 +87,37 @@ const MyTasksPage = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (tasks.length === 0) return;
+
+    let savedOrder = [];
+    if (user?.taskOrder && user.taskOrder.length > 0) {
+      savedOrder = user.taskOrder;
+    } else {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          savedOrder = parsed?.taskOrder || [];
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+
+    const allFetchedIds = tasks.map((task) => task._id || task.id).filter(Boolean);
+    const savedOrderFiltered = savedOrder.filter((id) => allFetchedIds.includes(id));
+    const newIds = allFetchedIds.filter((id) => !savedOrderFiltered.includes(id));
+    const nextOrder = [...savedOrderFiltered, ...newIds];
+
+    setTaskOrder((currentOrder) => {
+      const isIdentical = currentOrder.length === nextOrder.length && 
+                          currentOrder.every((val, i) => val === nextOrder[i]);
+      if (isIdentical) return currentOrder;
+      return nextOrder;
+    });
+  }, [user?.taskOrder, tasks]);
 
   useEffect(() => {
     if (!discussionTask) return;
@@ -420,9 +449,24 @@ const MyTasksPage = () => {
     });
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = async () => {
     setDraggedTaskId("");
     setSortBy("custom");
+
+    try {
+      const response = await axiosInstance.put("/api/users/reorder-tasks", {
+        taskOrder: taskOrder,
+      });
+      if (response.data && response.data.success) {
+        updateUser({
+          ...user,
+          taskOrder: response.data.taskOrder,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to save task order:", error);
+      toast.error("Failed to persist task reordering.");
+    }
   };
 
   return (

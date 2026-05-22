@@ -48,9 +48,35 @@ const getUserById = async (req, res) => {
     }catch(error) {
         res.status(500).json({message: "Server error", error: error.message});
     }
-}
+};
+
+const reorderTasks = async (req, res) => {
+    try {
+        const { taskOrder } = req.body;
+        if (!Array.isArray(taskOrder)) {
+            return res.status(400).json({ success: false, message: "taskOrder must be an array of task IDs" });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        user.taskOrder = taskOrder;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Task order updated successfully",
+            taskOrder: user.taskOrder
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
 
 module.exports = {
     getUsers,
     getUserById,
-}
+    reorderTasks,
+};

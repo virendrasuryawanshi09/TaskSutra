@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
+const { createAndSendNotification } = require('../services/notificationService');
 const MAX_RECENT_TASKS = 8;
 
 const normalizeTaskStatus = (status = '') => {
@@ -152,6 +153,22 @@ const createTask = async (req, res) => {
             todoChecklist: Array.isArray(todoCheckList) ? todoCheckList : [],
             attachments,
         });
+
+        // Trigger notifications
+        const io = req.app.get("io");
+        const notificationPromises = assignedTo.map(userId => 
+            createAndSendNotification({
+                recipient: userId,
+                sender: req.user._id,
+                type: 'task_assigned',
+                title: 'New Task Assigned',
+                message: `You have been assigned to the task: "${task.title}"`,
+                task: task._id,
+                io
+            })
+        );
+        await Promise.all(notificationPromises);
+
         res.status(201).json({ message: 'Task created successfully', task });
 
     } catch (error) {
@@ -168,6 +185,10 @@ const updateTask = async (req, res) => {
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
+
+        const io = req.app.get("io");
+        const oldAssigned = task.assignedTo.map(id => id.toString());
+
         task.title = req.body.title || task.title;
         task.description = req.body.description || task.description;
         task.priority = req.body.priority || task.priority;
@@ -177,13 +198,70 @@ const updateTask = async (req, res) => {
         }
         task.attachments = req.body.attachments || task.attachments;
 
+        let newlyAssigned = [];
+        let unassigned = [];
+        let keptAssigned = [...oldAssigned];
+
         if (req.body.assignedTo) {
             if (!Array.isArray(req.body.assignedTo)) {
                 return res.status(400).json({ message: 'Assigned users must be an array of user IDs' });
             }
+            const newAssigned = req.body.assignedTo.map(id => id.toString());
+            newlyAssigned = newAssigned.filter(id => !oldAssigned.includes(id));
+            unassigned = oldAssigned.filter(id => !newAssigned.includes(id));
+            keptAssigned = newAssigned.filter(id => oldAssigned.includes(id));
             task.assignedTo = req.body.assignedTo;
         }
+
         const updatedTask = await task.save();
+
+        // Trigger notifications
+        const notificationPromises = [];
+        
+        newlyAssigned.forEach(userId => {
+            notificationPromises.push(
+                createAndSendNotification({
+                    recipient: userId,
+                    sender: req.user._id,
+                    type: 'task_assigned',
+                    title: 'New Task Assigned',
+                    message: `You have been assigned to the task: "${updatedTask.title}"`,
+                    task: updatedTask._id,
+                    io
+                })
+            );
+        });
+
+        unassigned.forEach(userId => {
+            notificationPromises.push(
+                createAndSendNotification({
+                    recipient: userId,
+                    sender: req.user._id,
+                    type: 'task_unassigned',
+                    title: 'Task Unassigned',
+                    message: `You have been unassigned from the task: "${updatedTask.title}"`,
+                    task: updatedTask._id,
+                    io
+                })
+            );
+        });
+
+        keptAssigned.forEach(userId => {
+            notificationPromises.push(
+                createAndSendNotification({
+                    recipient: userId,
+                    sender: req.user._id,
+                    type: 'task_updated',
+                    title: 'Task Updated',
+                    message: `The task "${updatedTask.title}" has been updated by ${req.user.name || 'an administrator'}.`,
+                    task: updatedTask._id,
+                    io
+                })
+            );
+        });
+
+        await Promise.all(notificationPromises);
+
         res.json({ message: 'Task updated successfully', task: updatedTask });
 
     } catch (error) {
@@ -198,7 +276,24 @@ const deleteTask = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
+        const io = req.app.get("io");
+        const assignedUsers = task.assignedTo.map(id => id.toString());
+        const taskTitle = task.title;
+
         await task.deleteOne();
+
+        const notificationPromises = assignedUsers.map(userId =>
+            createAndSendNotification({
+                recipient: userId,
+                sender: req.user._id,
+                type: 'task_deleted',
+                title: 'Task Deleted',
+                message: `The task "${taskTitle}" has been deleted by ${req.user.name}.`,
+                io
+            })
+        );
+        await Promise.all(notificationPromises);
+
         res.json({ message: 'Task deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -239,12 +334,35 @@ const updateTaskChecklist = async (req, res) => {
             task.status = 'Pending';
         }
 
-        await task.save();
-        const updatedTask = await Task.findById(req.params.id).populate(
+        const updatedTask = await task.save();
+
+        // Trigger notifications
+        const io = req.app.get("io");
+        const notifyRecipients = new Set();
+        task.assignedTo.forEach(id => notifyRecipients.add(id.toString()));
+        if (task.createdBy) {
+            notifyRecipients.add(task.createdBy.toString());
+        }
+        notifyRecipients.delete(req.user._id.toString());
+
+        const notificationPromises = Array.from(notifyRecipients).map(userId =>
+            createAndSendNotification({
+                recipient: userId,
+                sender: req.user._id,
+                type: 'task_updated',
+                title: 'Task Checklist Updated',
+                message: `The checklist for "${updatedTask.title}" was updated by ${req.user.name}. Progress is now ${updatedTask.progress}%.`,
+                task: updatedTask._id,
+                io
+            })
+        );
+        await Promise.all(notificationPromises);
+
+        const populatedTask = await Task.findById(req.params.id).populate(
             'assignedTo',
             'name email profileImageUrl'
         );
-        res.json({ message: 'Task checklist updated successfully', task: updatedTask });
+        res.json({ message: 'Task checklist updated successfully', task: populatedTask });
 
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -421,6 +539,29 @@ const updateTaskStatus = async (req, res) => {
         }
 
         await task.save();
+
+        // Trigger notifications
+        const io = req.app.get("io");
+        const notifyRecipients = new Set();
+        task.assignedTo.forEach(id => notifyRecipients.add(id.toString()));
+        if (task.createdBy) {
+            notifyRecipients.add(task.createdBy.toString());
+        }
+        notifyRecipients.delete(req.user._id.toString());
+
+        const notificationPromises = Array.from(notifyRecipients).map(userId =>
+            createAndSendNotification({
+                recipient: userId,
+                sender: req.user._id,
+                type: 'task_updated',
+                title: 'Task Status Updated',
+                message: `The status of task "${task.title}" was updated to "${task.status}" by ${req.user.name}.`,
+                task: task._id,
+                io
+            })
+        );
+        await Promise.all(notificationPromises);
+
         res.json({ message: 'Task status updated successfully', task });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });

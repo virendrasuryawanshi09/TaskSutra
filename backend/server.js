@@ -30,6 +30,7 @@ const io = new Server(server, {
 
 // Initialize socket handler
 socketHandler(io);
+app.set("io", io);
 
 app.use(
   cors({

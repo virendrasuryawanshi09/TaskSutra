@@ -290,6 +290,10 @@ const createCompany = async (req, res) => {
     }
 
     const cleanDomain = domain.trim().toLowerCase();
+    const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'zoho.com', 'protonmail.com', 'mail.com'];
+    if (publicDomains.includes(cleanDomain)) {
+      return res.status(400).json({ success: false, message: "Registering a workspace under a public email domain is not permitted" });
+    }
 
     // Check if domain is already registered
     const existingCompany = await Company.findOne({ domain: cleanDomain });

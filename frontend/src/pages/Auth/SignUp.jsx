@@ -113,7 +113,11 @@ const SignUp = () => {
         id: toastId,
       });
 
-      navigate(getDashboardRoute(role));
+      if (role === "member" && !user.companyId) {
+        navigate("/admin/users");
+      } else {
+        navigate(getDashboardRoute(role));
+      }
     } catch (err) {
       console.error("SignUp Error:", err);
 

@@ -12,7 +12,7 @@ const SideMenu = () => {
   const [imageError, setImageError] = useState(false);
 
   const sideMenuData = user
-    ? user.role === "admin"
+    ? (user.role === "admin" || user.role === "ceo" || !user.companyId)
       ? SIDE_MENU_DATA
       : SIDE_MENU_USER_DATA
     : [];
@@ -102,8 +102,13 @@ const SideMenu = () => {
         )}
 
         {/* ROLE */}
+        {user?.role === "ceo" && (
+          <span className="text-[11px] text-yellow-500 font-semibold mb-1 uppercase tracking-wider">
+            Owner / CEO
+          </span>
+        )}
         {user?.role === "admin" && (
-          <span className="text-[11px] text-[var(--accent)] font-medium mb-1">
+          <span className="text-[11px] text-[var(--accent)] font-semibold mb-1 uppercase tracking-wider">
             Admin
           </span>
         )}

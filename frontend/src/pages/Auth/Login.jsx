@@ -66,7 +66,11 @@ const Login = () => {
       });
 
       toast.success("Login successful.", { id: toastId });
-      navigate(getDashboardRoute(role));
+      if (role === "member" && !user.companyId) {
+        navigate("/admin/users");
+      } else {
+        navigate(getDashboardRoute(role));
+      }
     } catch (error) {
       const message = getErrorMessage(
         error,

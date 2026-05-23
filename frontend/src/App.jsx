@@ -24,11 +24,15 @@ import useUserAuth from "./hooks/useUserAuth";
 import EditProfile from "./pages/User/Profile/EditProfile";
 
 const RootRedirect = () => {
-  const { isAuthenticated, role } = useUserAuth();
-  return isAuthenticated ? (
-    <Navigate to={role === "admin" ? "/admin/dashboard" : "/user/dashboard"} replace />
-  ) : (
-    <Navigate to="/login" replace />
+  const { isAuthenticated, role, user } = useUserAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (role === "member" && !user?.companyId) {
+    return <Navigate to="/admin/users" replace />;
+  }
+
+  return (
+    <Navigate to={(role === "admin" || role === "ceo") ? "/admin/dashboard" : "/user/dashboard"} replace />
   );
 };
 
@@ -119,7 +123,7 @@ const App = () => {
           <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
 
           {/* Admin */}
-          <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
+          <Route element={<PrivateRoute allowedRoles={["admin", "ceo"]} />}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/tasks" element={<ManageTasks />} />
             <Route path="/admin/create-task" element={<CreateTask />} />

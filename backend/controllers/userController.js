@@ -5,7 +5,18 @@ const bcrypt = require("bcryptjs");
 
 const getUsers = async (req, res) => {
     try{
-        const users = await User.find({role: 'member'}).select("-password");
+        const query = {};
+        if (req.user.companyId) {
+            query.companyId = req.user.companyId;
+        } else {
+            // Users without a company can only see themselves
+            query._id = req.user._id;
+        }
+
+        const users = await User.find({
+            ...query,
+            role: 'member'
+        }).select("-password");
 
         const userWithTaskCounts = await Promise.all(users.map(async(user) => {
             const totalTasks = await Task.countDocuments({

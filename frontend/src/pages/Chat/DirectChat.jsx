@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { io } from 'socket.io-client';
 import { useLocation } from 'react-router-dom';
-import DashboardLayout from '../../components/Layouts/DashboardLayout';
+import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
 import moment from 'moment';

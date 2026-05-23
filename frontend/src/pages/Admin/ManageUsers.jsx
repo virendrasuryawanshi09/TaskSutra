@@ -419,28 +419,21 @@ const ManageUsers = () => {
                     <div
                       key={user._id}
                       className="
-                        flex flex-col sm:flex-row sm:items-center sm:justify-between
-                        gap-4
-                        px-4 py-4 rounded-lg
+                        p-4 rounded-xl
                         bg-[var(--surface)]
                         border border-[var(--border)]
                         shadow-sm
-                        hover:-translate-y-0.5
                         hover:border-[var(--accent)]
-                        hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]
+                        hover:-translate-y-0.5
                         transition-all duration-200
+                        flex flex-col gap-3
+                        sm:flex-row sm:items-center sm:justify-between sm:gap-4
                       "
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="
-                            w-9 h-9 rounded-full
-                            bg-[var(--bg-soft)]
-                            flex items-center justify-center
-                            text-[12px] font-medium text-[var(--text)]
-                            overflow-hidden shrink-0
-                          "
-                        >
+                      {/* Left section: Avatar & Info */}
+                      <div className="flex items-start gap-3.5 min-w-0">
+                        {/* Avatar */}
+                        <div className="w-10 h-10 rounded-full bg-[var(--bg-soft)] flex items-center justify-center text-xs font-semibold text-[var(--text)] overflow-hidden shrink-0 border border-[var(--border)] shadow-sm">
                           {user.profileImageUrl ? (
                             <img
                               src={user.profileImageUrl}
@@ -455,21 +448,21 @@ const ManageUsers = () => {
                           )}
                         </div>
 
+                        {/* Name, Email, and Skills */}
                         <div className="flex flex-col min-w-0 text-left">
-                          <span className="text-[13px] font-medium text-[var(--text)] truncate">
+                          <span className="text-[14px] font-semibold text-[var(--text)] truncate">
                             {user.name || "Unnamed"} {isSelf && "(You)"}
                           </span>
-
-                          <span className="text-[12px] text-[var(--text-muted)] truncate">
+                          <span className="text-[12px] text-[var(--text-muted)] truncate mt-0.5">
                             {user.email}
                           </span>
 
                           {user.skills && user.skills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
+                            <div className="flex flex-wrap gap-1.5 mt-2">
                               {user.skills.map((skill, index) => (
                                 <span
                                   key={index}
-                                  className="px-1.5 py-0.5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider"
+                                  className="px-2 py-0.5 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider"
                                 >
                                   {skill}
                                 </span>
@@ -479,84 +472,93 @@ const ManageUsers = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between sm:justify-end gap-6 sm:gap-4">
-                        <div className="flex flex-wrap items-center gap-4 text-[12px]">
-                          <span className="text-[var(--text-muted)]">
-                            Total: {stats.total}
+                      {/* Right section: Stats & Actions */}
+                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 border-t border-[var(--border)] pt-3 sm:border-none sm:pt-0">
+                        {/* Stats */}
+                        <div className="flex items-center gap-3 text-[12px] text-[var(--text-muted)] font-medium">
+                          <span>
+                            Total: <span className="text-[var(--text)] font-semibold">{stats.total}</span>
                           </span>
-
-                          <span className="text-green-500">✓ {stats.completed}</span>
-
-                          <span className="text-cyan-500">↻ {stats.inProgress}</span>
-
-                          <span className="text-yellow-500">• {stats.pending}</span>
+                          <span className="flex items-center gap-0.5 text-green-500">
+                            ✓ <span className="text-[var(--text)] font-semibold">{stats.completed}</span>
+                          </span>
+                          <span className="flex items-center gap-0.5 text-cyan-500">
+                            ↻ <span className="text-[var(--text)] font-semibold">{stats.inProgress}</span>
+                          </span>
+                          <span className="flex items-center gap-0.5 text-yellow-500">
+                            • <span className="text-[var(--text)] font-semibold">{stats.pending}</span>
+                          </span>
                         </div>
 
-                        {/* Role Selector / Badge */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          {user.role === "ceo" ? (
-                            <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-yellow-500 bg-opacity-10 text-yellow-600 border border-yellow-500 border-opacity-20 shadow-sm">
-                              Owner / CEO
-                            </span>
-                          ) : (
-                            <select
-                              value={user.role || "member"}
-                              disabled={
-                                currentUser?.role !== "ceo" ||
-                                user.role === "ceo" ||
-                                isSelf
-                              }
-                              onChange={(e) => handleRoleChange(user, e.target.value)}
+                        {/* Role and Delete buttons */}
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-2">
+                            {user.role === "ceo" ? (
+                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-yellow-500 bg-opacity-10 text-yellow-600 border border-yellow-500 border-opacity-20 shadow-sm">
+                                Owner / CEO
+                              </span>
+                            ) : currentUser?.role === "ceo" && !isSelf ? (
+                              <select
+                                value={user.role || "member"}
+                                onChange={(e) => handleRoleChange(user, e.target.value)}
+                                className="
+                                  px-2.5 py-1 text-xs font-semibold
+                                  bg-[var(--bg-soft)] border border-[var(--border)] 
+                                  rounded-xl text-[var(--text)]
+                                  focus:outline-none focus:border-[var(--accent)]
+                                  transition-all duration-150
+                                  cursor-pointer
+                                "
+                              >
+                                <option value="member">Member</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            ) : user.role === "admin" ? (
+                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--accent)] bg-opacity-10 text-[var(--accent)] border border-[var(--accent)] border-opacity-20 shadow-sm">
+                                Admin
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--bg-soft)] text-[var(--text-muted)] border border-[var(--border)] shadow-sm">
+                                Member
+                              </span>
+                            )}
+                          </div>
+
+                          {!isSelf && user.role !== "ceo" && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveUser(user);
+                              }}
                               className="
-                                px-2.5 py-1 text-xs font-semibold
-                                bg-[var(--bg-soft)] border border-[var(--border)] 
-                                rounded-xl text-[var(--text)]
-                                focus:outline-none focus:border-[var(--accent)]
-                                disabled:opacity-75 disabled:cursor-not-allowed
-                                transition-all duration-150
+                                p-1.5 rounded-lg
+                                text-[var(--text-muted)]
+                                hover:text-red-500
+                                transition-all duration-200
+                                active:scale-[0.95]
+                                shrink-0
                                 cursor-pointer
                               "
+                              title="Remove member"
                             >
-                              <option value="member">Member</option>
-                              <option value="admin">Admin</option>
-                            </select>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.8}
+                                stroke="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                />
+                              </svg>
+                            </button>
                           )}
                         </div>
-
-                        {!isSelf && user.role !== "ceo" && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveUser(user);
-                            }}
-                            className="
-                              p-2 rounded-xl
-                              border border-red-500 border-opacity-20
-                              text-red-500
-                              hover:bg-red-500 hover:text-white hover:border-transparent
-                              transition-all duration-200
-                              active:scale-[0.95]
-                              shrink-0
-                            "
-                            title="Remove member"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.8}
-                              stroke="currentColor"
-                              className="w-4 h-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                              />
-                            </svg>
-                          </button>
-                        )}
                       </div>
                     </div>
                   );

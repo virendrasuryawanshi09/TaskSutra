@@ -66,20 +66,68 @@ const Navbar = () => {
         };
     }, []);
 
-    // Placeholder actions for Commit 8 (will be wired to API in Commit 9)
-    const handleMarkAsRead = (id, e) => {
-        e.stopPropagation();
-        console.log("Mark as read placeholder", id);
+    // Active notification actions
+    const handleMarkAsRead = async (id, e) => {
+        if (e) e.stopPropagation();
+        try {
+            const res = await axiosInstance.put(`/api/notifications/${id}/read`);
+            if (res.data && res.data.success) {
+                setNotifications((prev) =>
+                    prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+                );
+            }
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+            toast.error("Failed to mark notification as read.");
+        }
     };
-    const handleMarkAllAsRead = () => {
-        console.log("Mark all as read placeholder");
+
+    const handleMarkAllAsRead = async () => {
+        const unreadList = notifications.filter(n => !n.isRead);
+        if (unreadList.length === 0) return;
+        try {
+            const res = await axiosInstance.put("/api/notifications/read-all");
+            if (res.data && res.data.success) {
+                setNotifications((prev) =>
+                    prev.map((n) => ({ ...n, isRead: true }))
+                );
+                toast.success("All notifications marked as read");
+            }
+        } catch (error) {
+            console.error("Error marking all notifications as read:", error);
+            toast.error("Failed to mark all as read.");
+        }
     };
-    const handleDeleteNotification = (id, e) => {
-        e.stopPropagation();
-        console.log("Delete notification placeholder", id);
+
+    const handleDeleteNotification = async (id, e) => {
+        if (e) e.stopPropagation();
+        try {
+            const res = await axiosInstance.delete(`/api/notifications/${id}`);
+            if (res.data && res.data.success) {
+                setNotifications((prev) => prev.filter((n) => n._id !== id));
+                toast.success("Notification deleted");
+            }
+        } catch (error) {
+            console.error("Error deleting notification:", error);
+            toast.error("Failed to delete notification.");
+        }
     };
-    const handleClearAll = () => {
-        console.log("Clear all notifications placeholder");
+
+    const handleClearAll = async () => {
+        if (notifications.length === 0) return;
+        const confirmClear = window.confirm("Are you sure you want to clear all notifications?");
+        if (!confirmClear) return;
+
+        try {
+            const res = await axiosInstance.delete("/api/notifications/clear-all");
+            if (res.data && res.data.success) {
+                setNotifications([]);
+                toast.success("All notifications cleared");
+            }
+        } catch (error) {
+            console.error("Error clearing notifications:", error);
+            toast.error("Failed to clear notifications.");
+        }
     };
 
     useEffect(() => {

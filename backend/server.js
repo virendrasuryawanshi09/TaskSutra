@@ -15,6 +15,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const directChatRoutes = require("./routes/directChatRoutes");
 const taskDiscussionRoutes = require("./routes/taskDiscussionRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +66,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/direct-chats", directChatRoutes);
 app.use("/api/task-discussions", taskDiscussionRoutes);
 app.use("/api/workspace", workspaceRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

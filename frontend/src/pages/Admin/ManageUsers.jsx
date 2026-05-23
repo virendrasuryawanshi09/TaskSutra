@@ -27,6 +27,16 @@ const ManageUsers = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [isInviting, setIsInviting] = useState(false);
+  const [memberModalTab, setMemberModalTab] = useState("invite"); // 'invite' or 'direct'
+  const [directMemberData, setDirectMemberData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "member",
+    title: "",
+    skills: "",
+  });
+  const [isAddingDirectly, setIsAddingDirectly] = useState(false);
 
   // Domain verification states
   const [verificationMethod, setVerificationMethod] = useState("otp");
@@ -225,6 +235,54 @@ const ManageUsers = () => {
       );
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleDirectAdd = async (e) => {
+    e.preventDefault();
+    const { name, email, password, role, title, skills } = directMemberData;
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      toast.error("Name, email, and password are required.");
+      return;
+    }
+
+    setIsAddingDirectly(true);
+    const toastId = toast.loading(`Adding ${name} to workspace...`);
+    try {
+      const skillsArray = skills
+        ? skills.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+      
+      const res = await axiosInstance.post("/api/workspace/members", {
+        name: name.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        role,
+        title: title.trim(),
+        skills: skillsArray,
+        company: companyDetails?.name || "",
+      });
+
+      if (res.data && res.data.success) {
+        toast.success("Member added successfully!", { id: toastId });
+        setAllUsers((prev) => [...prev, res.data.member]);
+        setIsInviteModalOpen(false);
+        setDirectMemberData({
+          name: "",
+          email: "",
+          password: "",
+          role: "member",
+          title: "",
+          skills: "",
+        });
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to add workspace member.",
+        { id: toastId }
+      );
+    } finally {
+      setIsAddingDirectly(false);
     }
   };
 
@@ -849,131 +907,292 @@ const ManageUsers = () => {
         )}
       </div>
 
-      {/* Invite Member Modal */}
+      {/* Invite/Add Member Modal */}
       {isInviteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-            <h2 className="text-lg font-semibold text-[var(--text)] mb-2">
-              Invite Workspace Member
+            <h2 className="text-lg font-semibold text-[var(--text)] mb-3 text-left">
+              Manage Workspace Members
             </h2>
-            <p className="text-xs text-[var(--text-muted)] mb-4">
-              Enter their email address. A 10-minute secure signup link will be generated.
-            </p>
 
-            {!generatedLink ? (
-              <form onSubmit={handleSendInvite} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-[var(--text)] font-medium">
+            {/* Tabs */}
+            <div className="flex border-b border-[var(--border)] mb-5 gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setMemberModalTab("invite");
+                  setGeneratedLink("");
+                }}
+                className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                  memberModalTab === "invite"
+                    ? "border-[var(--accent)] text-[var(--accent)]"
+                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                }`}
+              >
+                Invite with Link
+              </button>
+              <button
+                type="button"
+                onClick={() => setMemberModalTab("direct")}
+                className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+                  memberModalTab === "direct"
+                    ? "border-[var(--accent)] text-[var(--accent)]"
+                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                }`}
+              >
+                Add Directly
+              </button>
+            </div>
+
+            {memberModalTab === "invite" ? (
+              /* --- INVITATION FLOW --- */
+              !generatedLink ? (
+                <form onSubmit={handleSendInvite} className="flex flex-col gap-4 text-left">
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                    Generate a secure link to allow the user to sign up themselves. Link will expire in 10 minutes.
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-[var(--text)] font-semibold">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="name@company.com"
+                      className="
+                        w-full px-3.5 py-2.5 text-sm 
+                        bg-[var(--bg-soft)] border border-[var(--border)] 
+                        rounded-xl text-[var(--text)] placeholder-[var(--text-muted)] 
+                        focus:outline-none focus:border-[var(--accent)]
+                        transition duration-150
+                      "
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsInviteModalOpen(false);
+                        setInviteEmail("");
+                      }}
+                      className="
+                        px-4 py-2 text-sm font-medium 
+                        border border-[var(--border)] rounded-xl 
+                        text-[var(--text)] hover:bg-[var(--bg-soft)] 
+                        transition duration-150 cursor-pointer
+                      "
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isInviting || !inviteEmail.trim()}
+                      className="
+                        px-4 py-2 text-sm font-medium 
+                        bg-[var(--accent)] text-white rounded-xl 
+                        hover:bg-[var(--accent-hover)] 
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        transition duration-150 cursor-pointer
+                      "
+                    >
+                      {isInviting ? "Generating..." : "Generate Invite"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-col gap-4 text-left">
+                  <div className="p-3 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-20 rounded-xl text-center">
+                    <p className="text-[11px] text-green-500 font-semibold mb-1">
+                      Invitation Link Generated!
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      This link will expire in exactly 10 minutes.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs text-[var(--text)] font-semibold">
+                      Signup URL
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedLink}
+                        className="
+                          w-full px-3 py-2 text-xs 
+                          bg-[var(--bg-soft)] border border-[var(--border)] 
+                          rounded-xl text-[var(--text)] focus:outline-none
+                        "
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedLink);
+                          toast.success("Link copied to clipboard!");
+                        }}
+                        className="
+                          px-3.5 py-2 text-xs font-semibold 
+                          bg-[var(--accent)] text-white rounded-xl 
+                          hover:bg-[var(--accent-hover)] transition shrink-0 cursor-pointer
+                        "
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsInviteModalOpen(false);
+                        setInviteEmail("");
+                        setGeneratedLink("");
+                      }}
+                      className="
+                        px-4 py-2 text-sm font-medium 
+                        bg-[var(--accent)] text-white rounded-xl 
+                        hover:bg-[var(--accent-hover)] transition cursor-pointer
+                      "
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* --- DIRECT ADD FLOW --- */
+              <form onSubmit={handleDirectAdd} className="flex flex-col gap-3.5 text-left max-h-[70vh] overflow-y-auto pr-1">
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  Directly create a new user profile. They can sign in instantly with their email and password.
+                </p>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-[var(--text)] font-semibold">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={directMemberData.name}
+                    onChange={(e) => setDirectMemberData({ ...directMemberData, name: e.target.value })}
+                    placeholder="John Doe"
+                    className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-[var(--text)] font-semibold">
                     Email Address
                   </label>
                   <input
                     type="email"
                     required
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    className="
-                      w-full px-3.5 py-2.5 text-sm 
-                      bg-[var(--bg-soft)] border border-[var(--border)] 
-                      rounded-xl text-[var(--text)] placeholder-[var(--text-muted)] 
-                      focus:outline-none focus:border-[var(--accent)]
-                      transition duration-150
-                    "
+                    value={directMemberData.email}
+                    onChange={(e) => setDirectMemberData({ ...directMemberData, email: e.target.value })}
+                    placeholder="john.doe@company.com"
+                    className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2.5 mt-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-[var(--text)] font-semibold">
+                    Temporary Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={directMemberData.password}
+                    onChange={(e) => setDirectMemberData({ ...directMemberData, password: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-[var(--text)] font-semibold">
+                      Job Title
+                    </label>
+                    <input
+                      type="text"
+                      value={directMemberData.title}
+                      onChange={(e) => setDirectMemberData({ ...directMemberData, title: e.target.value })}
+                      placeholder="e.g. Lead Designer"
+                      className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-[var(--text)] font-semibold">
+                      Role
+                    </label>
+                    <select
+                      value={directMemberData.role}
+                      onChange={(e) => setDirectMemberData({ ...directMemberData, role: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-[var(--text)] font-semibold">
+                    Skills (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={directMemberData.skills}
+                    onChange={(e) => setDirectMemberData({ ...directMemberData, skills: e.target.value })}
+                    placeholder="e.g. React, Node.js, Mongoose"
+                    className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2.5 mt-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setIsInviteModalOpen(false);
-                      setInviteEmail("");
+                      setDirectMemberData({
+                        name: "",
+                        email: "",
+                        password: "",
+                        role: "member",
+                        title: "",
+                        skills: "",
+                      });
                     }}
                     className="
                       px-4 py-2 text-sm font-medium 
                       border border-[var(--border)] rounded-xl 
                       text-[var(--text)] hover:bg-[var(--bg-soft)] 
-                      transition duration-150
+                      transition duration-150 cursor-pointer
                     "
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={isInviting || !inviteEmail.trim()}
+                    disabled={isAddingDirectly || !directMemberData.name.trim() || !directMemberData.email.trim() || !directMemberData.password.trim()}
                     className="
                       px-4 py-2 text-sm font-medium 
                       bg-[var(--accent)] text-white rounded-xl 
                       hover:bg-[var(--accent-hover)] 
                       disabled:opacity-50 disabled:cursor-not-allowed
-                      transition duration-150
+                      transition duration-150 cursor-pointer
                     "
                   >
-                    {isInviting ? "Generating..." : "Generate Invite"}
+                    {isAddingDirectly ? "Adding..." : "Add Member"}
                   </button>
                 </div>
               </form>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <div className="p-3 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-20 rounded-xl text-center">
-                  <p className="text-[11px] text-green-500 font-semibold mb-1">
-                    Invitation Link Generated!
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    This link will expire in exactly 10 minutes.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-[var(--text)] font-medium">
-                    Signup URL
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={generatedLink}
-                      className="
-                        w-full px-3 py-2 text-xs 
-                        bg-[var(--bg-soft)] border border-[var(--border)] 
-                        rounded-xl text-[var(--text)] focus:outline-none
-                      "
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedLink);
-                        toast.success("Link copied to clipboard!");
-                      }}
-                      className="
-                        px-3.5 py-2 text-xs font-semibold 
-                        bg-[var(--accent)] text-white rounded-xl 
-                        hover:bg-[var(--accent-hover)] transition shrink-0
-                      "
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsInviteModalOpen(false);
-                      setInviteEmail("");
-                      setGeneratedLink("");
-                    }}
-                    className="
-                      px-4 py-2 text-sm font-medium 
-                      bg-[var(--accent)] text-white rounded-xl 
-                      hover:bg-[var(--accent-hover)] transition
-                    "
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
             )}
           </div>
         </div>

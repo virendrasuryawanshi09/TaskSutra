@@ -498,21 +498,15 @@ const ManageUsers = () => {
                             <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-yellow-500 bg-opacity-10 text-yellow-600 border border-yellow-500 border-opacity-20 shadow-sm">
                               Owner / CEO
                             </span>
-                          ) : (
+                          ) : currentUser?.role === "ceo" && !isSelf ? (
                             <select
                               value={user.role || "member"}
-                              disabled={
-                                currentUser?.role !== "ceo" ||
-                                user.role === "ceo" ||
-                                isSelf
-                              }
                               onChange={(e) => handleRoleChange(user, e.target.value)}
                               className="
                                 px-2.5 py-1 text-xs font-semibold
                                 bg-[var(--bg-soft)] border border-[var(--border)] 
                                 rounded-xl text-[var(--text)]
                                 focus:outline-none focus:border-[var(--accent)]
-                                disabled:opacity-75 disabled:cursor-not-allowed
                                 transition-all duration-150
                                 cursor-pointer
                               "
@@ -520,6 +514,14 @@ const ManageUsers = () => {
                               <option value="member">Member</option>
                               <option value="admin">Admin</option>
                             </select>
+                          ) : user.role === "admin" ? (
+                            <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--accent)] bg-opacity-10 text-[var(--accent)] border border-[var(--accent)] border-opacity-20 shadow-sm">
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--bg-soft)] text-[var(--text-muted)] border border-[var(--border)] shadow-sm">
+                              Member
+                            </span>
                           )}
                         </div>
 
@@ -531,13 +533,13 @@ const ManageUsers = () => {
                               handleRemoveUser(user);
                             }}
                             className="
-                              p-2 rounded-xl
-                              border border-red-500 border-opacity-20
-                              text-red-500
-                              hover:bg-red-500 hover:text-white hover:border-transparent
+                              p-1.5 rounded-lg
+                              text-[var(--text-muted)]
+                              hover:text-red-500
                               transition-all duration-200
                               active:scale-[0.95]
                               shrink-0
+                              cursor-pointer
                             "
                             title="Remove member"
                           >

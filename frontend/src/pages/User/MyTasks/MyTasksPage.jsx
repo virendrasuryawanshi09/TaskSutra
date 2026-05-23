@@ -120,7 +120,41 @@ const MyTasksPage = () => {
   }, [user?.taskOrder, tasks]);
 
   useEffect(() => {
-    if (!discussionTask) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on("task_sync", ({ action, task, taskId }) => {
+      if (action === "create") {
+        setTasks((prev) => {
+          const id = task._id || task.id;
+          if (prev.some((t) => (t._id || t.id) === id)) return prev;
+          return [task, ...prev];
+        });
+      } else if (action === "update") {
+        setTasks((prev) => {
+          const id = task._id || task.id;
+          return prev.map((t) => ((t._id || t.id) === id ? task : t));
+        });
+      } else if (action === "delete") {
+        setTasks((prev) => prev.filter((t) => (t._id || t.id) !== taskId));
+      }
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!discussionTask || !socketRef.current) return;
     
     const taskId = discussionTask.id || discussionTask._id;
 
@@ -144,19 +178,9 @@ const MyTasksPage = () => {
     };
     fetchDiscussion();
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    socketRef.current.emit("joinTaskRoom", taskId);
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
-
-    socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
-    });
-
-    socketRef.current.on('receive_task_message', (msgData) => {
+    const handleReceiveMessage = (msgData) => {
        setDiscussionMessages((prev) => {
           if (prev.find(m => m.id === msgData._id)) return prev;
           
@@ -169,22 +193,28 @@ const MyTasksPage = () => {
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
-    });
+    };
 
-    socketRef.current.on('receive_edit_task_message', (msgData) => {
+    const handleEditMessage = (msgData) => {
        setDiscussionMessages((prev) =>
           prev.map(m => m.id === msgData._id ? { ...m, message: msgData.content, isEdited: msgData.isEdited } : m)
        );
-    });
+    };
 
-    socketRef.current.on('receive_delete_task_message', (data) => {
+    const handleDeleteMessage = (data) => {
        setDiscussionMessages((prev) => prev.filter(m => m.id !== data.messageId));
-    });
+    };
+
+    socketRef.current.on('receive_task_message', handleReceiveMessage);
+    socketRef.current.on('receive_edit_task_message', handleEditMessage);
+    socketRef.current.on('receive_delete_task_message', handleDeleteMessage);
 
     return () => {
        if (socketRef.current) {
            socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
+           socketRef.current.off('receive_task_message', handleReceiveMessage);
+           socketRef.current.off('receive_edit_task_message', handleEditMessage);
+           socketRef.current.off('receive_delete_task_message', handleDeleteMessage);
        }
        setDiscussionMessages([]);
        setDiscussionInput("");

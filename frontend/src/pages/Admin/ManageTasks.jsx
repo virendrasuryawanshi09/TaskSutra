@@ -83,13 +83,28 @@ const ManageTasks = () => {
   }, [filterStatus]);
 
   useEffect(() => {
-    if (!discussionTask) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    socketRef.current.on("task_sync", () => {
+      getAllTasks();
+    });
+
+    return () => {
       if (socketRef.current) {
-         socketRef.current.disconnect();
-         socketRef.current = null;
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
-      return;
-    }
+    };
+  }, [filterStatus]);
+
+  useEffect(() => {
+    if (!discussionTask || !socketRef.current) return;
 
     const taskId = discussionTask._id;
     const fetchDiscussion = async () => {
@@ -110,19 +125,9 @@ const ManageTasks = () => {
     };
     fetchDiscussion();
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    socketRef.current.emit("joinTaskRoom", taskId);
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
-
-    socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
-    });
-
-    socketRef.current.on('receive_task_message', (msgData) => {
+    const handleReceiveMessage = (msgData) => {
        setDiscussionMessages((prev) => {
           if (prev.find(m => m.id === msgData._id)) return prev;
           
@@ -133,13 +138,14 @@ const ManageTasks = () => {
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
-    });
+    };
+
+    socketRef.current.on('receive_task_message', handleReceiveMessage);
 
     return () => {
        if (socketRef.current) {
            socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
-           socketRef.current = null;
+           socketRef.current.off('receive_task_message', handleReceiveMessage);
        }
     };
   }, [discussionTask]);

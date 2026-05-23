@@ -367,6 +367,9 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+        if (socketRef.current) {
+          socketRef.current.emit("task_updated", updatedTask);
+        }
       }
 
       toast.success("Status updated.");
@@ -405,6 +408,9 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+        if (socketRef.current) {
+          socketRef.current.emit("task_updated", updatedTask);
+        }
       }
 
       toast.success("Priority updated.");
@@ -441,6 +447,9 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+        if (socketRef.current) {
+          socketRef.current.emit("task_updated", updatedTask);
+        }
       }
 
       toast.success("Due date updated.");

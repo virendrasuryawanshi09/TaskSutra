@@ -44,7 +44,24 @@ const CreateTask = () => {
   const socketRef = React.useRef(null);
 
   useEffect(() => {
-    if (!taskId) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token },
+      withCredentials: true,
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!taskId || !socketRef.current) return;
 
     const fetchDiscussion = async () => {
       try {
@@ -64,19 +81,9 @@ const CreateTask = () => {
     };
     fetchDiscussion();
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    socketRef.current.emit("joinTaskRoom", taskId);
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
-
-    socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
-    });
-
-    socketRef.current.on('receive_task_message', (msgData) => {
+    const handleReceiveMessage = (msgData) => {
        setMessages((prev) => {
           if (prev.find(m => m.id === msgData._id)) return prev;
           
@@ -87,13 +94,16 @@ const CreateTask = () => {
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
-    });
+    };
+
+    socketRef.current.on('receive_task_message', handleReceiveMessage);
 
     return () => {
        if (socketRef.current) {
            socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
+           socketRef.current.off('receive_task_message', handleReceiveMessage);
        }
+       setMessages([]);
     };
   }, [taskId]);
 
@@ -225,7 +235,7 @@ const CreateTask = () => {
       const todolist = buildTodoChecklistPayload(taskData.todoCheckList);
       const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-      await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
+      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
@@ -233,6 +243,10 @@ const CreateTask = () => {
       });
 
       toast.success("Task Created Successfully.");
+
+      if (response.data?.task && socketRef.current) {
+        socketRef.current.emit("task_created", response.data.task);
+      }
 
       clearData();
 
@@ -251,7 +265,7 @@ const CreateTask = () => {
       const todoList = buildTodoChecklistPayload(taskData.todoCheckList, prevTodoChecklist);
       const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-      await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
+      const response = await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
@@ -259,6 +273,11 @@ const CreateTask = () => {
       });
 
       toast.success("Task Updated Successfully.");
+
+      if (response.data?.task && socketRef.current) {
+        socketRef.current.emit("task_updated", response.data.task);
+      }
+
       navigate("/admin/tasks");
     } catch (error) {
       console.error("Error updating task:", error);
@@ -335,6 +354,11 @@ const CreateTask = () => {
     try {
       await axiosInstance.delete(API_PATHS.TASKS.DELETE_TASK(taskId));
       toast.success("Task Deleted Successfully.");
+
+      if (socketRef.current) {
+        socketRef.current.emit("task_deleted", taskId);
+      }
+
       setOpenDeleteAlert(false);
       navigate("/admin/tasks");
     } catch (error) {

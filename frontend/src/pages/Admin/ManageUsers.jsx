@@ -38,6 +38,16 @@ const ManageUsers = () => {
   });
   const [isAddingDirectly, setIsAddingDirectly] = useState(false);
 
+  // Edit member states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserData, setEditUserData] = useState({
+    name: "",
+    title: "",
+    skills: "",
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Domain verification states
   const [verificationMethod, setVerificationMethod] = useState("otp");
   const [verificationCodeInput, setVerificationCodeInput] = useState("");
@@ -283,6 +293,54 @@ const ManageUsers = () => {
       );
     } finally {
       setIsAddingDirectly(false);
+    }
+  };
+
+  const handleOpenEditModal = (userToEdit) => {
+    setEditingUser(userToEdit);
+    setEditUserData({
+      name: userToEdit.name || "",
+      title: userToEdit.title || "",
+      skills: Array.isArray(userToEdit.skills) ? userToEdit.skills.join(", ") : "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editUserData.name.trim()) {
+      toast.error("Name is required.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    const toastId = toast.loading(`Saving changes for ${editUserData.name}...`);
+    try {
+      const skillsArray = editUserData.skills
+        ? editUserData.skills.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      const res = await axiosInstance.put(`/api/workspace/members/${editingUser._id}`, {
+        name: editUserData.name.trim(),
+        title: editUserData.title.trim(),
+        skills: skillsArray,
+      });
+
+      if (res.data && res.data.success) {
+        toast.success("Member updated successfully!", { id: toastId });
+        setAllUsers((prev) =>
+          prev.map((u) => (u._id === editingUser._id ? res.data.member : u))
+        );
+        setIsEditModalOpen(false);
+        setEditingUser(null);
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to update member.",
+        { id: toastId }
+      );
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -581,6 +639,41 @@ const ManageUsers = () => {
                               </span>
                             )}
                           </div>
+
+                          {(currentUser?.role === "ceo" || currentUser?.role === "admin") && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditModal(user);
+                              }}
+                              className="
+                                p-1.5 rounded-lg
+                                text-[var(--text-muted)]
+                                hover:text-[var(--accent)]
+                                transition-all duration-200
+                                active:scale-[0.95]
+                                shrink-0
+                                cursor-pointer
+                              "
+                              title="Edit member"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.8}
+                                stroke="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+                                />
+                              </svg>
+                            </button>
+                          )}
 
                           {!isSelf && user.role !== "ceo" && (
                             <button
@@ -1194,6 +1287,98 @@ const ManageUsers = () => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <h2 className="text-lg font-semibold text-[var(--text)] mb-3 text-left">
+              Edit Workspace Member
+            </h2>
+            <form onSubmit={handleSaveEdit} className="flex flex-col gap-3.5 text-left pr-1">
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                Update the member's profile details. Changing their role is handled in the main list.
+              </p>
+              
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-[var(--text)] font-semibold">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editUserData.name}
+                  onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                  placeholder="John Doe"
+                  className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-[var(--text)] font-semibold">
+                  Job Title
+                </label>
+                <input
+                  type="text"
+                  value={editUserData.title}
+                  onChange={(e) => setEditUserData({ ...editUserData, title: e.target.value })}
+                  placeholder="e.g. Lead Designer"
+                  className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-[var(--text)] font-semibold">
+                  Skills (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={editUserData.skills}
+                  onChange={(e) => setEditUserData({ ...editUserData, skills: e.target.value })}
+                  placeholder="e.g. React, Node.js, Mongoose"
+                  className="w-full px-3 py-2 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 mt-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingUser(null);
+                    setEditUserData({
+                      name: "",
+                      title: "",
+                      skills: "",
+                    });
+                  }}
+                  className="
+                    px-4 py-2 text-sm font-medium 
+                    border border-[var(--border)] rounded-xl 
+                    text-[var(--text)] hover:bg-[var(--bg-soft)] 
+                    transition duration-150 cursor-pointer
+                  "
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit || !editUserData.name.trim()}
+                  className="
+                    px-4 py-2 text-sm font-medium 
+                    bg-[var(--accent)] text-white rounded-xl 
+                    hover:bg-[var(--accent-hover)] 
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    transition duration-150 cursor-pointer
+                  "
+                >
+                  {isSavingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

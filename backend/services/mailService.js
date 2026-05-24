@@ -1,20 +1,12 @@
-let nodemailer;
-try {
-  nodemailer = require("nodemailer");
-} catch (err) {
-  nodemailer = null;
-}
+const nodemailer = require("nodemailer");
 
 const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => {
-  if (!nodemailer) {
-    console.warn("\n[WARNING] nodemailer is not installed. Skipping email send. Run `npm install nodemailer` in backend directory.");
-    console.log(`[DEMO INVITE FALLBACK] Invitation Link for ${toEmail}: ${inviteLink}\n`);
-    return { logged: true, nodemailerMissing: true };
-  }
-
-  // Use env variables if present, otherwise fall back to ethereal.email test account
   let transporter;
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+  let isEthereal = false;
+
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS &&
+      !process.env.SMTP_USER.includes("YOUR_GMAIL")) {
+    // Real SMTP (e.g. Gmail)
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 587,
@@ -24,8 +16,19 @@ const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => 
         pass: process.env.SMTP_PASS,
       },
     });
+
+    // Verify connection before sending
+    try {
+      await transporter.verify();
+      console.log("[SMTP] Connection verified successfully.");
+    } catch (verifyErr) {
+      console.error("[SMTP] Connection verification failed:", verifyErr.message);
+      throw new Error(`SMTP connection failed: ${verifyErr.message}. Check your SMTP_USER and SMTP_PASS in .env`);
+    }
   } else {
-    // Ethereal fallback for local development
+    // Ethereal fallback for local development (does NOT deliver to real inboxes)
+    isEthereal = true;
+    console.warn("[MAIL] No real SMTP config found — falling back to Ethereal test account. Email will NOT reach a real inbox.");
     try {
       const testAccount = await nodemailer.createTestAccount();
       transporter = nodemailer.createTransport({
@@ -38,7 +41,8 @@ const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => 
         },
       });
     } catch (err) {
-      console.warn("Failed to create Ethereal test account, logging mail instead:", err.message);
+      console.warn("Failed to create Ethereal test account:", err.message);
+      console.log(`[INVITE FALLBACK] Link for ${toEmail}: ${inviteLink}`);
       return { logged: true };
     }
   }
@@ -91,15 +95,19 @@ const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => 
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    const testUrl = nodemailer.getTestMessageUrl(info);
-    if (testUrl) {
-      console.log(`\n[ETHEREAL MAIL] Test Email sent successfully! Preview URL: ${testUrl}\n`);
+
+    if (isEthereal) {
+      const testUrl = nodemailer.getTestMessageUrl(info);
+      console.log(`\n[ETHEREAL MAIL] Preview URL (not a real inbox): ${testUrl}\n`);
       return { success: true, previewUrl: testUrl };
     }
+
+    console.log(`[SMTP] Email sent successfully to ${toEmail}`);
     return { success: true };
   } catch (err) {
     console.error("Error sending mail:", err.message);
-    return { logged: true, error: err.message };
+    // Throw so the controller returns a proper error response to the frontend
+    throw new Error(`Failed to send invitation email: ${err.message}`);
   }
 };
 

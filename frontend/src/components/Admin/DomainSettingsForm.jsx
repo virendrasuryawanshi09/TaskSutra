@@ -128,12 +128,7 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
     return (
       /* Create Workspace Form (Ultra-Premium Setup Console) */
       <div className="max-w-md mx-auto py-8 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-sm relative z-10 text-left">
-        <div className="flex justify-center mb-6">
-          <span className="px-3 py-1 text-[9px] font-mono font-extrabold uppercase bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 rounded-full tracking-widest flex items-center gap-1.5 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse"></span>
-            Workspace Registration
-          </span>
-        </div>
+
 
         <h3 className="text-xl font-extrabold text-[var(--text)] mb-2 text-center tracking-tight">
           Deploy Your Enterprise Engine
@@ -148,14 +143,13 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
               Workspace Name
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm font-sans">🏢</span>
               <input
                 type="text"
                 required
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 placeholder="Acme Corporation"
-                className="w-full pl-10 pr-4 py-3 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all duration-205"
+                className="w-full pl-3 pr-4 py-3 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all duration-205"
               />
             </div>
           </div>
@@ -165,14 +159,13 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
               Workspace Domain
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm font-sans">🌐</span>
               <input
                 type="text"
                 required
                 value={newCompanyDomain}
                 onChange={(e) => setNewCompanyDomain(e.target.value)}
                 placeholder="acme.com"
-                className="w-full pl-10 pr-4 py-3 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all duration-205"
+                className="w-full pl-3 pr-4 py-3 text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all duration-205"
               />
             </div>
             <span className="text-[9px] text-[var(--text-muted)] block font-mono text-left">
@@ -321,11 +314,10 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
                   {/* Email OTP Option */}
                   <div
                     onClick={() => setVerificationMethod("otp")}
-                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                      verificationMethod === "otp"
-                        ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                        : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
-                    }`}
+                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${verificationMethod === "otp"
+                      ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                      : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-bold text-[var(--text)]">Email OTP Verification</span>
@@ -345,11 +337,10 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
                   {/* DNS TXT Option */}
                   <div
                     onClick={() => setVerificationMethod("dns")}
-                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                      verificationMethod === "dns"
-                        ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                        : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
-                    }`}
+                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${verificationMethod === "dns"
+                      ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                      : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-bold text-[var(--text)]">DNS TXT Record</span>
@@ -531,13 +522,11 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
                 setAutoJoinEnabled(!autoJoinEnabled);
                 toast.success(`Domain auto-join ${!autoJoinEnabled ? "enabled" : "disabled"}`);
               }}
-              className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer relative shrink-0 ${
-                autoJoinEnabled ? "bg-[var(--accent)]" : "bg-[var(--border)]"
-              }`}
+              className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer relative shrink-0 ${autoJoinEnabled ? "bg-[var(--accent)]" : "bg-[var(--border)]"
+                }`}
             >
-              <span className={`w-4.5 h-4.5 rounded-full bg-white block shadow-sm transform transition duration-200 ${
-                autoJoinEnabled ? "translate-x-4.5" : "translate-x-0"
-              }`}></span>
+              <span className={`w-4.5 h-4.5 rounded-full bg-white block shadow-sm transform transition duration-200 ${autoJoinEnabled ? "translate-x-4.5" : "translate-x-0"
+                }`}></span>
             </button>
           </div>
 
@@ -586,13 +575,11 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
                 setMfaEnforced(!mfaEnforced);
                 toast.success(`MFA Enforcement ${!mfaEnforced ? "enabled" : "disabled"}`);
               }}
-              className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer relative shrink-0 ${
-                mfaEnforced ? "bg-[var(--accent)]" : "bg-[var(--border)]"
-              }`}
+              className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer relative shrink-0 ${mfaEnforced ? "bg-[var(--accent)]" : "bg-[var(--border)]"
+                }`}
             >
-              <span className={`w-4.5 h-4.5 rounded-full bg-white block shadow-sm transform transition duration-200 ${
-                mfaEnforced ? "translate-x-4.5" : "translate-x-0"
-              }`}></span>
+              <span className={`w-4.5 h-4.5 rounded-full bg-white block shadow-sm transform transition duration-200 ${mfaEnforced ? "translate-x-4.5" : "translate-x-0"
+                }`}></span>
             </button>
           </div>
         </div>

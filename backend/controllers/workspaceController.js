@@ -201,6 +201,7 @@ const addWorkspaceMember = async (req, res) => {
       role,
       title,
       company,
+      companyId: req.user.companyId,
       skills,
     });
 
@@ -304,7 +305,7 @@ const createCompany = async (req, res) => {
 
     const cleanDomain = domain.trim().toLowerCase();
     const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'zoho.com', 'protonmail.com', 'mail.com'];
-    if (publicDomains.includes(cleanDomain)) {
+    if (publicDomains.includes(cleanDomain) && process.env.NODE_ENV === 'production') {
       return res.status(400).json({ success: false, message: "Registering a workspace under a public email domain is not permitted" });
     }
 

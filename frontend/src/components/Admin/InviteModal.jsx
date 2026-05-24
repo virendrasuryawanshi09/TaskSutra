@@ -121,22 +121,20 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
               setMemberModalTab("invite");
               setGeneratedLink("");
             }}
-            className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-              memberModalTab === "invite"
+            className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${memberModalTab === "invite"
                 ? "border-[var(--accent)] text-[var(--accent)]"
                 : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
+              }`}
           >
             Invite with Link
           </button>
           <button
             type="button"
             onClick={() => setMemberModalTab("direct")}
-            className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-              memberModalTab === "direct"
+            className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${memberModalTab === "direct"
                 ? "border-[var(--accent)] text-[var(--accent)]"
                 : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
+              }`}
           >
             Add Directly
           </button>
@@ -214,13 +212,13 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
                     rel="noopener noreferrer"
                     className="mt-1 w-full py-2 px-3 text-xs font-bold text-center text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 active:scale-[0.98] transition-all inline-block"
                   >
-                    View Sent Email ↗
+                    View Sent Email
                   </a>
                 </div>
               ) : isNodemailerMissing ? (
                 <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex flex-col gap-1.5">
                   <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                    ⚠️ Automatic Email Skipped
+                    Automatic Email Skipped
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
                     The package <code className="font-mono bg-[var(--bg-soft)] px-1 rounded">nodemailer</code> is not installed in the backend. The invitation link was generated, but could not be sent to <span className="font-semibold text-[var(--text)]">{inviteEmail}</span>.

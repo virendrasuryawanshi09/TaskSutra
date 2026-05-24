@@ -71,6 +71,17 @@ app.use("/api/notifications", notificationRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Global error handling middleware
+app.use((err, req, res, next) => {
+    console.error("Unhandled Error:", err);
+    res.status(err.status || err.statusCode || 500).json({
+        success: false,
+        message: err.message || "An internal server error occurred",
+        ...(process.env.NODE_ENV === "development" && { error: err.stack })
+    });
+});
+
+
 
 const PORT = process.env.PORT || 5000;
 

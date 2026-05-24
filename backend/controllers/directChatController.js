@@ -179,8 +179,8 @@ exports.deleteDirectMessage = async (req, res) => {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    // Sender or admin can delete
-    if (message.sender.toString() !== userId.toString() && req.user.role !== "admin") {
+    // Sender or admin/ceo can delete
+    if (message.sender.toString() !== userId.toString() && !["admin", "ceo"].includes(req.user.role)) {
       return res.status(403).json({ message: "Not authorized to delete this message" });
     }
 

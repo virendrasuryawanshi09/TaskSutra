@@ -16,7 +16,7 @@ exports.getTaskDiscussion = async (req, res) => {
 
     // Authorization: Admin or assigned to task
     const isAssigned = task.assignedTo && task.assignedTo.some(id => id.toString() === userId.toString());
-    const isAdmin = req.user.role === "admin";
+    const isAdmin = ["admin", "ceo"].includes(req.user.role);
     
     if (!isAssigned && !isAdmin) {
       return res.status(403).json({ message: "Not authorized to access this task discussion" });
@@ -60,7 +60,7 @@ exports.sendTaskMessage = async (req, res) => {
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     const isAssigned = task.assignedTo && task.assignedTo.some(id => id.toString() === senderId.toString());
-    const isAdmin = req.user.role === "admin";
+    const isAdmin = ["admin", "ceo"].includes(req.user.role);
 
     if (!isAssigned && !isAdmin) {
       return res.status(403).json({ message: "Not authorized to post to this discussion" });
@@ -142,7 +142,7 @@ exports.deleteTaskMessage = async (req, res) => {
     if (!message) return res.status(404).json({ message: "Message not found" });
 
     // Sender or admin can delete
-    if (message.sender.toString() !== userId.toString() && req.user.role !== "admin") {
+    if (message.sender.toString() !== userId.toString() && !["admin", "ceo"].includes(req.user.role)) {
       return res.status(403).json({ message: "Not authorized to delete this message" });
     }
 

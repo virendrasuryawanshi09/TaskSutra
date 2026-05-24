@@ -15,7 +15,7 @@ const getUsers = async (req, res) => {
 
         const users = await User.find({
             ...query,
-            role: 'member'
+            role: { $in: ['member', 'admin', 'ceo'] }
         }).select("-password");
 
         const userWithTaskCounts = await Promise.all(users.map(async(user) => {

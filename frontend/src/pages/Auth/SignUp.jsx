@@ -144,7 +144,7 @@ const SignUp = () => {
         </h3>
 
         {invitationCompany && (
-          <div className="mb-6 p-4 rounded-xl bg-[var(--accent)] bg-opacity-10 border border-[var(--accent)] border-opacity-20 text-center">
+          <div className="mb-6 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">
             <p className="text-[13px] font-medium text-[var(--text)]">
               You've been invited to join <span className="font-semibold text-[var(--accent)]">{invitationCompany}</span> on TaskSutra.
             </p>

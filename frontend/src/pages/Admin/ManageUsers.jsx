@@ -26,6 +26,8 @@ const ManageUsers = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
+  const [invitePreviewUrl, setInvitePreviewUrl] = useState("");
+  const [isNodemailerMissing, setIsNodemailerMissing] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [memberModalTab, setMemberModalTab] = useState("invite"); // 'invite' or 'direct'
   const [directMemberData, setDirectMemberData] = useState({
@@ -236,7 +238,9 @@ const ManageUsers = () => {
       });
       if (res.data && res.data.inviteLink) {
         setGeneratedLink(res.data.inviteLink);
-        toast.success("Invitation generated!", { id: toastId });
+        setInvitePreviewUrl(res.data.previewUrl || "");
+        setIsNodemailerMissing(!!res.data.nodemailerMissing);
+        toast.success(res.data.message || "Invitation generated!", { id: toastId });
       }
     } catch (error) {
       toast.error(
@@ -610,7 +614,7 @@ const ManageUsers = () => {
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="flex items-center gap-2">
                             {user.role === "ceo" ? (
-                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-yellow-500 bg-opacity-10 text-yellow-600 border border-yellow-500 border-opacity-20 shadow-sm">
+                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 shadow-sm">
                                 Owner / CEO
                               </span>
                             ) : currentUser?.role === "ceo" && !isSelf ? (
@@ -630,7 +634,7 @@ const ManageUsers = () => {
                                 <option value="admin">Admin</option>
                               </select>
                             ) : user.role === "admin" ? (
-                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--accent)] bg-opacity-10 text-[var(--accent)] border border-[var(--accent)] border-opacity-20 shadow-sm">
+                              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 shadow-sm">
                                 Admin
                               </span>
                             ) : (
@@ -803,33 +807,41 @@ const ManageUsers = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
                   {/* Left Column: Organization Details (5/12 cols) */}
                   <div className="lg:col-span-5 flex flex-col gap-4">
-                    <div className="p-5 bg-gradient-to-b from-[var(--bg-soft)] to-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm flex flex-col gap-4">
-                      <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Workspace Overview</h4>
+                    <div className="p-6 bg-gradient-to-b from-[var(--surface)] to-[var(--bg-soft)] border border-[var(--border)] rounded-2xl shadow-md flex flex-col gap-5">
+                      <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
+                        <span className="text-[10px] font-bold text-[var(--text-muted)] tracking-wider uppercase">Workspace Specifications</span>
+                      </div>
                       
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {/* Domain Card */}
-                        <div className="flex items-center gap-3.5 p-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl transition-transform duration-200 hover:scale-[1.01]">
-                          <div className="w-9 h-9 rounded-lg bg-[var(--accent)] bg-opacity-10 flex items-center justify-center text-[var(--accent)] font-semibold shrink-0">
+                        <div className="flex items-start gap-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl transition-all duration-300 hover:shadow-md hover:border-[var(--accent)] group">
+                          <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400 font-semibold shrink-0 group-hover:scale-105 transition-transform">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                             </svg>
                           </div>
-                          <div>
-                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Organization Domain</p>
-                            <p className="text-xs font-bold mt-0.5 text-[var(--text)] uppercase">{companyDetails.domain}</p>
+                          <div className="min-w-0 flex-1 text-left">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Organization Domain</span>
+                              <span className="px-1.5 py-0.5 text-[8px] font-bold bg-teal-500/10 text-teal-600 rounded border border-teal-500/20">Primary</span>
+                            </div>
+                            <p className="text-xs font-extrabold mt-1 text-[var(--text)] uppercase tracking-wide truncate">{companyDetails.domain}</p>
                           </div>
                         </div>
 
                         {/* Owner Card */}
-                        <div className="flex items-center gap-3.5 p-3.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl transition-transform duration-200 hover:scale-[1.01]">
-                          <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 font-semibold shrink-0">
+                        <div className="flex items-start gap-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl transition-all duration-300 hover:shadow-md hover:border-amber-500/50 group">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 font-semibold shrink-0 group-hover:scale-105 transition-transform">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                             </svg>
                           </div>
-                          <div>
-                            <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Workspace Owner</p>
-                            <p className="text-xs font-bold mt-0.5 text-[var(--text)]">
+                          <div className="min-w-0 flex-1 text-left">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Workspace Owner</span>
+                              <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-500/10 text-amber-600 rounded border border-amber-500/20">Super Admin</span>
+                            </div>
+                            <p className="text-xs font-bold mt-1 text-[var(--text)] truncate">
                               {currentUser?.role === "ceo" ? "You (CEO / Owner)" : "Workspace Owner"}
                             </p>
                           </div>
@@ -838,12 +850,16 @@ const ManageUsers = () => {
                     </div>
 
                     {/* Quick Security Tip Card */}
-                    <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl flex items-start gap-3 shadow-sm">
-                      <span className="text-base mt-0.5">💡</span>
-                      <div>
-                        <h5 className="text-xs font-bold text-[var(--text)]">Domain Ownership Security</h5>
+                    <div className="p-5 bg-[var(--surface)] border-l-4 border-l-[var(--accent)] border-[var(--border)] rounded-r-2xl shadow-sm flex items-start gap-4 transition-all duration-300 hover:shadow-md">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--bg-soft)] flex items-center justify-center shrink-0">
+                        <svg className="w-4.5 h-4.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <h5 className="text-xs font-bold text-[var(--text)] tracking-wide">Domain Security Advisory</h5>
                         <p className="text-[11px] text-[var(--text-muted)] leading-relaxed mt-1">
-                          Verifying your domain ensures employee security. Once verified, team signups matching your workspace domain auto-join without needing manual email link generation.
+                          Verifying domain ownership locks down registration access. Team signups matching the workspace domain will instantly auto-join your company without requiring manual invite links.
                         </p>
                       </div>
                     </div>
@@ -851,12 +867,12 @@ const ManageUsers = () => {
 
                   {/* Right Column: Verification Panel (7/12 cols) */}
                   <div className="lg:col-span-7">
-                    <div className="p-6 border border-[var(--border)] bg-[var(--surface)] rounded-2xl flex flex-col gap-6 shadow-sm relative overflow-hidden">
+                    <div className="p-6 border border-[var(--border)] bg-[var(--surface)] rounded-2xl flex flex-col gap-6 shadow-md relative overflow-hidden">
                       <div className="flex items-start gap-4">
                         <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm shrink-0 ${
                           companyDetails.isVerified 
-                            ? "bg-green-500/10 text-green-500 border border-green-500/10" 
-                            : "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/10"
+                            ? "bg-green-500/10 text-green-500 border border-green-500/20" 
+                            : "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20"
                         }`}>
                           {companyDetails.isVerified ? (
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -868,7 +884,7 @@ const ManageUsers = () => {
                             </svg>
                           )}
                         </div>
-                        <div>
+                        <div className="text-left">
                           <h4 className="text-sm font-bold text-[var(--text)]">Security Verification Control</h4>
                           <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-1">
                             {companyDetails.isVerified 
@@ -879,12 +895,31 @@ const ManageUsers = () => {
                       </div>
 
                       {companyDetails.isVerified ? (
-                        <div className="p-4.5 bg-green-500/5 border border-green-500/15 rounded-xl text-left space-y-2">
-                          <p className="text-xs font-bold text-green-500 flex items-center gap-1.5">
-                            <span>✅ Verified via {companyDetails.verificationMethod === "dns" ? "DNS TXT Record" : "Email OTP Code"}</span>
-                          </p>
-                          <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                            New users registering with email addresses ending in <strong className="text-[var(--text)]">@{companyDetails.domain}</strong> will instantly auto-join this workspace.
+                        <div className="p-5 bg-gradient-to-r from-green-500/5 to-teal-500/5 border border-green-500/20 rounded-xl text-left space-y-4 shadow-sm">
+                          <div className="flex items-center gap-2 pb-2.5 border-b border-green-500/10">
+                            <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">
+                              Verified Domain Access Active
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Method</span>
+                              <span className="font-bold text-[var(--text)] mt-0.5 block">
+                                {companyDetails.verificationMethod === "dns" ? "DNS TXT Registry" : "Secure Email OTP"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Auto-Join Rule</span>
+                              <span className="font-bold text-teal-600 mt-0.5 block">Enabled</span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-[11px] text-[var(--text-muted)] leading-relaxed pt-2 border-t border-[var(--border)] border-dashed">
+                            Employees registering with emails ending in <strong className="text-[var(--text)]">@{companyDetails.domain}</strong> will auto-join this workspace.
                           </p>
                         </div>
                       ) : currentUser?.role !== "ceo" ? (
@@ -899,58 +934,58 @@ const ManageUsers = () => {
                           {!(activeVerification || companyDetails.verificationCode) ? (
                             /* Step 1: Select verification method cards */
                             <div className="flex flex-col gap-5">
-                              <p className="text-xs font-bold text-[var(--text)]">
+                              <p className="text-xs font-bold text-[var(--text)] text-left">
                                 Select Verification Protocol:
                               </p>
                               
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {/* Email Card */}
                                 <div 
                                   onClick={() => setVerificationMethod("otp")}
-                                  className={`flex flex-col p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
+                                  className={`flex flex-col p-4.5 rounded-xl border text-left transition-all duration-300 cursor-pointer ${
                                     verificationMethod === "otp"
-                                      ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm scale-[1.01]"
-                                      : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--bg-soft)]"
+                                      ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-md scale-[1.02]"
+                                      : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--bg-soft)] hover:scale-[1.01]"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-[var(--text)]">Email OTP Verification</span>
                                     <input
                                       type="radio"
                                       name="verify_method"
                                       value="otp"
                                       checked={verificationMethod === "otp"}
                                       onChange={() => setVerificationMethod("otp")}
-                                      className="accent-[var(--accent)] w-3.5 h-3.5 cursor-pointer"
+                                      className="accent-[var(--accent)] w-4 h-4 cursor-pointer"
                                     />
-                                    <span className="text-xs font-bold text-[var(--text)]">Email OTP Verification</span>
                                   </div>
-                                  <span className="text-[10px] text-[var(--text-muted)] mt-2 pl-5.5 leading-normal">
-                                    Receive a secure 6-digit OTP verification code. Bypassed in dev using inline Sandbox container.
+                                  <span className="text-[10px] text-[var(--text-muted)] mt-3 leading-relaxed">
+                                    Receive a secure 6-digit OTP verification code. Bypassed in dev using inline Sandbox console below.
                                   </span>
                                 </div>
 
                                 {/* DNS Card */}
                                 <div 
                                   onClick={() => setVerificationMethod("dns")}
-                                  className={`flex flex-col p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
+                                  className={`flex flex-col p-4.5 rounded-xl border text-left transition-all duration-300 cursor-pointer ${
                                     verificationMethod === "dns"
-                                      ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm scale-[1.01]"
-                                      : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--bg-soft)]"
+                                      ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-md scale-[1.02]"
+                                      : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--bg-soft)] hover:scale-[1.01]"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-[var(--text)]">DNS TXT Record</span>
                                     <input
                                       type="radio"
                                       name="verify_method"
                                       value="dns"
                                       checked={verificationMethod === "dns"}
                                       onChange={() => setVerificationMethod("dns")}
-                                      className="accent-[var(--accent)] w-3.5 h-3.5 cursor-pointer"
+                                      className="accent-[var(--accent)] w-4 h-4 cursor-pointer"
                                     />
-                                    <span className="text-xs font-bold text-[var(--text)]">DNS TXT Record</span>
                                   </div>
-                                  <span className="text-[10px] text-[var(--text-muted)] mt-2 pl-5.5 leading-normal">
-                                    Publish a secure validation TXT token in your domain DNS registry settings.
+                                  <span className="text-[10px] text-[var(--text-muted)] mt-3 leading-relaxed">
+                                    Publish a secure validation TXT token in your domain's DNS registry configurations.
                                   </span>
                                 </div>
                               </div>
@@ -959,58 +994,55 @@ const ManageUsers = () => {
                                 type="button"
                                 onClick={handleVerifyDomainStart}
                                 disabled={isVerifyingDomain}
-                                className="py-2.5 px-4 text-xs font-bold bg-[var(--accent)] text-white rounded-xl hover:bg-[var(--accent-hover)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full text-center shadow-md shadow-[rgba(0,0,0,0.1)]"
+                                className="py-3 px-4 text-xs font-bold bg-[var(--accent)] text-white rounded-xl hover:bg-[var(--accent-hover)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full text-center shadow-md shadow-[rgba(0,0,0,0.1)]"
                               >
                                 {isVerifyingDomain ? "Processing Protocol..." : "Generate Verification Code"}
                               </button>
                             </div>
                           ) : (
                             /* Step 2: Code verification form */
-                            <form onSubmit={handleConfirmDomain} className="flex flex-col gap-4 text-left">
+                            <form onSubmit={handleConfirmDomain} className="flex flex-col gap-4 text-left font-sans">
                               
                               {/* DEVSANDBOX INTERCEPT NOTIFICATION PANEL */}
-                              <div className="p-4.5 bg-cyan-950/10 border border-cyan-800/20 rounded-xl flex flex-col gap-2.5 shadow-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-ping"></span>
-                                  <h5 className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                              <div className="p-4.5 bg-neutral-900 border border-neutral-800 rounded-xl flex flex-col gap-3 shadow-lg">
+                                <div className="flex items-center gap-2 border-b border-neutral-800 pb-2">
+                                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                                  <h5 className="text-[10px] font-extrabold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    Developer Sandbox Intercept
+                                    DEV-SANDBOX-INTERCEPT
                                   </h5>
                                 </div>
-                                <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                                  Since this is running in a local developer sandbox environment (`localhost`), the generated verification code has been intercepted and is displayed below. In a production build, it is dispatched to <strong className="text-[var(--text)]">{currentUser?.email}</strong>.
+                                <p className="text-[10px] text-neutral-400 leading-relaxed font-sans">
+                                  System intercepted the security code. In production, this dispatches via email server. For local testing, copy the value below:
                                 </p>
 
-                                <div className="flex flex-col gap-2 p-3 bg-[var(--bg-soft)] border border-[var(--border)] rounded-lg">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                                      {((activeVerification?.method || companyDetails.verificationMethod) === "otp") ? "Verification OTP" : "DNS TXT Token"}
+                                <div className="flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-lg">
+                                  <div className="min-w-0">
+                                    <span className="text-[8px] font-mono font-bold text-neutral-500 uppercase tracking-wider block">
+                                      {((activeVerification?.method || companyDetails.verificationMethod) === "otp") ? "OTP Code" : "TXT TOKEN"}
                                     </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const codeToCopy = activeVerification?.code || companyDetails.verificationCode;
-                                        navigator.clipboard.writeText(codeToCopy);
-                                        toast.success("Copied to clipboard!");
-                                      }}
-                                      className="text-[10px] px-2 py-0.5 font-semibold bg-[var(--surface)] border border-[var(--border)] rounded text-[var(--text)] hover:bg-[var(--border)] transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                                    >
-                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                      </svg>
-                                      Copy
-                                    </button>
+                                    <span className="font-mono text-xs font-extrabold text-cyan-300 tracking-wider break-all select-all block mt-0.5">
+                                      {activeVerification?.code || companyDetails.verificationCode}
+                                    </span>
                                   </div>
-                                  <div className="font-mono text-base font-bold text-[var(--accent)] tracking-widest break-all select-all pt-0.5">
-                                    {activeVerification?.code || companyDetails.verificationCode}
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const codeToCopy = activeVerification?.code || companyDetails.verificationCode;
+                                      navigator.clipboard.writeText(codeToCopy);
+                                      toast.success("Copied to clipboard!");
+                                    }}
+                                    className="text-[9px] px-2.5 py-1 font-mono bg-neutral-900 border border-neutral-800 rounded text-neutral-300 hover:bg-neutral-800 transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                                  >
+                                    Copy
+                                  </button>
                                 </div>
 
-                                <div className="flex items-center gap-2 pt-1 border-t border-[var(--border)] border-dashed">
-                                  <span className="text-[10px] text-[var(--text-muted)] font-medium">Bypass shortcut:</span>
-                                  <span className="px-2 py-0.5 text-[9px] font-bold bg-amber-500/10 text-amber-600 rounded-md border border-amber-500/20 select-all font-mono">
+                                <div className="flex items-center gap-2 pt-2 border-t border-neutral-800 border-dashed justify-between">
+                                  <span className="text-[9px] text-neutral-500 font-mono">Bypass key:</span>
+                                  <span className="px-2 py-0.5 text-[9px] font-mono font-bold bg-amber-500/10 text-amber-500 rounded border border-amber-500/20 select-all">
                                     MOCK_VERIFY
                                   </span>
                                 </div>
@@ -1063,9 +1095,8 @@ const ManageUsers = () => {
         )}
       </div>
 
-      {/* Invite/Add Member Modal */}
       {isInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[4px] p-4">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
             <h2 className="text-lg font-semibold text-[var(--text)] mb-3 text-left">
               Manage Workspace Members
@@ -1159,19 +1190,48 @@ const ManageUsers = () => {
                   </div>
                 </form>
               ) : (
-                <div className="flex flex-col gap-4 text-left">
-                  <div className="p-3 bg-green-500 bg-opacity-10 border border-green-500 border-opacity-20 rounded-xl text-center">
-                    <p className="text-[11px] text-green-500 font-semibold mb-1">
-                      Invitation Link Generated!
-                    </p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      This link will expire in exactly 10 minutes.
-                    </p>
-                  </div>
+                <div className="flex flex-col gap-4 text-left font-sans">
+                  {invitePreviewUrl ? (
+                    <div className="p-4 bg-cyan-950/10 border border-cyan-800/20 rounded-xl flex flex-col gap-2">
+                      <p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+                        Direct Email Dispatched!
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                        Since this is a local development environment, the invitation email was sent to a virtual sandbox inbox. You can open and review the sent template below:
+                      </p>
+                      <a 
+                        href={invitePreviewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 w-full py-2 px-3 text-xs font-bold text-center text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 active:scale-[0.98] transition-all inline-block"
+                      >
+                        View Sent Email ↗
+                      </a>
+                    </div>
+                  ) : isNodemailerMissing ? (
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex flex-col gap-1.5">
+                      <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                        ⚠️ Automatic Email Skipped
+                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                        The package <code className="font-mono bg-[var(--bg-soft)] px-1 rounded">nodemailer</code> is not installed in the backend. The invitation link was generated, but could not be sent to <span className="font-semibold text-[var(--text)]">{inviteEmail}</span>. Run <code className="font-mono bg-[var(--bg-soft)] px-1 rounded">npm install nodemailer</code> inside <code className="font-mono">backend</code>.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-center">
+                      <p className="text-[11px] text-green-500 font-semibold mb-1">
+                        Invitation Generated!
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        The invitation details have been registered on the server.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-[var(--text)] font-semibold">
-                      Signup URL
+                      Fallback Signup URL
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -1208,6 +1268,8 @@ const ManageUsers = () => {
                         setIsInviteModalOpen(false);
                         setInviteEmail("");
                         setGeneratedLink("");
+                        setInvitePreviewUrl("");
+                        setIsNodemailerMissing(false);
                       }}
                       className="
                         px-4 py-2 text-sm font-medium 
@@ -1356,8 +1418,8 @@ const ManageUsers = () => {
 
       {/* Edit Member Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[4px] p-4">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative font-sans">
             <h2 className="text-lg font-semibold text-[var(--text)] mb-3 text-left">
               Edit Workspace Member
             </h2>

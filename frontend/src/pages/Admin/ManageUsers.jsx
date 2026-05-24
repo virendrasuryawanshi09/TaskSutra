@@ -174,7 +174,7 @@ const ManageUsers = () => {
       });
       if (res.data && res.data.company) {
         setCompanyDetails(res.data.company);
-        
+
         // Update user context with new role ('ceo') and company details
         if (res.data.user) {
           updateUser({
@@ -184,7 +184,7 @@ const ManageUsers = () => {
             company: res.data.user.company,
           });
         }
-        
+
         toast.success("Workspace created! You are now the Owner.", { id: toastId });
       }
     } catch (error) {
@@ -222,8 +222,8 @@ const ManageUsers = () => {
     } catch (error) {
       toast.error(
         error?.message ||
-          error?.response?.data?.message ||
-          "Failed to download users report.",
+        error?.response?.data?.message ||
+        "Failed to download users report.",
         { id: toastId }
       );
     } finally {
@@ -271,7 +271,7 @@ const ManageUsers = () => {
       const skillsArray = skills
         ? skills.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
-      
+
       const res = await axiosInstance.post("/api/workspace/members", {
         name: name.trim(),
         email: email.trim(),
@@ -450,22 +450,20 @@ const ManageUsers = () => {
           <button
             type="button"
             onClick={() => setActiveTab("members")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 cursor-pointer ${
-              activeTab === "members"
-                ? "border-[var(--accent)] text-[var(--accent)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 cursor-pointer ${activeTab === "members"
+              ? "border-[var(--accent)] text-[var(--accent)]"
+              : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
           >
             Team Members
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 cursor-pointer ${
-              activeTab === "settings"
-                ? "border-[var(--accent)] text-[var(--accent)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 cursor-pointer ${activeTab === "settings"
+              ? "border-[var(--accent)] text-[var(--accent)]"
+              : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
           >
             Workspace & Domain Settings
           </button>
@@ -688,8 +686,8 @@ const ManageUsers = () => {
                             <button
                               type="button"
                               onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveUser(user);
+                                e.stopPropagation();
+                                handleRemoveUser(user);
                               }}
                               className="
                                 p-1.5 rounded-lg
@@ -728,7 +726,7 @@ const ManageUsers = () => {
           </>
         ) : (
           <div className="flex flex-col gap-6 font-sans">
-            
+
             {isLoadingCompany ? (
               <div className="text-center py-20 text-[var(--text-muted)] font-mono text-xs flex flex-col items-center justify-center gap-3">
                 <span className="w-5 h-5 border-2 border-[var(--border)] border-t-[var(--accent)] rounded-full animate-spin"></span>
@@ -743,14 +741,14 @@ const ManageUsers = () => {
                     Workspace Registration
                   </span>
                 </div>
-                
+
                 <h3 className="text-xl font-extrabold text-[var(--text)] mb-2 text-center tracking-tight">
                   Deploy Your Enterprise Engine
                 </h3>
                 <p className="text-xs text-[var(--text-muted)] mb-8 text-center leading-relaxed">
                   Establish a secure workspace directory for your company. Match email domains for automatic employee onboarding.
                 </p>
-                
+
                 <form onSubmit={handleCreateCompany} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
@@ -801,7 +799,7 @@ const ManageUsers = () => {
             ) : (
               /* Settings Dashboard UI */
               <div className="space-y-6">
-                
+
                 {/* 1. Header Hero Panel */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-[var(--border)]">
                   <div className="text-left">
@@ -854,7 +852,7 @@ const ManageUsers = () => {
                     <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider font-mono">General Configurations</h3>
                     <p className="text-xs text-[var(--text-muted)] mt-1">Workspace registration profile details.</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 text-left">
                       <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">Workspace Name</label>
@@ -911,7 +909,6 @@ const ManageUsers = () => {
                   ) : currentUser?.role !== "ceo" ? (
                     /* Non-CEO Unverified Warning */
                     <div className="p-4 bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl flex items-start gap-3 text-left">
-                      <span className="text-amber-500 mt-0.5">⚠️</span>
                       <p className="text-xs text-[var(--text-muted)] leading-relaxed font-sans">
                         Domain verification is required. Only the CEO/Workspace Owner can verify or edit domain settings.
                       </p>
@@ -925,16 +922,15 @@ const ManageUsers = () => {
                           <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
                             1. Select Verification Method
                           </p>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Email OTP Option */}
-                            <div 
+                            <div
                               onClick={() => setVerificationMethod("otp")}
-                              className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                                verificationMethod === "otp"
-                                  ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                                  : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
-                              }`}
+                              className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${verificationMethod === "otp"
+                                ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                                : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
+                                }`}
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-xs font-bold text-[var(--text)]">Email OTP Verification</span>
@@ -952,13 +948,12 @@ const ManageUsers = () => {
                             </div>
 
                             {/* DNS TXT Option */}
-                            <div 
+                            <div
                               onClick={() => setVerificationMethod("dns")}
-                              className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                                verificationMethod === "dns"
-                                  ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                                  : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
-                              }`}
+                              className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-200 ${verificationMethod === "dns"
+                                ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                                : "border-[var(--border)] hover:border-[var(--text-muted)] bg-[var(--surface)]"
+                                }`}
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-xs font-bold text-[var(--text)]">DNS TXT Record</span>
@@ -1018,7 +1013,6 @@ const ManageUsers = () => {
                                     }}
                                     className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] text-[10px]"
                                   >
-                                    📋
                                   </button>
                                 </div>
                               </div>
@@ -1045,7 +1039,7 @@ const ManageUsers = () => {
                               </div>
                               <span className="text-[8px] font-mono text-[var(--text-muted)] uppercase font-bold">Local dev mode</span>
                             </div>
-                            
+
                             <p className="text-[10px] text-[var(--text-muted)] leading-relaxed font-sans">
                               Verification interceptor active. Grab key values instantly from this debugging interface:
                             </p>
@@ -1135,19 +1129,17 @@ const ManageUsers = () => {
                           Automatically add signups matching verified domain email to team.
                         </span>
                       </div>
-                      
-                      <div 
+
+                      <div
                         onClick={() => setAutoJoinEnabled(!autoJoinEnabled)}
-                        className={`relative w-10 h-5.5 rounded-full cursor-pointer transition-colors duration-200 border ${
-                          autoJoinEnabled 
-                            ? "bg-[var(--accent)] border-[var(--accent)]" 
-                            : "bg-[var(--border)] border-[var(--border)]"
-                        }`}
-                      >
-                        <span 
-                          className={`absolute top-0.5 w-4.5 h-4.5 bg-[var(--surface)] rounded-full transition-transform duration-200 ${
-                            autoJoinEnabled ? "translate-x-4.5" : "translate-x-0.5"
+                        className={`relative w-10 h-5.5 rounded-full cursor-pointer transition-colors duration-200 border ${autoJoinEnabled
+                          ? "bg-[var(--accent)] border-[var(--accent)]"
+                          : "bg-[var(--border)] border-[var(--border)]"
                           }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-4.5 h-4.5 bg-[var(--surface)] rounded-full transition-transform duration-200 ${autoJoinEnabled ? "translate-x-4.5" : "translate-x-0.5"
+                            }`}
                         ></span>
                       </div>
                     </div>
@@ -1179,19 +1171,17 @@ const ManageUsers = () => {
                           Require two-step authentication for access matrix.
                         </span>
                       </div>
-                      
-                      <div 
+
+                      <div
                         onClick={() => setMfaEnforced(!mfaEnforced)}
-                        className={`relative w-10 h-5.5 rounded-full cursor-pointer transition-colors duration-200 border ${
-                          mfaEnforced 
-                            ? "bg-[var(--accent)] border-[var(--accent)]" 
-                            : "bg-[var(--border)] border-[var(--border)]"
-                        }`}
-                      >
-                        <span 
-                          className={`absolute top-0.5 w-4.5 h-4.5 bg-[var(--surface)] rounded-full transition-transform duration-200 ${
-                            mfaEnforced ? "translate-x-4.5" : "translate-x-0.5"
+                        className={`relative w-10 h-5.5 rounded-full cursor-pointer transition-colors duration-200 border ${mfaEnforced
+                          ? "bg-[var(--accent)] border-[var(--accent)]"
+                          : "bg-[var(--border)] border-[var(--border)]"
                           }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-4.5 h-4.5 bg-[var(--surface)] rounded-full transition-transform duration-200 ${mfaEnforced ? "translate-x-4.5" : "translate-x-0.5"
+                            }`}
                         ></span>
                       </div>
                     </div>
@@ -1232,13 +1222,12 @@ const ManageUsers = () => {
                               </div>
                             </div>
 
-                            <span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded uppercase tracking-wider ${
-                              u.role === "ceo" 
-                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                                : u.role === "admin"
+                            <span className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded uppercase tracking-wider ${u.role === "ceo"
+                              ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                              : u.role === "admin"
                                 ? "bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20"
                                 : "bg-[var(--bg-soft)] text-[var(--text-muted)] border border-[var(--border)]"
-                            }`}>
+                              }`}>
                               {u.role === "ceo" ? "Owner" : u.role}
                             </span>
                           </div>
@@ -1309,22 +1298,20 @@ const ManageUsers = () => {
                   setMemberModalTab("invite");
                   setGeneratedLink("");
                 }}
-                className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                  memberModalTab === "invite"
-                    ? "border-[var(--accent)] text-[var(--accent)]"
-                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-                }`}
+                className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${memberModalTab === "invite"
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                  }`}
               >
                 Invite with Link
               </button>
               <button
                 type="button"
                 onClick={() => setMemberModalTab("direct")}
-                className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
-                  memberModalTab === "direct"
-                    ? "border-[var(--accent)] text-[var(--accent)]"
-                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-                }`}
+                className={`pb-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${memberModalTab === "direct"
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                  }`}
               >
                 Add Directly
               </button>
@@ -1399,7 +1386,7 @@ const ManageUsers = () => {
                       <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
                         Since this is a local development environment, the invitation email was sent to a virtual sandbox inbox. You can open and review the sent template below:
                       </p>
-                      <a 
+                      <a
                         href={invitePreviewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -1487,7 +1474,7 @@ const ManageUsers = () => {
                 <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                   Directly create a new user profile. They can sign in instantly with their email and password.
                 </p>
-                
+
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-[var(--text)] font-semibold">
                     Full Name
@@ -1626,7 +1613,7 @@ const ManageUsers = () => {
               <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                 Update the member's profile details. Changing their role is handled in the main list.
               </p>
-              
+
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-[var(--text)] font-semibold">
                   Full Name

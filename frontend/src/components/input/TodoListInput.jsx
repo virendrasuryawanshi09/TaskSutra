@@ -68,14 +68,14 @@ const TodoListInput = ({ todoList = [], setTodoList, isEditMode = false }) => {
 
                                 <div className="flex items-center gap-3">
 
-                                    {/* 🔥 NUMBER (CREATE MODE) */}
+                                    {/* NUMBER (CREATE MODE) */}
                                     {!isEditMode && (
                                         <span className="text-xs text-[var(--text-muted)] w-5">
                                             {index < 9 ? `0${index + 1}` : index + 1}
                                         </span>
                                     )}
 
-                                    {/* ✅ CHECKBOX (EDIT MODE ONLY) */}
+                                    {/* CHECKBOX (EDIT MODE ONLY) */}
                                     {isEditMode && (
                                         <button
                                             onClick={() => toggleComplete(index)}

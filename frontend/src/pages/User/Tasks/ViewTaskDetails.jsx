@@ -9,7 +9,7 @@ import SelectDropdown from "../../../components/input/SelectDropdown";
 import TaskDiscussionPanel from "./TaskDiscussionPanel";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
-import { io } from "socket.io-client";
+import { useSocket } from "../../../context/SocketContext";
 import { UserContext } from "../../../context/UserContextState";
 
 const statusOptions = [
@@ -147,6 +147,7 @@ const ViewTaskDetails = () => {
   const [queryInput, setQueryInput] = useState("");
   const [messages, setMessages] = useState([]);
   const socketRef = React.useRef(null);
+  const socket = useSocket();
 
   const isCompleted = currentStatus === "Completed";
 
@@ -238,19 +239,12 @@ const ViewTaskDetails = () => {
     };
     fetchDiscussion();
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!taskId || !socket) return;
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
+    socketRef.current = socket;
+    socket.emit("joinTaskRoom", taskId);
 
-    socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
-    });
-
-    socketRef.current.on('receive_task_message', (msgData) => {
+    const handleReceiveTaskMessage = (msgData) => {
        setMessages((prev) => {
           if (prev.find(m => m.id === msgData._id)) return prev;
           
@@ -263,25 +257,29 @@ const ViewTaskDetails = () => {
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
-    });
+    };
 
-    socketRef.current.on('receive_edit_task_message', (msgData) => {
+    const handleReceiveEditTaskMessage = (msgData) => {
        setMessages((prev) =>
           prev.map(m => m.id === msgData._id ? { ...m, message: msgData.content, isEdited: msgData.isEdited } : m)
        );
-    });
+    };
 
-    socketRef.current.on('receive_delete_task_message', (data) => {
+    const handleReceiveDeleteTaskMessage = (data) => {
        setMessages((prev) => prev.filter(m => m.id !== data.messageId));
-    });
+    };
+
+    socket.on('receive_task_message', handleReceiveTaskMessage);
+    socket.on('receive_edit_task_message', handleReceiveEditTaskMessage);
+    socket.on('receive_delete_task_message', handleReceiveDeleteTaskMessage);
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
-       }
+       socket.emit("leaveTaskRoom", taskId);
+       socket.off('receive_task_message', handleReceiveTaskMessage);
+       socket.off('receive_edit_task_message', handleReceiveEditTaskMessage);
+       socket.off('receive_delete_task_message', handleReceiveDeleteTaskMessage);
     };
-  }, [taskId]);
+  }, [taskId, socket]);
 
   const handleChecklistToggle = (itemId) => {
     if (isCompleted) {
@@ -356,6 +354,45 @@ const ViewTaskDetails = () => {
     } catch (error) {
       toast.error("Failed to edit comment");
     }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const toastId = toast.loading("Uploading attachment...");
+    try {
+      const formData = new FormData();
+      formData.append("image", file); // Backend expects "image" field
+
+      const res = await axiosInstance.post(API_PATHS.IMAGE.UPLOAD_IMAGE, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data && res.data.imageUrl) {
+        const updatedAttachments = [...(task.attachments || []), res.data.imageUrl];
+        
+        const updateRes = await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
+          attachments: updatedAttachments
+        });
+
+        if (updateRes.data && updateRes.data.task) {
+          const normalizedAttachments = normalizeAttachments(updateRes.data.task.attachments);
+          setAttachmentFiles(normalizedAttachments);
+          setTask(prev => ({ ...prev, attachments: updateRes.data.task.attachments }));
+          toast.success("Attachment uploaded successfully!", { id: toastId });
+        }
+      }
+    } catch (err) {
+      console.error("Upload error", err);
+      toast.error(err.response?.data?.message || "Failed to upload file.", { id: toastId });
+    }
+    e.target.value = null; // reset input
+  };
+
+  const handleDownloadFile = (url) => {
+    if (!url) return;
+    window.open(url, "_blank");
   };
 
   const handleDeleteDiscussionMessage = async (messageId) => {
@@ -750,6 +787,7 @@ const ViewTaskDetails = () => {
                   </label>
                   <input
                     type="file"
+                    onChange={handleFileUpload}
                     className="
                       w-full
                       bg-[var(--bg-soft)]
@@ -784,6 +822,7 @@ const ViewTaskDetails = () => {
 
                         <button
                           type="button"
+                          onClick={() => handleDownloadFile(file.url)}
                           className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
                         >
                           <HiOutlineArrowDownTray className="text-sm" />

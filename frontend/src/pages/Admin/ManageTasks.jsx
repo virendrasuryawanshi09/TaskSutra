@@ -8,7 +8,7 @@ import TaskStatusTabs from '../../components/TaskStatusTabs';
 import TaskCard from '../../components/Charts/TaskCard';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { io } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
 import TaskDiscussionPanel from '../User/Tasks/TaskDiscussionPanel';
 
 const ManageTasks = () => {
@@ -82,29 +82,25 @@ const ManageTasks = () => {
     getAllTasks();
   }, [filterStatus]);
 
+  const socket = useSocket();
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!socket) return;
+    socketRef.current = socket;
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
-
-    socketRef.current.on("task_sync", () => {
+    const handleTaskSync = () => {
       getAllTasks();
-    });
+    };
+
+    socket.on("task_sync", handleTaskSync);
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
+      socket.off("task_sync", handleTaskSync);
     };
-  }, [filterStatus]);
+  }, [socket, filterStatus]);
 
   useEffect(() => {
-    if (!discussionTask || !socketRef.current) return;
+    if (!discussionTask || !socket) return;
 
     const taskId = discussionTask._id;
     const fetchDiscussion = async () => {
@@ -125,7 +121,7 @@ const ManageTasks = () => {
     };
     fetchDiscussion();
 
-    socketRef.current.emit("joinTaskRoom", taskId);
+    socket.emit("joinTaskRoom", taskId);
 
     const handleReceiveMessage = (msgData) => {
        setDiscussionMessages((prev) => {
@@ -140,13 +136,11 @@ const ManageTasks = () => {
        });
     };
 
-    socketRef.current.on('receive_task_message', handleReceiveMessage);
+    socket.on('receive_task_message', handleReceiveMessage);
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.off('receive_task_message', handleReceiveMessage);
-       }
+       socket.emit("leaveTaskRoom", taskId);
+       socket.off('receive_task_message', handleReceiveMessage);
     };
   }, [discussionTask]);
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useContext } from 'react';
-import { io } from 'socket.io-client';
+import { useSocket } from '../../context/SocketContext';
 import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
@@ -130,21 +130,14 @@ const DirectChat = () => {
   }, [activeChat, user]);
 
   // Socket setup
+  const socket = useSocket();
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token || !user) return;
+    if (!socket || !user) return;
 
-    const socketUrl = "http://localhost:5000";
-    socketRef.current = io(socketUrl, {
-      auth: { token },
-      withCredentials: true,
-    });
+    socketRef.current = socket;
 
-    socketRef.current.on('connect', () => {
-      console.log('Connected to Direct Messaging socket');
-    });
-
-    socketRef.current.on('receive_direct_message', (message) => {
+    const handleReceiveDirectMessage = (message) => {
       const senderId = String(message.sender?._id || message.sender);
       
       // Only append if the message belongs to the current active chat
@@ -188,9 +181,9 @@ const DirectChat = () => {
           }
         });
       }
-    });
+    };
 
-    socketRef.current.on('receive_task_message', (message) => {
+    const handleReceiveTaskMessage = (message) => {
       setMessages((prev) => {
         if (activeChat?.type === 'task' && String(message.discussionId) === String(activeChat.data.discussionId || message.discussionId)) {
           if (prev.find(m => String(m._id) === String(message._id))) return prev;
@@ -198,9 +191,9 @@ const DirectChat = () => {
         }
         return prev;
       });
-    });
+    };
 
-    socketRef.current.on('receive_message', (message) => {
+    const handleReceiveMessage = (message) => {
       setMessages((prev) => {
         if (activeChat?.type === 'community') {
           if (prev.find(m => String(m._id) === String(message._id))) return prev;
@@ -208,114 +201,150 @@ const DirectChat = () => {
         }
         return prev;
       });
-    });
+    };
 
-    socketRef.current.on('userOnline', (data) => {
+    const handleUserOnline = (data) => {
       setOnlineUsers(Object.values(data.onlineUsers || {}));
-    });
+    };
 
-    socketRef.current.on('userOffline', (data) => {
+    const handleUserOffline = (data) => {
       setOnlineUsers(Object.values(data.onlineUsers || {}));
-    });
+    };
 
-    socketRef.current.on('dm_typing', (data) => {
+    const handleDmTyping = (data) => {
       if (activeChat?.type === 'user' && data.senderId === activeChat.data._id) {
          setTypingStatus(`${data.name} is typing...`);
       }
-    });
+    };
 
-    socketRef.current.on('dm_stop_typing', (data) => {
+    const handleDmStopTyping = (data) => {
       if (activeChat?.type === 'user' && data.senderId === activeChat.data._id) {
          setTypingStatus(null);
       }
-    });
+    };
 
-    socketRef.current.on('task_typing', (data) => {
+    const handleTaskTyping = (data) => {
       if (activeChat?.type === 'task' && data.taskId === activeChat.data._id && data.userId !== (user?._id || user?.id)) {
          setTypingStatus(`${data.name} is typing...`);
       }
-    });
+    };
 
-    socketRef.current.on('task_stop_typing', (data) => {
+    const handleTaskStopTyping = (data) => {
       if (activeChat?.type === 'task' && data.taskId === activeChat.data._id) {
          setTypingStatus(null);
       }
-    });
+    };
 
-    socketRef.current.on('typing', (data) => {
+    const handleTyping = (data) => {
       if (activeChat?.type === 'community' && data.userId !== (user?._id || user?.id)) {
          setTypingStatus(`${data.name} is typing...`);
       }
-    });
+    };
 
-    socketRef.current.on('stop_typing', (data) => {
+    const handleStopTyping = (data) => {
       if (activeChat?.type === 'community') {
          setTypingStatus(null);
       }
-    });
+    };
 
-    socketRef.current.on('receive_edit_message', (msgData) => {
+    const handleReceiveEditMessage = (msgData) => {
        if (activeChat?.type === 'community') {
           setMessages(prev => prev.map(m => m._id === msgData._id ? { ...m, content: msgData.content, isEdited: msgData.isEdited } : m));
        }
-    });
+    };
 
-    socketRef.current.on('receive_delete_message', (data) => {
+    const handleReceiveDeleteMessage = (data) => {
        if (activeChat?.type === 'community') {
           setMessages(prev => prev.filter(m => m._id !== data.messageId));
        }
-    });
+    };
 
-    socketRef.current.on('receive_edit_direct_message', (msgData) => {
+    const handleReceiveEditDirectMessage = (msgData) => {
        if (activeChat?.type === 'user') {
           setMessages(prev => prev.map(m => m._id === msgData._id ? { ...m, content: msgData.content, isEdited: msgData.isEdited } : m));
        }
-    });
+    };
 
-    socketRef.current.on('receive_delete_direct_message', (data) => {
+    const handleReceiveDeleteDirectMessage = (data) => {
        if (activeChat?.type === 'user') {
           setMessages(prev => prev.filter(m => m._id !== data.messageId));
        }
-    });
+    };
 
-    socketRef.current.on('receive_edit_task_message', (msgData) => {
+    const handleReceiveEditTaskMessage = (msgData) => {
        if (activeChat?.type === 'task') {
           setMessages(prev => prev.map(m => m._id === msgData._id ? { ...m, content: msgData.content, isEdited: msgData.isEdited } : m));
        }
-    });
+    };
 
-    socketRef.current.on('receive_delete_task_message', (data) => {
+    const handleReceiveDeleteTaskMessage = (data) => {
        if (activeChat?.type === 'task') {
           setMessages(prev => prev.filter(m => m._id !== data.messageId));
        }
-    });
+    };
 
-    socketRef.current.on('messages_seen', (data) => {
+    const handleMessagesSeen = (data) => {
       if (activeChat?.type === 'user' && data.readerId === activeChat.data._id) {
          setMessages(prev => prev.map(m => 
             m.sender?._id === (user?._id || user?.id) ? { ...m, isRead: true } : m
          ));
       }
-    });
+    };
+
+    socket.on('receive_direct_message', handleReceiveDirectMessage);
+    socket.on('receive_task_message', handleReceiveTaskMessage);
+    socket.on('receive_message', handleReceiveMessage);
+    socket.on('userOnline', handleUserOnline);
+    socket.on('userOffline', handleUserOffline);
+    socket.on('dm_typing', handleDmTyping);
+    socket.on('dm_stop_typing', handleDmStopTyping);
+    socket.on('task_typing', handleTaskTyping);
+    socket.on('task_stop_typing', handleTaskStopTyping);
+    socket.on('typing', handleTyping);
+    socket.on('stop_typing', handleStopTyping);
+    socket.on('receive_edit_message', handleReceiveEditMessage);
+    socket.on('receive_delete_message', handleReceiveDeleteMessage);
+    socket.on('receive_edit_direct_message', handleReceiveEditDirectMessage);
+    socket.on('receive_delete_direct_message', handleReceiveDeleteDirectMessage);
+    socket.on('receive_edit_task_message', handleReceiveEditTaskMessage);
+    socket.on('receive_delete_task_message', handleReceiveDeleteTaskMessage);
+    socket.on('messages_seen', handleMessagesSeen);
 
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
+      socket.off('receive_direct_message', handleReceiveDirectMessage);
+      socket.off('receive_task_message', handleReceiveTaskMessage);
+      socket.off('receive_message', handleReceiveMessage);
+      socket.off('userOnline', handleUserOnline);
+      socket.off('userOffline', handleUserOffline);
+      socket.off('dm_typing', handleDmTyping);
+      socket.off('dm_stop_typing', handleDmStopTyping);
+      socket.off('task_typing', handleTaskTyping);
+      socket.off('task_stop_typing', handleTaskStopTyping);
+      socket.off('typing', handleTyping);
+      socket.off('stop_typing', handleStopTyping);
+      socket.off('receive_edit_message', handleReceiveEditMessage);
+      socket.off('receive_delete_message', handleReceiveDeleteMessage);
+      socket.off('receive_edit_direct_message', handleReceiveEditDirectMessage);
+      socket.off('receive_delete_direct_message', handleReceiveDeleteDirectMessage);
+      socket.off('receive_edit_task_message', handleReceiveEditTaskMessage);
+      socket.off('receive_delete_task_message', handleReceiveDeleteTaskMessage);
+      socket.off('messages_seen', handleMessagesSeen);
     };
-  }, [user, activeChat]);
+  }, [socket, user, activeChat]);
 
   // Handle task room join/leave
   useEffect(() => {
-     if (socketRef.current) {
+     if (socket) {
          if (activeChat?.type === 'task') {
-             socketRef.current.emit('joinTaskRoom', activeChat.data._id);
+             socket.emit('joinTaskRoom', activeChat.data._id);
          }
      }
      return () => {
-         if (socketRef.current && activeChat?.type === 'task') {
-             socketRef.current.emit('leaveTaskRoom', activeChat.data._id);
+         if (socket && activeChat?.type === 'task') {
+             socket.emit('leaveTaskRoom', activeChat.data._id);
          }
      };
-  }, [activeChat]);
+  }, [socket, activeChat]);
   const handleContextMenu = (e, msg, isMe) => {
     e.preventDefault();
     if (window.innerWidth < 1024) return;

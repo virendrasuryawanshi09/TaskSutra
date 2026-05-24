@@ -3,7 +3,7 @@ import SideMenu from "./SideMenu";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
-import { io } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
 import { LuBell, LuTrash2, LuCheck, LuCheckCheck } from "react-icons/lu";
 import axiosInstance from "../../utils/axiosInstance";
 import toast from "react-hot-toast";
@@ -14,7 +14,7 @@ const Navbar = () => {
 
     const [notifications, setNotifications] = useState([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const socketRef = useRef(null);
+    const socket = useSocket();
     const dropdownRef = useRef(null);
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -31,28 +31,21 @@ const Navbar = () => {
     };
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
         fetchNotifications();
 
-        socketRef.current = io("http://localhost:5000", {
-            auth: { token },
-            withCredentials: true,
-        });
+        if (!socket) return;
 
-        socketRef.current.on("new_notification", (newNotif) => {
+        const handleNewNotification = (newNotif) => {
             setNotifications((prev) => [newNotif, ...prev]);
             toast.success(`Notification: ${newNotif.title}`);
-        });
+        };
+
+        socket.on("new_notification", handleNewNotification);
 
         return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-            }
+            socket.off("new_notification", handleNewNotification);
         };
-    }, []);
+    }, [socket]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {

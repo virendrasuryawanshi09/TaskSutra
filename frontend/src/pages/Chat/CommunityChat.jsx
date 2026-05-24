@@ -3,7 +3,7 @@ import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
 import { LuHash, LuMessageSquare, LuSend, LuMenu, LuX } from 'react-icons/lu';
-import { io } from 'socket.io-client';
+import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
 const CommunityChat = () => {
@@ -80,34 +80,31 @@ const CommunityChat = () => {
   }, [user]);
 
   // Setup Socket for online tracking
+  const socket = useSocket();
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!socket) return;
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
+    socketRef.current = socket;
 
-    socketRef.current.on('userOnline', (data) => {
+    const handleUserOnline = (data) => {
       setOnlineUsers(Object.values(data.onlineUsers || {}));
-    });
+    };
 
-    socketRef.current.on('userOffline', (data) => {
+    const handleUserOffline = (data) => {
       setOnlineUsers(Object.values(data.onlineUsers || {}));
-    });
+    };
 
-    // Handle Incoming Messages
-    socketRef.current.on('receive_message', (message) => {
+    const handleReceiveMessage = (message) => {
        if (chatModeRef.current === 'community') {
           setMessages(prev => {
              if (prev.find(m => m._id === message._id)) return prev;
              return [...prev, message];
           });
        }
-    });
+    };
 
-    socketRef.current.on('receive_direct_message', (message) => {
+    const handleReceiveDirectMessage = (message) => {
        const senderId = String(message.sender?._id || message.sender);
        const senderName = message.sender?.name || 'A colleague';
        const currentActiveId = String(activeChatIdRef.current);
@@ -164,9 +161,9 @@ const CommunityChat = () => {
              }
           });
        }
-    });
+    };
 
-    socketRef.current.on('receive_task_message', (msgData) => {
+    const handleReceiveTaskMessage = (msgData) => {
        if (chatModeRef.current === 'task') {
           setMessages(prev => {
              if (prev.find(m => m._id === msgData._id)) return prev;
@@ -187,24 +184,34 @@ const CommunityChat = () => {
             </div>
           ), { duration: 4000, position: 'bottom-right' });
        }
-    });
+    };
+
+    socket.on('userOnline', handleUserOnline);
+    socket.on('userOffline', handleUserOffline);
+    socket.on('receive_message', handleReceiveMessage);
+    socket.on('receive_direct_message', handleReceiveDirectMessage);
+    socket.on('receive_task_message', handleReceiveTaskMessage);
 
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
+      socket.off('userOnline', handleUserOnline);
+      socket.off('userOffline', handleUserOffline);
+      socket.off('receive_message', handleReceiveMessage);
+      socket.off('receive_direct_message', handleReceiveDirectMessage);
+      socket.off('receive_task_message', handleReceiveTaskMessage);
     };
-  }, []);
+  }, [socket]);
 
   // Manage Task Rooms Connection
   useEffect(() => {
-     if (chatMode === 'task' && socketRef.current) {
-        socketRef.current.emit('joinTaskRoom', activeChatId);
+     if (chatMode === 'task' && socket) {
+        socket.emit('joinTaskRoom', activeChatId);
      }
      return () => {
-        if (chatMode === 'task' && socketRef.current) {
-           socketRef.current.emit('leaveTaskRoom', activeChatId);
+        if (chatMode === 'task' && socket) {
+           socket.emit('leaveTaskRoom', activeChatId);
         }
      };
-  }, [chatMode, activeChatId]);
+  }, [chatMode, activeChatId, socket]);
 
   // Sort users by recent direct chat activity
   const sortedUsers = [...users].sort((a, b) => {

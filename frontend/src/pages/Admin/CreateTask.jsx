@@ -15,7 +15,7 @@ import TodoListInput from "../../components/input/TodoListInput";
 import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 import DeleteAlert from "../../components/DeleteAlert";
 import { LuMessageSquare } from "react-icons/lu";
-import { io } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
 import TaskDiscussionPanel from "../User/Tasks/TaskDiscussionPanel";
 
 const CreateTask = () => {
@@ -43,25 +43,15 @@ const CreateTask = () => {
   const [messages, setMessages] = useState([]);
   const socketRef = React.useRef(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, []);
+  const socket = useSocket();
 
   useEffect(() => {
-    if (!taskId || !socketRef.current) return;
+    if (!socket) return;
+    socketRef.current = socket;
+  }, [socket]);
+
+  useEffect(() => {
+    if (!taskId || !socket) return;
 
     const fetchDiscussion = async () => {
       try {
@@ -81,7 +71,7 @@ const CreateTask = () => {
     };
     fetchDiscussion();
 
-    socketRef.current.emit("joinTaskRoom", taskId);
+    socket.emit("joinTaskRoom", taskId);
 
     const handleReceiveMessage = (msgData) => {
        setMessages((prev) => {
@@ -96,16 +86,14 @@ const CreateTask = () => {
        });
     };
 
-    socketRef.current.on('receive_task_message', handleReceiveMessage);
+    socket.on('receive_task_message', handleReceiveMessage);
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.off('receive_task_message', handleReceiveMessage);
-       }
+       socket.emit("leaveTaskRoom", taskId);
+       socket.off('receive_task_message', handleReceiveMessage);
        setMessages([]);
     };
-  }, [taskId]);
+  }, [taskId, socket]);
 
   const handleSendMessage = async () => {
     const trimmedMessage = queryInput.trim();

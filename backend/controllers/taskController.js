@@ -38,8 +38,10 @@ const getTasks = async (req, res) => {
 
         let tasks;
 
-        // Admin can see all tasks
-        if (req.user.role === 'admin') {
+        const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
+
+        // Admin/CEO can see all tasks
+        if (hasFullAccess) {
             tasks = await Task.find(filter).populate(
                 'assignedTo',
                 'name email profileImageUrl'
@@ -72,7 +74,7 @@ const getTasks = async (req, res) => {
 
         // Count all tasks
         const allTasks = await Task.countDocuments(
-            req.user.role === 'admin'
+            hasFullAccess
                 ? {}
                 : { assignedTo: req.user._id }
         );
@@ -80,19 +82,19 @@ const getTasks = async (req, res) => {
         // Pending tasks
         const pendingTasks = await Task.countDocuments({
             status: 'Pending',
-            ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
+            ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
         // In-progress tasks
         const inProgressTasks = await Task.countDocuments({
             status: 'In-progress',
-            ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
+            ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
         // Completed tasks
         const completedTasks = await Task.countDocuments({
             status: 'Completed',
-            ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
+            ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
         res.json({
@@ -184,6 +186,16 @@ const updateTask = async (req, res) => {
         const task = await Task.findById(req.params.id);
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        const isAssigned = task.assignedTo.some(
+            (userId) => userId.toString() === req.user._id.toString()
+        );
+        const isCreator = task.createdBy && task.createdBy.toString() === req.user._id.toString();
+        const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
+
+        if (!isAssigned && !isCreator && !hasFullAccess) {
+            return res.status(403).json({ message: 'You are not authorized to update this task' });
         }
 
         const io = req.app.get("io");
@@ -312,7 +324,8 @@ const updateTaskChecklist = async (req, res) => {
         const isAssigned = task.assignedTo.some(
             (userId) => userId.toString() === req.user._id.toString()
         );
-        if (!isAssigned && req.user.role !== 'admin') {
+        const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
+        if (!isAssigned && !hasFullAccess) {
             return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
         }
 
@@ -520,8 +533,9 @@ const updateTaskStatus = async (req, res) => {
         const isAssigned = task.assignedTo.some(
             (userId) => userId.toString() === req.user._id.toString()
         );
+        const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
 
-        if (!isAssigned && req.user.role !== 'admin') {
+        if (!isAssigned && !hasFullAccess) {
             return res.status(403).json({ message: 'You are not authorized to update this task status' });
         }
 
@@ -570,10 +584,7 @@ const updateTaskStatus = async (req, res) => {
 };
 
 const updateTaskTodos = async (req, res) => {
-    try {
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
+    return updateTaskChecklist(req, res);
 };
 
 module.exports = {

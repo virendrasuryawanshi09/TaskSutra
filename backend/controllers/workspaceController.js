@@ -4,6 +4,7 @@ const Invitation = require("../models/Invitation");
 const User = require("../models/User");
 const dns = require("dns");
 const crypto = require("crypto");
+const { sendInviteEmail } = require("../services/mailService");
 
 /**
  * Exposes controllers for enterprise workspace membership actions
@@ -125,6 +126,11 @@ const createInvitation = async (req, res) => {
       return res.status(400).json({ success: false, message: "A pending invitation already exists for this email" });
     }
 
+    const company = await Company.findById(req.user.companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Associated workspace company not found" });
+    }
+
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -136,12 +142,19 @@ const createInvitation = async (req, res) => {
     });
 
     const inviteLink = `http://localhost:5173/signup?token=${token}`;
-    console.log(`\n[DEMO INVITE] Generated 10-minute invitation for ${email}:\nLink: ${inviteLink}\n`);
+    
+    // Dispatch invite email
+    const senderName = req.user.name || req.user.email;
+    const emailResult = await sendInviteEmail(email, inviteLink, company.name, senderName);
 
     res.status(201).json({
       success: true,
-      message: "Invitation created successfully",
+      message: emailResult.nodemailerMissing 
+        ? "Invitation generated, but nodemailer was not installed. Check console fallback."
+        : "Invitation link sent to member email successfully",
       inviteLink,
+      previewUrl: emailResult?.previewUrl || null,
+      nodemailerMissing: !!emailResult.nodemailerMissing,
       expiresAt
     });
   } catch (error) {
@@ -188,6 +201,7 @@ const addWorkspaceMember = async (req, res) => {
       role,
       title,
       company,
+      companyId: req.user.companyId,
       skills,
     });
 
@@ -290,6 +304,10 @@ const createCompany = async (req, res) => {
     }
 
     const cleanDomain = domain.trim().toLowerCase();
+    const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'zoho.com', 'protonmail.com', 'mail.com'];
+    if (publicDomains.includes(cleanDomain) && process.env.NODE_ENV === 'production') {
+      return res.status(400).json({ success: false, message: "Registering a workspace under a public email domain is not permitted" });
+    }
 
     // Check if domain is already registered
     const existingCompany = await Company.findOne({ domain: cleanDomain });

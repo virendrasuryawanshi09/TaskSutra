@@ -11,7 +11,7 @@ export const getErrorMessage = (
 ) => error?.response?.data?.message || error?.message || fallback;
 
 export const getDashboardRoute = (role) => {
-  return role === "admin" ? "/admin/dashboard" : "/user/dashboard";
+  return (role === "admin" || role === "ceo") ? "/admin/dashboard" : "/user/dashboard";
 };
 
 export const persistAuthSession = ({ token, user, role }) => {

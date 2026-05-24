@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 /**
  * Service to handle enterprise workspace member operations
  */
-const addMember = async ({ name, email, password, role, title, company, skills }) => {
+const addMember = async ({ name, email, password, role, title, company, companyId, skills }) => {
   const userExists = await User.findOne({ email });
   if (userExists) {
     throw new Error("User already exists with this email");
@@ -21,6 +21,7 @@ const addMember = async ({ name, email, password, role, title, company, skills }
     role: role || "member",
     title: title || "",
     company: company || "",
+    companyId: companyId || null,
     skills: skills || [],
   });
 

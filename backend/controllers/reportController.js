@@ -519,7 +519,8 @@ const sendWorkbook = async (res, workbook, filename) => {
 
 const exportTasksReport = async (req, res) => {
     try {
-        const tasks = await Task.find()
+        const companyId = req.user.companyId || new mongoose.Types.ObjectId();
+        const tasks = await Task.find({ companyId })
             .populate("assignedTo", "name email")
             .populate("createdBy", "name email");
 

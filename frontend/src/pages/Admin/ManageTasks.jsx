@@ -8,7 +8,7 @@ import TaskStatusTabs from '../../components/TaskStatusTabs';
 import TaskCard from '../../components/Charts/TaskCard';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { io } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
 import TaskDiscussionPanel from '../User/Tasks/TaskDiscussionPanel';
 
 const ManageTasks = () => {
@@ -82,14 +82,25 @@ const ManageTasks = () => {
     getAllTasks();
   }, [filterStatus]);
 
+  const socket = useSocket();
+
   useEffect(() => {
-    if (!discussionTask) {
-      if (socketRef.current) {
-         socketRef.current.disconnect();
-         socketRef.current = null;
-      }
-      return;
-    }
+    if (!socket) return;
+    socketRef.current = socket;
+
+    const handleTaskSync = () => {
+      getAllTasks();
+    };
+
+    socket.on("task_sync", handleTaskSync);
+
+    return () => {
+      socket.off("task_sync", handleTaskSync);
+    };
+  }, [socket, filterStatus]);
+
+  useEffect(() => {
+    if (!discussionTask || !socket) return;
 
     const taskId = discussionTask._id;
     const fetchDiscussion = async () => {
@@ -110,37 +121,26 @@ const ManageTasks = () => {
     };
     fetchDiscussion();
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    socket.emit("joinTaskRoom", taskId);
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
+    const handleReceiveMessage = (msgData) => {
+      setDiscussionMessages((prev) => {
+        if (prev.find(m => m.id === msgData._id)) return prev;
 
-    socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
-    });
+        return [...prev, {
+          id: msgData._id,
+          user: msgData.sender?.name || "Team Member",
+          message: msgData.content,
+          timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }];
+      });
+    };
 
-    socketRef.current.on('receive_task_message', (msgData) => {
-       setDiscussionMessages((prev) => {
-          if (prev.find(m => m.id === msgData._id)) return prev;
-          
-          return [...prev, {
-            id: msgData._id,
-            user: msgData.sender?.name || "Team Member",
-            message: msgData.content,
-            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }];
-       });
-    });
+    socket.on('receive_task_message', handleReceiveMessage);
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
-           socketRef.current = null;
-       }
+      socket.emit("leaveTaskRoom", taskId);
+      socket.off('receive_task_message', handleReceiveMessage);
     };
   }, [discussionTask]);
 
@@ -153,25 +153,25 @@ const ManageTasks = () => {
       const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
         content: trimmedMessage
       });
-      
+
       const savedMessage = response.data.message;
-      
+
       const newMsg = {
-         id: savedMessage._id,
-         user: "You",
-         message: savedMessage.content,
-         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        id: savedMessage._id,
+        user: "You",
+        message: savedMessage.content,
+        timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      
+
       setDiscussionMessages((currentMessages) => [...currentMessages, newMsg]);
-      
+
       if (socketRef.current) {
         socketRef.current.emit("send_task_message", {
-           taskId,
-           messageData: savedMessage
+          taskId,
+          messageData: savedMessage
         });
       }
-      
+
       setDiscussionInput("");
     } catch (error) {
       toast.error("Failed to send message.");
@@ -191,7 +191,7 @@ const ManageTasks = () => {
 
         <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
 
-        {/* 🔥 HEADER */}
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
 
           <div>
@@ -231,7 +231,7 @@ const ManageTasks = () => {
 
         </div>
 
-        {/* 🔥 TABS */}
+
         <div className="mb-6 -mx-2 px-2">
           <TaskStatusTabs
             tabs={tabs}
@@ -240,10 +240,10 @@ const ManageTasks = () => {
           />
         </div>
 
-        {/* 🔥 DIVIDER (SUBTLE PREMIUM TOUCH) */}
+
         <div className="h-px bg-[var(--border)] mb-6 opacity-60" />
 
-        {/* 🔥 CONTENT */}
+
         {allTasks.length === 0 ? (
           <div className="
             flex flex-col items-center justify-center
@@ -292,7 +292,7 @@ const ManageTasks = () => {
         )}
 
       </div>
-      
+
       <TaskDiscussionPanel
         task={discussionTask}
         isOpen={Boolean(discussionTask)}

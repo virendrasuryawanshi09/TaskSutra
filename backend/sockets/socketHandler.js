@@ -155,6 +155,19 @@ module.exports = (io) => {
              io.to(`task_${taskId}`).emit("receive_delete_task_message", { messageId });
         });
 
+        // --- Task Synchronization Events ---
+        socket.on("task_updated", (taskData) => {
+             socket.broadcast.emit("task_sync", { action: "update", task: taskData });
+        });
+
+        socket.on("task_created", (taskData) => {
+             socket.broadcast.emit("task_sync", { action: "create", task: taskData });
+        });
+
+        socket.on("task_deleted", (taskId) => {
+             socket.broadcast.emit("task_sync", { action: "delete", taskId });
+        });
+
         socket.on("error", (error) => {
             console.error(`Socket error for ${socket.id}:`, error);
         });

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
-// ── Animated counter ──────────────────────────────────────────────────────────
+
 const useCountUp = (target = 0, duration = 900) => {
   const [count, setCount] = useState(0);
   const rafRef = useRef(null);
@@ -26,7 +26,7 @@ const useCountUp = (target = 0, duration = 900) => {
   return count;
 };
 
-// ── SVG ring progress ─────────────────────────────────────────────────────────
+
 const Ring = ({ pct = 0, color, size = 52, stroke = 4 }) => {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
@@ -58,7 +58,7 @@ const Ring = ({ pct = 0, color, size = 52, stroke = 4 }) => {
   );
 };
 
-// ── Single stat card ──────────────────────────────────────────────────────────
+
 const StatCard = ({ label, value = 0, total = 0, icon: Icon, color, accentBg, delay = 0 }) => {
   const animatedValue = useCountUp(value, 900);
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;

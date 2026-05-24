@@ -44,7 +44,8 @@ const registerUser = async (req, res) => {
         } else {
             // Auto-join via domain check fallback
             const emailDomain = email.split('@')[1]?.toLowerCase();
-            if (emailDomain) {
+            const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'zoho.com', 'protonmail.com', 'mail.com'];
+            if (emailDomain && !publicDomains.includes(emailDomain)) {
                 const matchingCompany = await Company.findOne({ domain: emailDomain, isVerified: true });
                 if (matchingCompany) {
                     companyId = matchingCompany._id;

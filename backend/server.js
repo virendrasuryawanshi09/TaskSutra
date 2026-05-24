@@ -15,6 +15,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const directChatRoutes = require("./routes/directChatRoutes");
 const taskDiscussionRoutes = require("./routes/taskDiscussionRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -29,6 +30,7 @@ const io = new Server(server, {
 
 // Initialize socket handler
 socketHandler(io);
+app.set("io", io);
 
 app.use(
   cors({
@@ -65,8 +67,20 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/direct-chats", directChatRoutes);
 app.use("/api/task-discussions", taskDiscussionRoutes);
 app.use("/api/workspace", workspaceRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+    console.error("Unhandled Error:", err);
+    res.status(err.status || err.statusCode || 500).json({
+        success: false,
+        message: err.message || "An internal server error occurred",
+        ...(process.env.NODE_ENV === "development" && { error: err.stack })
+    });
+});
+
 
 
 const PORT = process.env.PORT || 5000;

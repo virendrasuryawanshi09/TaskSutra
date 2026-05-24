@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { UserContext } from "../../../context/UserContextState";
@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import MyTasksWorkspace from "./components/MyTasksWorkspace";
 import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
 import TaskDiscussionPanel from "../Tasks/TaskDiscussionPanel";
-import { io } from "socket.io-client";
+import { useSocket } from "../../../context/SocketContext";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -35,7 +35,7 @@ const MyTasksPage = () => {
   const [draggedTaskId, setDraggedTaskId] = useState("");
   const [discussionMessages, setDiscussionMessages] = useState([]);
   const [discussionInput, setDiscussionInput] = useState("");
-  const socketRef = useRef(null);
+  const socket = useSocket();
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -120,7 +120,34 @@ const MyTasksPage = () => {
   }, [user?.taskOrder, tasks]);
 
   useEffect(() => {
-    if (!discussionTask) return;
+    if (!socket) return;
+
+    const handleTaskSync = ({ action, task, taskId }) => {
+      if (action === "create") {
+        setTasks((prev) => {
+          const id = task._id || task.id;
+          if (prev.some((t) => (t._id || t.id) === id)) return prev;
+          return [task, ...prev];
+        });
+      } else if (action === "update") {
+        setTasks((prev) => {
+          const id = task._id || task.id;
+          return prev.map((t) => ((t._id || t.id) === id ? task : t));
+        });
+      } else if (action === "delete") {
+        setTasks((prev) => prev.filter((t) => (t._id || t.id) !== taskId));
+      }
+    };
+
+    socket.on("task_sync", handleTaskSync);
+
+    return () => {
+      socket.off("task_sync", handleTaskSync);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!discussionTask || !socket) return;
     
     const taskId = discussionTask.id || discussionTask._id;
 
@@ -144,19 +171,9 @@ const MyTasksPage = () => {
     };
     fetchDiscussion();
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    socket.emit("joinTaskRoom", taskId);
 
-    socketRef.current = io("http://localhost:5000", {
-      auth: { token },
-      withCredentials: true,
-    });
-
-    socketRef.current.on('connect', () => {
-       socketRef.current.emit("joinTaskRoom", taskId);
-    });
-
-    socketRef.current.on('receive_task_message', (msgData) => {
+    const handleReceiveMessage = (msgData) => {
        setDiscussionMessages((prev) => {
           if (prev.find(m => m.id === msgData._id)) return prev;
           
@@ -169,27 +186,31 @@ const MyTasksPage = () => {
             timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }];
        });
-    });
+    };
 
-    socketRef.current.on('receive_edit_task_message', (msgData) => {
+    const handleEditMessage = (msgData) => {
        setDiscussionMessages((prev) =>
           prev.map(m => m.id === msgData._id ? { ...m, message: msgData.content, isEdited: msgData.isEdited } : m)
        );
-    });
+    };
 
-    socketRef.current.on('receive_delete_task_message', (data) => {
+    const handleDeleteMessage = (data) => {
        setDiscussionMessages((prev) => prev.filter(m => m.id !== data.messageId));
-    });
+    };
+
+    socket.on('receive_task_message', handleReceiveMessage);
+    socket.on('receive_edit_task_message', handleEditMessage);
+    socket.on('receive_delete_task_message', handleDeleteMessage);
 
     return () => {
-       if (socketRef.current) {
-           socketRef.current.emit("leaveTaskRoom", taskId);
-           socketRef.current.disconnect();
-       }
+       socket.emit("leaveTaskRoom", taskId);
+       socket.off('receive_task_message', handleReceiveMessage);
+       socket.off('receive_edit_task_message', handleEditMessage);
+       socket.off('receive_delete_task_message', handleDeleteMessage);
        setDiscussionMessages([]);
        setDiscussionInput("");
     };
-  }, [discussionTask]);
+  }, [discussionTask, socket]);
 
   const taskViewModel = useMemo(
     () => {
@@ -245,8 +266,8 @@ const MyTasksPage = () => {
       setDiscussionMessages(prev => [...prev, newMsg]);
       setDiscussionInput("");
       
-      if (socketRef.current) {
-        socketRef.current.emit("send_task_message", {
+      if (socket) {
+        socket.emit("send_task_message", {
           taskId,
           messageData: savedMessage
         });
@@ -269,8 +290,8 @@ const MyTasksPage = () => {
         isEdited: true
       } : m));
 
-      if (socketRef.current) {
-        socketRef.current.emit("edit_task_message", {
+      if (socket) {
+        socket.emit("edit_task_message", {
           taskId: discussionTask.id || discussionTask._id,
           messageData: updatedMessage
         });
@@ -287,8 +308,8 @@ const MyTasksPage = () => {
 
       setDiscussionMessages(prev => prev.filter(m => m.id !== messageId));
 
-      if (socketRef.current) {
-        socketRef.current.emit("delete_task_message", {
+      if (socket) {
+        socket.emit("delete_task_message", {
           taskId: discussionTask.id || discussionTask._id,
           messageId
         });
@@ -337,6 +358,9 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+        if (socket) {
+          socket.emit("task_updated", updatedTask);
+        }
       }
 
       toast.success("Status updated.");
@@ -375,6 +399,9 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+        if (socket) {
+          socket.emit("task_updated", updatedTask);
+        }
       }
 
       toast.success("Priority updated.");
@@ -411,6 +438,9 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+        if (socket) {
+          socket.emit("task_updated", updatedTask);
+        }
       }
 
       toast.success("Due date updated.");

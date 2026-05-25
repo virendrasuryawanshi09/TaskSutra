@@ -86,8 +86,13 @@ const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => 
     </div>
   `;
 
+  // For Gmail/SMTP compatibility, compile a friendly display name pointing to the system SMTP address
+  const senderFriendlyName = `${senderName} via TaskSutra`;
+  const systemEmail = process.env.SMTP_USER || "invites@tasksutra.com";
+  const fromEmail = `"${senderFriendlyName}" <${systemEmail}>`;
+
   const mailOptions = {
-    from: process.env.SMTP_FROM || `"TaskSutra" <invites@tasksutra.com>`,
+    from: fromEmail,
     to: toEmail,
     subject: `Join ${companyName} on TaskSutra`,
     html: htmlContent,

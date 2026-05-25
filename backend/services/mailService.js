@@ -48,39 +48,69 @@ const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => 
   }
 
   const htmlContent = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f6f9fc; padding: 40px 20px; text-align: center; color: #333;">
-      <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <!-- Top branding bar -->
-        <div style="background-color: #1f6f78; padding: 25px; color: #ffffff; font-size: 24px; font-weight: bold; letter-spacing: 1px; text-align: center;">
-          TaskSutra
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #fafafa; padding: 48px 24px; color: #171717; line-height: 1.6;">
+      <div style="max-width: 540px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);">
+        
+        <!-- Premium Branding Header -->
+        <div style="padding: 32px 40px 16px 40px; border-bottom: 1px solid #f5f5f5; text-align: left;">
+          <span style="font-size: 20px; font-weight: 800; tracking-tight: -0.03em; color: #0f172a; font-family: sans-serif;">
+            Task<span style="color: #1f6f78;">Sutra</span>
+          </span>
         </div>
-        <div style="padding: 40px 30px; text-align: left;">
-          <h2 style="color: #1a202c; font-size: 20px; font-weight: 700; margin-top: 0;">You've been invited!</h2>
-          <p style="font-size: 15px; color: #4a5568; line-height: 1.6; margin-bottom: 24px;">
-            Hi there,
+        
+        <!-- Main Email Body -->
+        <div style="padding: 32px 40px;">
+          <p style="font-size: 14px; color: #404040; margin-bottom: 20px; font-weight: 500;">
+            Hello,
           </p>
-          <p style="font-size: 15px; color: #4a5568; line-height: 1.6; margin-bottom: 24px;">
-            <strong>${senderName}</strong> has invited you to join the <strong>${companyName}</strong> workspace on TaskSutra, a premium project management console.
+          
+          <p style="font-size: 14px; color: #404040; margin-bottom: 20px; line-height: 1.6;">
+            You have been invited to join the workspace <strong>"${companyName}"</strong> on Tasksutra.
+          </p>
+          
+          <p style="font-size: 14px; color: #404040; margin-bottom: 24px; line-height: 1.6;">
+            Tasksutra helps teams collaborate efficiently through project management, task tracking, communication, and workflow organization in one unified workspace.
+          </p>
+          
+          <p style="font-size: 14px; color: #404040; margin-bottom: 12px; font-weight: 600;">
+            By joining this workspace, you will be able to:
+          </p>
+          <ul style="font-size: 14px; color: #404040; margin-bottom: 24px; padding-left: 20px; list-style-type: disc; line-height: 1.6;">
+            <li style="margin-bottom: 6px;">Access assigned projects and tasks</li>
+            <li style="margin-bottom: 6px;">Collaborate with your team members</li>
+            <li style="margin-bottom: 6px;">Track progress and updates</li>
+            <li style="margin-bottom: 6px;">Participate in your organization’s workflow system</li>
+          </ul>
+          
+          <p style="font-size: 14px; color: #404040; margin-bottom: 20px;">
+            To accept this invitation, click the secure link below:
           </p>
           
           <!-- Call to Action Button -->
-          <div style="text-align: center; margin: 35px 0;">
-            <a href="${inviteLink}" style="background-color: #1f6f78; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-size: 15px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px -1px rgba(31,111,120,0.2);">
-              Join Workspace
+          <div style="margin: 24px 0;">
+            <a href="${inviteLink}" style="background-color: #0f172a; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 13px; font-weight: 600; display: inline-block; transition: background-color 0.2s ease; border: 1px solid #0f172a; text-align: center;">
+              Accept Invitation
             </a>
           </div>
           
-          <p style="font-size: 13px; color: #718096; line-height: 1.5; margin-bottom: 20px;">
-            Please note: This invite link is private to you and will expire in exactly <strong>10 minutes</strong>.
+          <div style="font-size: 12px; color: #737373; margin-top: 32px; line-height: 1.6; border-left: 2px solid #e5e5e5; padding-left: 12px;">
+            <span style="font-weight: 600; display: block; margin-bottom: 4px;">Please note:</span>
+            &bull; This invitation link will expire in 10 minutes for security purposes.<br />
+            &bull; If you were not expecting this invitation, you may safely ignore this email.
+          </div>
+          
+          <hr style="border: 0; border-top: 1px solid #f5f5f5; margin: 28px 0;" />
+          
+          <p style="font-size: 13px; color: #404040; line-height: 1.6; margin-bottom: 0;">
+            Best regards,<br />
+            <strong>${companyName} Team</strong><br />
+            <span style="font-size: 11px; color: #737373;">Powered by Tasksutra</span>
           </p>
-          <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 25px 0;" />
-          <p style="font-size: 12px; color: #a0aec0; line-height: 1.5; margin-bottom: 0;">
-            If the button above does not work, copy and paste this URL into your browser:<br />
-            <a href="${inviteLink}" style="color: #1f6f78; word-break: break-all;">${inviteLink}</a>
+
+          <p style="font-size: 11px; color: #a3a3a3; word-break: break-all; margin-top: 28px; margin-bottom: 0;">
+            If the button doesn't work, copy and paste this URL into your browser:<br />
+            <a href="${inviteLink}" style="color: #1f6f78; text-decoration: none;">${inviteLink}</a>
           </p>
-        </div>
-        <div style="background-color: #f7fafc; padding: 20px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7;">
-          TaskSutra Enterprise Console &bull; B2B Teamwork Accelerated
         </div>
       </div>
     </div>
@@ -94,7 +124,7 @@ const sendInviteEmail = async (toEmail, inviteLink, companyName, senderName) => 
   const mailOptions = {
     from: fromEmail,
     to: toEmail,
-    subject: `Join ${companyName} on TaskSutra`,
+    subject: `[TaskSutra] Collaboration invite for ${companyName} from ${senderName}`,
     html: htmlContent,
   };
 

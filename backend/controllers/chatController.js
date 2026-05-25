@@ -3,8 +3,8 @@ const Message = require("../models/Message");
 // Get all messages
 exports.getMessages = async (req, res) => {
   try {
-    const messages = await Message.find()
-      .populate("sender", "name email role profilePicture")
+    const messages = await Message.find({ companyId: req.user.companyId })
+      .populate("sender", "name email role profileImageUrl")
       .sort({ createdAt: 1 }); // Sort by creation time ascending
     res.status(200).json(messages);
   } catch (error) {
@@ -23,6 +23,7 @@ exports.sendMessage = async (req, res) => {
 
     const newMessage = new Message({
       sender: req.user.id || req.user._id,
+      companyId: req.user.companyId,
       content,
     });
 
@@ -30,7 +31,7 @@ exports.sendMessage = async (req, res) => {
 
     const populatedMessage = await Message.findById(newMessage._id).populate(
       "sender",
-      "name email role profilePicture"
+      "name email role profileImageUrl"
     );
 
     res.status(201).json(populatedMessage);
@@ -67,7 +68,7 @@ exports.editMessage = async (req, res) => {
 
     const populatedMessage = await Message.findById(message._id).populate(
       "sender",
-      "name email role profilePicture"
+      "name email role profileImageUrl"
     );
 
     res.status(200).json(populatedMessage);

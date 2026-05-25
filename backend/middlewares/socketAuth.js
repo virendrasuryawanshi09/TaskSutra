@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const socketAuth = (socket, next) => {
+const socketAuth = async (socket, next) => {
     try {
         // Token can be passed in auth or query
         const token = socket.handshake.auth.token || socket.handshake.query.token;
@@ -10,7 +11,11 @@ const socketAuth = (socket, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.user = decoded; // Attach user info to socket
+        const user = await User.findById(decoded.id).select("-password");
+        if (!user) {
+            return next(new Error("Authentication error: User no longer exists"));
+        }
+        socket.user = user; // Attach user info to socket
         next();
     } catch (error) {
         console.error("Socket authentication error:", error.message);

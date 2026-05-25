@@ -36,6 +36,10 @@ const getTasks = async (req, res) => {
             filter.status = status;
         }
 
+        // Enforce company boundary isolation
+        const companyId = req.user.companyId;
+        filter.companyId = companyId;
+
         let tasks;
 
         const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
@@ -75,25 +79,28 @@ const getTasks = async (req, res) => {
         // Count all tasks
         const allTasks = await Task.countDocuments(
             hasFullAccess
-                ? {}
-                : { assignedTo: req.user._id }
+                ? { companyId }
+                : { companyId, assignedTo: req.user._id }
         );
 
         // Pending tasks
         const pendingTasks = await Task.countDocuments({
             status: 'Pending',
+            companyId,
             ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
         // In-progress tasks
         const inProgressTasks = await Task.countDocuments({
             status: 'In-progress',
+            companyId,
             ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
         // Completed tasks
         const completedTasks = await Task.countDocuments({
             status: 'Completed',
+            companyId,
             ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
@@ -124,6 +131,12 @@ const getTaskById = async (req, res) => {
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
+
+        // Enforce company boundary isolation
+        if (String(task.companyId || '') !== String(req.user.companyId || '')) {
+            return res.status(403).json({ message: 'You are not authorized to view this task' });
+        }
+
         res.json(task);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -152,6 +165,7 @@ const createTask = async (req, res) => {
             dueDate,
             assignedTo,
             createdBy: req.user._id,
+            companyId: req.user.companyId,
             todoChecklist: Array.isArray(todoCheckList) ? todoCheckList : [],
             attachments,
         });
@@ -186,6 +200,11 @@ const updateTask = async (req, res) => {
         const task = await Task.findById(req.params.id);
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Enforce company boundary isolation
+        if (String(task.companyId || '') !== String(req.user.companyId || '')) {
+            return res.status(403).json({ message: 'You are not authorized to update this task' });
         }
 
         const isAssigned = task.assignedTo.some(
@@ -288,6 +307,11 @@ const deleteTask = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
+        // Enforce company boundary isolation
+        if (String(task.companyId || '') !== String(req.user.companyId || '')) {
+            return res.status(403).json({ message: 'You are not authorized to delete this task' });
+        }
+
         const io = req.app.get("io");
         const assignedUsers = task.assignedTo.map(id => id.toString());
         const taskTitle = task.title;
@@ -319,6 +343,11 @@ const updateTaskChecklist = async (req, res) => {
 
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Enforce company boundary isolation
+        if (String(task.companyId || '') !== String(req.user.companyId || '')) {
+            return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
         }
 
         const isAssigned = task.assignedTo.some(
@@ -384,16 +413,19 @@ const updateTaskChecklist = async (req, res) => {
 
 const getDashboardData = async (req, res) => {
     try {
-        const totalTasks = await Task.countDocuments();
-        const pendingTasks = await Task.countDocuments({ status: "Pending" });
-        const completedTasks = await Task.countDocuments({ status: "Completed" });
+        const companyId = req.user.companyId;
+        const totalTasks = await Task.countDocuments({ companyId });
+        const pendingTasks = await Task.countDocuments({ companyId, status: "Pending" });
+        const completedTasks = await Task.countDocuments({ companyId, status: "Completed" });
         const overdueTasks = await Task.countDocuments({
+            companyId,
             status: { $ne: "Completed" },
             dueDate: { $lt: new Date() }
         });
 
         const taskStatuses = ["Pending", "In-progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
+            { $match: { companyId } },
             {
                 $group: {
                     _id: "$status",
@@ -412,6 +444,7 @@ const getDashboardData = async (req, res) => {
 
         const taskPriorities = ["Low", "Medium", "High"];
         const taskPriorityLevelsRaw = await Task.aggregate([
+            { $match: { companyId } },
             {
                 $group: {
                     _id: "$priority",
@@ -426,7 +459,7 @@ const getDashboardData = async (req, res) => {
                 return acc;
         }, {});
 
-        const recentTasks = await Task.find()
+        const recentTasks = await Task.find({ companyId })
         .sort({ createdAt: -1 })
         .limit(MAX_RECENT_TASKS)
         .select("title status priority dueDate createdAt");
@@ -455,11 +488,13 @@ const getDashboardData = async (req, res) => {
 const getUserDashboardData = async (req, res) => {
     try {
         const userId = req.user._id;
+        const companyId = req.user.companyId;
 
-        const totalTasks = await Task.countDocuments({ assignedTo: userId });
-        const pendingTasks = await Task.countDocuments({ assignedTo: userId, status: "Pending" });
-        const completedTasks = await Task.countDocuments({ assignedTo: userId, status: "Completed" });
+        const totalTasks = await Task.countDocuments({ companyId, assignedTo: userId });
+        const pendingTasks = await Task.countDocuments({ companyId, assignedTo: userId, status: "Pending" });
+        const completedTasks = await Task.countDocuments({ companyId, assignedTo: userId, status: "Completed" });
         const overdueTasks = await Task.countDocuments({
+            companyId,
             assignedTo: userId,
             status: { $ne: "Completed" },
             dueDate: { $lt: new Date() }
@@ -467,7 +502,7 @@ const getUserDashboardData = async (req, res) => {
 
         const taskStatuses = ["Pending", "In-progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
-            { $match: { assignedTo: userId } },
+            { $match: { companyId, assignedTo: userId } },
             {
                 $group: {
                     _id: "$status",
@@ -485,7 +520,7 @@ const getUserDashboardData = async (req, res) => {
 
         const taskPriorities = ["Low", "Medium", "High"];
         const taskPriorityLevelsRaw = await Task.aggregate([
-            { $match: { assignedTo: userId } },
+            { $match: { companyId, assignedTo: userId } },
             {
                 $group: {
                     _id: "$priority",
@@ -500,7 +535,7 @@ const getUserDashboardData = async (req, res) => {
                 return acc;
         }, {});
 
-        const recentTasks = await Task.find({ assignedTo: userId })
+        const recentTasks = await Task.find({ companyId, assignedTo: userId })
         .sort({ createdAt: -1 })
         .limit(MAX_RECENT_TASKS)
         .select("title status priority dueDate createdAt");
@@ -528,6 +563,11 @@ const updateTaskStatus = async (req, res) => {
         const task = await Task.findById(req.params.id);
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Enforce company boundary isolation
+        if (String(task.companyId || '') !== String(req.user.companyId || '')) {
+            return res.status(403).json({ message: 'You are not authorized to update this task status' });
         }
 
         const isAssigned = task.assignedTo.some(

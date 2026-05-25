@@ -15,8 +15,15 @@ module.exports = (io) => {
             addUser(userId.toString(), socket.id);
             console.log(`User ${userId} connected with socket ${socket.id}`);
             
-            // Broadcast to all clients that this user is online
-            io.emit("userOnline", { userId: userId.toString(), onlineUsers: getAllUsers() });
+            // Join the user to their company room if they are associated with a company
+            if (socket.user && socket.user.companyId) {
+                socket.join(`company_${socket.user.companyId.toString()}`);
+                console.log(`User ${userId} joined company room: company_${socket.user.companyId}`);
+                // Broadcast only to their company that they are online
+                io.to(`company_${socket.user.companyId.toString()}`).emit("userOnline", { userId: userId.toString(), onlineUsers: getAllUsers() });
+            } else {
+                io.emit("userOnline", { userId: userId.toString(), onlineUsers: getAllUsers() });
+            }
         }
 
         // --- Room based architecture ---
@@ -40,8 +47,12 @@ module.exports = (io) => {
             
             if (disconnectedUserId) {
                 console.log(`User ${disconnectedUserId} went offline`);
-                // Broadcast to all clients that this user is offline
-                io.emit("userOffline", { userId: disconnectedUserId, onlineUsers: getAllUsers() });
+                // Broadcast only to their company that they are offline
+                if (socket.user && socket.user.companyId) {
+                    io.to(`company_${socket.user.companyId.toString()}`).emit("userOffline", { userId: disconnectedUserId, onlineUsers: getAllUsers() });
+                } else {
+                    io.emit("userOffline", { userId: disconnectedUserId, onlineUsers: getAllUsers() });
+                }
             }
         });
         
@@ -53,19 +64,27 @@ module.exports = (io) => {
         
         // --- Global Chat Events ---
         socket.on("send_message", (messageData) => {
-            // messageData should contain { content, sender, createdAt } populated
-            // Broadcast to all connected clients
-            io.emit("receive_message", messageData);
+            if (socket.user && socket.user.companyId) {
+                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_message", messageData);
+            } else {
+                io.emit("receive_message", messageData);
+            }
         });
 
         socket.on("typing", (data) => {
-             // data should contain { userId, name }
-             socket.broadcast.emit("typing", data);
+             if (socket.user && socket.user.companyId) {
+                 socket.to(`company_${socket.user.companyId.toString()}`).emit("typing", data);
+             } else {
+                 socket.broadcast.emit("typing", data);
+             }
         });
 
         socket.on("stop_typing", (data) => {
-             // data should contain { userId }
-             socket.broadcast.emit("stop_typing", data);
+             if (socket.user && socket.user.companyId) {
+                 socket.to(`company_${socket.user.companyId.toString()}`).emit("stop_typing", data);
+             } else {
+                 socket.broadcast.emit("stop_typing", data);
+             }
         });
 
         // --- Direct Messaging Events ---
@@ -122,11 +141,19 @@ module.exports = (io) => {
 
         // --- Edit/Delete Message Events ---
         socket.on("edit_message", (messageData) => {
-            io.emit("receive_edit_message", messageData);
+            if (socket.user && socket.user.companyId) {
+                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_edit_message", messageData);
+            } else {
+                io.emit("receive_edit_message", messageData);
+            }
         });
 
         socket.on("delete_message", (data) => {
-            io.emit("receive_delete_message", data); // { messageId }
+            if (socket.user && socket.user.companyId) {
+                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_delete_message", data);
+            } else {
+                io.emit("receive_delete_message", data);
+            }
         });
 
         socket.on("edit_direct_message", (data) => {
@@ -157,15 +184,27 @@ module.exports = (io) => {
 
         // --- Task Synchronization Events ---
         socket.on("task_updated", (taskData) => {
-             socket.broadcast.emit("task_sync", { action: "update", task: taskData });
+             if (socket.user && socket.user.companyId) {
+                 socket.to(`company_${socket.user.companyId.toString()}`).emit("task_sync", { action: "update", task: taskData });
+             } else {
+                 socket.broadcast.emit("task_sync", { action: "update", task: taskData });
+             }
         });
 
         socket.on("task_created", (taskData) => {
-             socket.broadcast.emit("task_sync", { action: "create", task: taskData });
+             if (socket.user && socket.user.companyId) {
+                 socket.to(`company_${socket.user.companyId.toString()}`).emit("task_sync", { action: "create", task: taskData });
+             } else {
+                 socket.broadcast.emit("task_sync", { action: "create", task: taskData });
+             }
         });
 
         socket.on("task_deleted", (taskId) => {
-             socket.broadcast.emit("task_sync", { action: "delete", taskId });
+             if (socket.user && socket.user.companyId) {
+                 socket.to(`company_${socket.user.companyId.toString()}`).emit("task_sync", { action: "delete", taskId });
+             } else {
+                 socket.broadcast.emit("task_sync", { action: "delete", taskId });
+             }
         });
 
         socket.on("error", (error) => {

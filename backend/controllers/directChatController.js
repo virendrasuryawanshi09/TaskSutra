@@ -1,5 +1,6 @@
 const DirectChat = require("../models/DirectChat");
 const DirectMessage = require("../models/DirectMessage");
+const notificationService = require("../services/notificationService");
 
 // @desc    Get all direct chats for the current user
 // @route   GET /api/direct-chats
@@ -92,6 +93,23 @@ exports.sendDirectMessage = async (req, res) => {
       "sender",
       "name profilePicture email"
     );
+
+    // Send notification to the receiver asynchronously
+    const io = req.app.get("io");
+    (async () => {
+      try {
+        await notificationService.createAndSendNotification({
+          recipient: receiverId,
+          sender: senderId,
+          type: "direct_message",
+          title: "New Direct Message",
+          message: `${req.user.name}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+          io
+        });
+      } catch (err) {
+        console.error("Error sending direct message notification:", err);
+      }
+    })();
 
     res.status(201).json({ message: populatedMessage, chat });
   } catch (error) {

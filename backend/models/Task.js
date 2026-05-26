@@ -17,6 +17,15 @@ const taskSchema = new mongoose.Schema({
     attachments: [{type: String}],
     todoChecklist: [todoSchema],
     progress: {type: Number, default: 0},
+    // AI Pillar 4: Task DNA Attributes
+    taskDna: {
+        attributes: {
+            type: [String],
+            enum: ['Deep-Focus', 'High-Interruption', 'Rapid-Bug-Fix', 'Documentation-Heavy', 'Cross-Functional'],
+            default: ['Deep-Focus']
+        },
+        estimatedComplexityScore: { type: Number, default: 5 } // 1-10 scale
+    }
 }, {timestamps: true});
 
 module.exports = mongoose.model("Task", taskSchema);

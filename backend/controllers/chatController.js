@@ -1,4 +1,6 @@
 const Message = require("../models/Message");
+const notificationService = require("../services/notificationService");
+const User = require("../models/User");
 
 // Get all messages
 exports.getMessages = async (req, res) => {
@@ -33,6 +35,30 @@ exports.sendMessage = async (req, res) => {
       "sender",
       "name email role profileImageUrl"
     );
+
+    // Send notifications to all company members except the sender asynchronously
+    const io = req.app.get("io");
+    (async () => {
+      try {
+        const usersInCompany = await User.find({
+          companyId: req.user.companyId,
+          _id: { $ne: req.user.id || req.user._id }
+        });
+        
+        await Promise.all(usersInCompany.map(recipientUser => 
+          notificationService.createAndSendNotification({
+            recipient: recipientUser._id,
+            sender: req.user.id || req.user._id,
+            type: "community_chat",
+            title: "New Community Message",
+            message: `${req.user.name}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+            io
+          })
+        ));
+      } catch (err) {
+        console.error("Error sending community chat notifications:", err);
+      }
+    })();
 
     res.status(201).json(populatedMessage);
   } catch (error) {

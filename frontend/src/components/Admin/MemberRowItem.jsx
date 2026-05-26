@@ -11,6 +11,10 @@ const MemberRowItem = ({
 }) => {
   const stats = getTaskStats(user);
   const isSelf = currentUser && (currentUser._id === user._id || currentUser.email === user.email);
+  const canEdit = currentUser && (
+    currentUser.role === "ceo" ||
+    (currentUser.role === "admin" && (isSelf || user.role === "member"))
+  );
 
   return (
     <div
@@ -91,7 +95,7 @@ const MemberRowItem = ({
           <div className="flex items-center gap-2">
             {user.role === "ceo" ? (
               <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 shadow-sm">
-                Owner / CEO
+                CEO
               </span>
             ) : currentUser?.role === "ceo" && !isSelf ? (
               <select
@@ -120,7 +124,7 @@ const MemberRowItem = ({
             )}
           </div>
 
-          {(currentUser?.role === "ceo" || currentUser?.role === "admin") && (
+          {canEdit && (
             <button
               type="button"
               onClick={(e) => {

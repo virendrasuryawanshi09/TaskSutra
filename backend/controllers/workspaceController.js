@@ -258,6 +258,22 @@ const updateWorkspaceMember = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "Workspace member not found" });
+    }
+
+    // Administrators can only modify their own info and standard members
+    if (req.user.role === "admin") {
+      const isSelf = req.user._id.toString() === id;
+      if (!isSelf && targetUser.role !== "member") {
+        return res.status(403).json({
+          success: false,
+          message: "Operation Denied: Administrators can only update details of themselves and standard members.",
+        });
+      }
+    }
+
     // If trying to change role, ensure caller is CEO
     if (updateData.role !== undefined && req.user.role !== "ceo") {
       return res.status(403).json({

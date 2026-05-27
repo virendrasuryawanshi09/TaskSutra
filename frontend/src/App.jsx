@@ -27,7 +27,7 @@ const RootRedirect = () => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   if (role === "member" && !user?.companyId) {
-    return <Navigate to="/admin/users" replace />;
+    return <Navigate to="/user/dashboard" replace />;
   }
 
   return (

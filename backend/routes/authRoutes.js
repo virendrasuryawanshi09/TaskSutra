@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const {
     registerUser,
     loginUser,
@@ -11,10 +12,18 @@ const upload = require('../middlewares/uploadMiddleware');
 
 const router = express.Router();
 
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // limit each IP to 20 requests per 15 minutes
+    message: { message: "Too many authentication attempts, please try again after 15 minutes" },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 //Auth Routes
 
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+router.post('/register', authLimiter, registerUser);
+router.post('/login', authLimiter, loginUser);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 router.delete('/profile', protect, deleteAccount);

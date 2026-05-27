@@ -11,7 +11,7 @@ exports.getDirectChats = async (req, res) => {
     const userId = req.user.id || req.user._id;
 
     const chats = await DirectChat.find({ participants: userId })
-      .populate("participants", "name profilePicture email role")
+      .populate("participants", "name profileImageUrl email role")
       .populate("lastMessage")
       .sort({ updatedAt: -1 });
 
@@ -39,7 +39,7 @@ exports.getDirectMessages = async (req, res) => {
     }
 
     const messages = await DirectMessage.find({ chatId: chat._id })
-      .populate("sender", "name profilePicture email")
+      .populate("sender", "name profileImageUrl email")
       .sort({ createdAt: 1 });
 
     res.status(200).json({ chat, messages });
@@ -66,7 +66,7 @@ exports.sendDirectMessage = async (req, res) => {
     });
 
     if (!chat) {
-      chat = new DirectChat({
+      chat = await DirectChat.create({
         participants: [senderId, receiverId],
         unreadCounts: { [receiverId.toString()]: 0 },
       });
@@ -92,7 +92,7 @@ exports.sendDirectMessage = async (req, res) => {
 
     const populatedMessage = await DirectMessage.findById(newMessage._id).populate(
       "sender",
-      "name profilePicture email"
+      "name profileImageUrl email"
     );
 
     // Send notification to the receiver asynchronously
@@ -184,7 +184,7 @@ exports.editDirectMessage = async (req, res) => {
 
     const populatedMessage = await DirectMessage.findById(message._id).populate(
       "sender",
-      "name profilePicture email"
+      "name profileImageUrl email"
     );
 
     res.status(200).json({ message: populatedMessage });

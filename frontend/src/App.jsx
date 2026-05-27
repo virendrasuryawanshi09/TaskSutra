@@ -38,7 +38,7 @@ const RootRedirect = () => {
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, role } = useUserAuth();
   if (isAuthenticated) {
-    return <Navigate to={role === "admin" ? "/admin/dashboard" : "/user/dashboard"} replace />;
+    return <Navigate to={(role === "admin" || role === "ceo") ? "/admin/dashboard" : "/user/dashboard"} replace />;
   }
   return children;
 };

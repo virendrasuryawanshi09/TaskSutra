@@ -138,7 +138,13 @@ const updateUserProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         user.name = req.body.name || user.name;
-        user.email = req.body.email || user.email;
+        if (req.body.email && req.body.email !== user.email) {
+            const emailTaken = await User.findOne({ email: req.body.email, _id: { $ne: user._id } });
+            if (emailTaken) {
+                return res.status(400).json({ message: 'Email is already in use by another account' });
+            }
+            user.email = req.body.email;
+        }
         user.profileImageUrl = req.body.profileImageUrl !== undefined ? req.body.profileImageUrl : user.profileImageUrl;
         user.skills = req.body.skills || user.skills;
         user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;

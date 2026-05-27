@@ -69,7 +69,11 @@ app.use("/api/task-discussions", taskDiscussionRoutes);
 app.use("/api/workspace", workspaceRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// 404 catch-all — must be after all routes
+app.use((req, res) => {
+    res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
+});
 
 // Global error handling middleware
 app.use((err, req, res, next) => {

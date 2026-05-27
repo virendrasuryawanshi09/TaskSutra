@@ -220,14 +220,14 @@ const updateTask = async (req, res) => {
         const io = req.app.get("io");
         const oldAssigned = task.assignedTo.map(id => id.toString());
 
-        task.title = req.body.title || task.title;
-        task.description = req.body.description || task.description;
-        task.priority = req.body.priority || task.priority;
-        task.dueDate = req.body.dueDate || task.dueDate;
+        task.title = req.body.title !== undefined ? req.body.title : task.title;
+        task.description = req.body.description !== undefined ? req.body.description : task.description;
+        task.priority = req.body.priority !== undefined ? req.body.priority : task.priority;
+        task.dueDate = req.body.dueDate !== undefined ? req.body.dueDate : task.dueDate;
         if (Array.isArray(req.body.todoCheckList)) {
             task.todoChecklist = req.body.todoCheckList;
         }
-        task.attachments = req.body.attachments || task.attachments;
+        task.attachments = req.body.attachments !== undefined ? req.body.attachments : task.attachments;
 
         let newlyAssigned = [];
         let unassigned = [];

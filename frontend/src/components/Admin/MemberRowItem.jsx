@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LuChevronDown, LuCheck } from "react-icons/lu";
 
 const MemberRowItem = ({
   user,
@@ -9,6 +11,18 @@ const MemberRowItem = ({
   getInitials,
   getTaskStats,
 }) => {
+  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const stats = getTaskStats(user);
   const isSelf = currentUser && (currentUser._id === user._id || currentUser.email === user.email);
   const canEdit = currentUser && (
@@ -98,21 +112,80 @@ const MemberRowItem = ({
                 CEO
               </span>
             ) : currentUser?.role === "ceo" && !isSelf ? (
-              <select
-                value={user.role || "member"}
-                onChange={(e) => onRoleChange(user, e.target.value)}
-                className="
-                  px-2.5 py-1 text-xs font-semibold
-                  bg-[var(--bg-soft)] border border-[var(--border)] 
-                  rounded-xl text-[var(--text)]
-                  focus:outline-none focus:border-[var(--accent)]
-                  transition-all duration-150
-                  cursor-pointer
-                "
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="
+                    flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold
+                    bg-[var(--bg-soft)] border border-[var(--border)] 
+                    rounded-xl text-[var(--text)]
+                    hover:border-[var(--accent)]
+                    focus:outline-none focus:border-[var(--accent)]
+                    transition-all duration-150
+                    cursor-pointer select-none
+                  "
+                >
+                  <span className="capitalize">{user.role || "member"}</span>
+                  <LuChevronDown className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${isOpen ? "rotate-180 text-[var(--accent)]" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="
+                        absolute right-0 mt-1.5 w-32 rounded-xl
+                        bg-[var(--surface)] border border-[var(--border)]
+                        shadow-lg py-1 z-50 overflow-hidden
+                      "
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onRoleChange(user, "member");
+                          setIsOpen(false);
+                        }}
+                        className="
+                          w-full flex items-center justify-between px-3 py-2 text-left
+                          hover:bg-[var(--bg-soft)] transition-colors duration-150
+                          cursor-pointer group
+                        "
+                      >
+                        <span className="text-xs font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                          Member
+                        </span>
+                        {(user.role || "member") === "member" && (
+                          <LuCheck className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 ml-2" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onRoleChange(user, "admin");
+                          setIsOpen(false);
+                        }}
+                        className="
+                          w-full flex items-center justify-between px-3 py-2 text-left
+                          hover:bg-[var(--bg-soft)] transition-colors duration-150
+                          cursor-pointer group
+                        "
+                      >
+                        <span className="text-xs font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                          Admin
+                        </span>
+                        {user.role === "admin" && (
+                          <LuCheck className="w-3.5 h-3.5 text-[var(--accent)] shrink-0 ml-2" />
+                        )}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : user.role === "admin" ? (
               <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 shadow-sm">
                 Admin

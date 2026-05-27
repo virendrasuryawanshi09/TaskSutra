@@ -4,37 +4,45 @@ import {
     LuClipboardCheck,
     LuSquarePlus,
     LuLogOut,
-    LuCircleCheckBig
+    LuCircleCheckBig,
+    LuUser,
+    LuMessageSquare
 } from "react-icons/lu";
 
 export const SIDE_MENU_DATA = [
     {
         id: "01",
-        label:"Dashboard",
+        label: "Dashboard",
         icon: LuLayoutDashboard,
         path: "/admin/dashboard",
     },
     {
         id: "02",
-        label:"Manage Tasks",
+        label: "Manage Tasks",
         icon: LuClipboardCheck,
         path: "/admin/tasks",
     },
     {
         id: "03",
-        label:"Create Task",
+        label: "Create Task",
         icon: LuSquarePlus,
         path: "/admin/create-task",
     },
     {
         id: "04",
-        label:"Team Members",
+        label: "Team Members",
         icon: LuUsers,
         path: "/admin/users",
     },
     {
+        id: "chat-admin",
+        label: "Workspace Chat",
+        icon: LuMessageSquare,
+        path: "/admin/direct-chat",
+    },
+    {
         id: "05",
-        label:"Logout",
+        label: "Logout",
         icon: LuLogOut,
         path: "logout",
     },
@@ -43,7 +51,7 @@ export const SIDE_MENU_DATA = [
 export const SIDE_MENU_USER_DATA = [
     {
         id: "01",
-        label:"Dashboard",
+        label: "Dashboard",
         icon: LuLayoutDashboard,
         path: "/user/dashboard",
         section: "main",
@@ -51,7 +59,7 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "02",
-        label:"My Tasks",
+        label: "My Tasks",
         icon: LuClipboardCheck,
         path: "/user/my-tasks",
         section: "main",
@@ -59,7 +67,7 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "03",
-        label:"Team Members",
+        label: "Team Members",
         icon: LuUsers,
         path: "/user/team-members",
         section: "views",
@@ -67,15 +75,23 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "04",
-        label:"Completed",
-        icon: LuCircleCheckBig,
-        path: "/user/my-tasks?view=completed",
+        label: "Edit Profile",
+        icon: LuUser,
+        path: "/user/profile",
         section: "views",
-        description: "Look back at finished work and the progress you have already made.",
+        description: "Update your personal information and profile picture.",
+    },
+    {
+        id: "chat-user",
+        label: "Workspace Chat",
+        icon: LuMessageSquare,
+        path: "/user/direct-chat",
+        section: "views",
+        description: "Unified workspace messaging and task discussions.",
     },
     {
         id: "05",
-        label:"Logout",
+        label: "Logout",
         icon: LuLogOut,
         path: "logout",
         section: "utility",
@@ -84,13 +100,13 @@ export const SIDE_MENU_USER_DATA = [
 ];
 
 export const PRIORITY_DATA = [
-    {label: "Low", value:"Low"},
-    {label: "Medium", value:"Medium"},
-    {label: "High", value:"High"},
+    { label: "Low", value: "Low" },
+    { label: "Medium", value: "Medium" },
+    { label: "High", value: "High" },
 ]
 
 export const STATUS_DATA = [
-    {label: "Pending", value:"Pending"},
-    {label: "In Progress", value:"In Progress"},
-    {label: "Competed", value:"Completed"}
+    { label: "Pending", value: "Pending" },
+    { label: "In Progress", value: "In Progress" },
+    { label: "Competed", value: "Completed" }
 ]

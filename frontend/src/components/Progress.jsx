@@ -18,7 +18,7 @@ const Progress = ({ progress = 0, status }) => {
   return (
     <div className="relative w-full">
 
-      {/* 🔥 TRACK */}
+      {/* TRACK */}
       <div className="
         w-full h-1.5
         bg-[var(--bg-soft)]
@@ -26,7 +26,6 @@ const Progress = ({ progress = 0, status }) => {
         overflow-hidden
       ">
 
-        {/* 🔥 PROGRESS BAR */}
         <div
           className={`
             h-full rounded-full

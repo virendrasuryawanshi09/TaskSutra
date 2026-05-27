@@ -5,10 +5,15 @@ import { getDashboardRoute } from "../utils/helper.js";
 
 const PrivateRoute = ({ allowedRoles = [] }) => {
   const location = useLocation();
-  const { isAuthenticated, role } = useUserAuth();
+  const { isAuthenticated, role, user } = useUserAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // Allow members without a company to access /admin/users to set up their workspace
+  if (role === "member" && !user?.companyId && location.pathname === "/admin/users") {
+    return <Outlet />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {

@@ -2,8 +2,8 @@ import React from "react";
 
 const TaskStatusTabs = ({ tabs, activeTab, setActiveTab }) => {
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex gap-6 sm:gap-8 border-b border-[var(--border)] min-w-max">
+    <div className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-nowrap min-w-max items-center gap-x-6 sm:gap-x-8 border-b border-[var(--border)]">
 
         {tabs.map((tab) => {
           const isActive = activeTab === tab.label;
@@ -23,31 +23,28 @@ const TaskStatusTabs = ({ tabs, activeTab, setActiveTab }) => {
               {/* LABEL */}
               <span
                 className={`
-                  ${
-                    isActive
-                      ? "text-[var(--text)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                  ${isActive
+                    ? "text-[var(--text)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text)]"
                   }
                 `}
               >
                 {tab.label}
               </span>
 
-              {/* COUNT */}
               <span
                 className={`
                   ml-2 text-xs
-                  ${
-                    isActive
-                      ? "text-[var(--accent)]"
-                      : "text-[var(--text-muted)]"
+                  ${isActive
+                    ? "text-[var(--accent)]"
+                    : "text-[var(--text-muted)]"
                   }
                 `}
               >
                 {tab.count}
               </span>
 
-              
+
               <div
                 className={`
                   absolute left-0 bottom-0 h-[2px] rounded-full

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import DashboardLayout from "../../components/Layouts/DashboardLayout";
+import DashboardLayout from "../../components/layouts/DashboardLayout";
 import SelectDropdown from "../../components/input/SelectDropdown"
 import { PRIORITY_DATA } from "../../utils/data";
 import axiosInstance from "../../utils/axiosInstance";
@@ -14,6 +14,9 @@ import SelectUsers from "../../components/input/SelectUsers";
 import TodoListInput from "../../components/input/TodoListInput";
 import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 import DeleteAlert from "../../components/DeleteAlert";
+import { LuMessageSquare } from "react-icons/lu";
+import { useSocket } from "../../context/SocketContext";
+import TaskDiscussionPanel from "../User/Tasks/TaskDiscussionPanel";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -34,6 +37,99 @@ const CreateTask = () => {
 
   const [currentTask, setCurrentTask] = useState(null);
   const [error, setError] = useState("");
+
+  const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const socketRef = React.useRef(null);
+
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+    socketRef.current = socket;
+  }, [socket]);
+
+  useEffect(() => {
+    if (!taskId || !socket) return;
+
+    const fetchDiscussion = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/task-discussions/${taskId}`);
+        if (response.data && response.data.messages) {
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: msg._id,
+            user: msg.sender?.name || "Admin",
+            message: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching discussion", error);
+      }
+    };
+    fetchDiscussion();
+
+    socket.emit("joinTaskRoom", taskId);
+
+    const handleReceiveMessage = (msgData) => {
+       setMessages((prev) => {
+          if (prev.find(m => m.id === msgData._id)) return prev;
+          
+          return [...prev, {
+            id: msgData._id,
+            user: msgData.sender?.name || "Team Member",
+            message: msgData.content,
+            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+       });
+    };
+
+    socket.on('receive_task_message', handleReceiveMessage);
+
+    return () => {
+       socket.emit("leaveTaskRoom", taskId);
+       socket.off('receive_task_message', handleReceiveMessage);
+       setMessages([]);
+    };
+  }, [taskId, socket]);
+
+  const handleSendMessage = async () => {
+    const trimmedMessage = queryInput.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
+        content: trimmedMessage
+      });
+      
+      const savedMessage = response.data.message;
+      
+      const newMsg = {
+         id: savedMessage._id,
+         user: "You",
+         message: savedMessage.content,
+         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setMessages((currentMessages) => [...currentMessages, newMsg]);
+      
+      if (socketRef.current) {
+        socketRef.current.emit("send_task_message", {
+           taskId,
+           messageData: savedMessage
+        });
+      }
+      
+      setQueryInput("");
+    } catch (error) {
+      toast.error("Failed to send message. Please ensure you are authorized.");
+    }
+  };
 
   useEffect(() => {
     if (error) {
@@ -127,7 +223,7 @@ const CreateTask = () => {
       const todolist = buildTodoChecklistPayload(taskData.todoCheckList);
       const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-      await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
+      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
@@ -135,6 +231,10 @@ const CreateTask = () => {
       });
 
       toast.success("Task Created Successfully.");
+
+      if (response.data?.task && socketRef.current) {
+        socketRef.current.emit("task_created", response.data.task);
+      }
 
       clearData();
 
@@ -153,7 +253,7 @@ const CreateTask = () => {
       const todoList = buildTodoChecklistPayload(taskData.todoCheckList, prevTodoChecklist);
       const uploadedAttachmentUrls = await uploadAttachments(taskData.attachments || []);
 
-      await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
+      const response = await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
         ...taskData,
         attachments: uploadedAttachmentUrls,
         dueDate: new Date(taskData.dueDate).toISOString(),
@@ -161,8 +261,13 @@ const CreateTask = () => {
       });
 
       toast.success("Task Updated Successfully.");
+
+      if (response.data?.task && socketRef.current) {
+        socketRef.current.emit("task_updated", response.data.task);
+      }
+
       navigate("/admin/tasks");
-    }catch (error) {
+    } catch (error) {
       console.error("Error updating task:", error);
       toast.error(error.response?.data?.message || "Failed to update task. Please try again.");
     } finally {
@@ -225,7 +330,7 @@ const CreateTask = () => {
           attachments: taskInfo?.attachments || [],
         });
       }
-    } catch(error) {
+    } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
@@ -237,6 +342,11 @@ const CreateTask = () => {
     try {
       await axiosInstance.delete(API_PATHS.TASKS.DELETE_TASK(taskId));
       toast.success("Task Deleted Successfully.");
+
+      if (socketRef.current) {
+        socketRef.current.emit("task_deleted", taskId);
+      }
+
       setOpenDeleteAlert(false);
       navigate("/admin/tasks");
     } catch (error) {
@@ -252,7 +362,7 @@ const CreateTask = () => {
       getTaskDetailsByID();
     }
 
-    return () => {};
+    return () => { };
   }, [taskId]);
 
   return (
@@ -279,13 +389,23 @@ const CreateTask = () => {
             </div>
 
             {taskId && (
-              <button
-                onClick={() => setOpenDeleteAlert(true)}
-                className="flex cursor-pointer items-center gap-2 text-sm text-red-500 transition hover:text-red-600"
-              >
-                <LuTrash2 className="text-lg" />
-                Delete
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsDiscussionOpen(true)}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-[var(--accent)] transition hover:text-[var(--accent-hover)]"
+                >
+                  <LuMessageSquare className="text-lg" />
+                  Discuss
+                </button>
+                <button
+                  onClick={() => setOpenDeleteAlert(true)}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-red-500 transition hover:text-red-600"
+                >
+                  <LuTrash2 className="text-lg" />
+                  Delete
+                </button>
+              </div>
             )}
           </div>
 
@@ -487,6 +607,16 @@ const CreateTask = () => {
         loading={loading}
         onClose={() => setOpenDeleteAlert(false)}
         onConfirm={deleteTask}
+      />
+
+      <TaskDiscussionPanel
+        task={currentTask}
+        isOpen={isDiscussionOpen}
+        onClose={() => setIsDiscussionOpen(false)}
+        messages={messages}
+        queryInput={queryInput}
+        onQueryInputChange={(e) => setQueryInput(e.target.value)}
+        onSend={handleSendMessage}
       />
     </DashboardLayout>
   );

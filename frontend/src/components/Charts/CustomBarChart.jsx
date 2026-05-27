@@ -64,7 +64,7 @@ const CustomBarChart = ({ data }) => {
           margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
         >
 
-          {/* 🔥 GRADIENT DEFINITIONS */}
+          {/* GRADIENT DEFINITIONS */}
           <defs>
             {data.map((entry) => {
               const [start, end] = getColors(entry.priority);

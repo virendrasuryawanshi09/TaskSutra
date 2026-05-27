@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AuthLayout from "../../components/layouts/AuthLayout";
 import Input from "../../components/input/input.jsx";
@@ -15,7 +15,6 @@ import {
   validateEmail,
 } from "../../utils/helper.js";
 
-
 const SignUp = () => {
   const navigate = useNavigate();
   const { updateUserContext } = useUserAuth();
@@ -24,10 +23,36 @@ const SignUp = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [adminInviteToken, setAdminInviteToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false); 
-  
+
+  // Invitation fields
+  const [inviteToken, setInviteToken] = useState("");
+  const [isEmailLocked, setIsEmailLocked] = useState(false);
+  const [invitationCompany, setInvitationCompany] = useState("");
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const token = queryParams.get("token");
+    if (token) {
+      const validateInvite = async () => {
+        const toastId = toast.loading("Validating invitation link...");
+        try {
+          const res = await axiosInstance.get(`/api/workspace/invitations/validate/${token}`);
+          if (res.data && res.data.email) {
+            setEmail(res.data.email);
+            setIsEmailLocked(true);
+            setInviteToken(token);
+            setInvitationCompany(res.data.company);
+            toast.success(`Joining workspace: ${res.data.company}`, { id: toastId });
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || "Invitation link is invalid or expired.", { id: toastId });
+        }
+      };
+      validateInvite();
+    }
+  }, []);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -36,7 +61,6 @@ const SignUp = () => {
 
     const trimmedName = fullName.trim();
     const normalizedEmail = normalizeEmail(email);
-    const trimmedInviteToken = adminInviteToken.trim();
 
     if (!trimmedName || !normalizedEmail || !password.trim()) {
       const message = "Name, email, and password are required.";
@@ -68,7 +92,7 @@ const SignUp = () => {
         email: normalizedEmail,
         password,
         profileImageUrl,
-        adminInviteToken: trimmedInviteToken || undefined,
+        inviteToken: inviteToken || undefined,
       });
 
       const { token, role, ...user } = data;
@@ -89,9 +113,13 @@ const SignUp = () => {
         id: toastId,
       });
 
-      navigate(getDashboardRoute(role));
+      if (role === "member" && !user.companyId) {
+        navigate("/admin/users");
+      } else {
+        navigate(getDashboardRoute(role));
+      }
     } catch (err) {
-      console.error("Signup Error:", err);
+      console.error("SignUp Error:", err);
 
       const message = getErrorMessage(
         err,
@@ -110,14 +138,20 @@ const SignUp = () => {
 
   return (
     <AuthLayout>
-
       <div>
         <h3 className="text-[20px] font-semibold mb-4">
           Create an account
         </h3>
 
-        <form onSubmit={handleSignUp}>
+        {invitationCompany && (
+          <div className="mb-6 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">
+            <p className="text-[13px] font-medium text-[var(--text)]">
+              You've been invited to join <span className="font-semibold text-[var(--accent)]">{invitationCompany}</span> on TaskSutra.
+            </p>
+          </div>
+        )}
 
+        <form onSubmit={handleSignUp}>
           <div className="mb-6 flex justify-center">
             <ProfilePhotoSelector
               image={profilePic}
@@ -137,6 +171,7 @@ const SignUp = () => {
             onChange={(e) => setEmail(e.target.value)}
             type="email"
             label="Email"
+            disabled={isEmailLocked}
           />
 
           <Input
@@ -144,13 +179,6 @@ const SignUp = () => {
             onChange={(e) => setPassword(e.target.value)}
             type="password"
             label="Password"
-          />
-
-          <Input
-            value={adminInviteToken}
-            onChange={(e) => setAdminInviteToken(e.target.value)}
-            type="text"
-            label="Admin Invite Token (Optional)"
           />
 
           {error && (
@@ -183,10 +211,8 @@ const SignUp = () => {
               Sign in
             </Link>
           </div>
-
         </form>
       </div>
-
     </AuthLayout>
   );
 };

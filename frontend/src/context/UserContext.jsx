@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { UserContext } from "./UserContextState.js";
+import axiosInstance from "../utils/axiosInstance";
+import { API_PATHS } from "../utils/apiPaths";
 
 const getStoredUser = () => {
   const storedUser = localStorage.getItem("user");
@@ -22,6 +24,22 @@ const getStoredToken = () => localStorage.getItem("token");
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(getStoredUser);
   const [token, setToken] = useState(getStoredToken);
+
+  useEffect(() => {
+    const fetchLatestProfile = async () => {
+      if (!token) return;
+      try {
+        const response = await axiosInstance.get(API_PATHS.AUTH.GET_PROFILE);
+        if (response.data) {
+          updateUser(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch latest user profile:", error);
+      }
+    };
+
+    fetchLatestProfile();
+  }, [token]);
 
   useEffect(() => {
     const syncAuthState = () => {

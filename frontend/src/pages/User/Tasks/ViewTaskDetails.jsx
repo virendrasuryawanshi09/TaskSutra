@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -9,6 +9,8 @@ import SelectDropdown from "../../../components/input/SelectDropdown";
 import TaskDiscussionPanel from "./TaskDiscussionPanel";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
+import { useSocket } from "../../../context/SocketContext";
+import { UserContext } from "../../../context/UserContextState";
 
 const statusOptions = [
   { label: "Pending" },
@@ -126,6 +128,7 @@ const deriveProgressValue = (status, checklist, fallbackProgress = 0) => {
 };
 
 const ViewTaskDetails = () => {
+  const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const location = useLocation();
   const { id: taskId } = useParams();
@@ -143,6 +146,8 @@ const ViewTaskDetails = () => {
   const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const socketRef = React.useRef(null);
+  const socket = useSocket();
 
   const isCompleted = currentStatus === "Completed";
 
@@ -196,7 +201,8 @@ const ViewTaskDetails = () => {
         setSavedChecklistItems(normalizedChecklist);
         setAttachmentFiles(normalizedAttachments);
         setAssignedUsers(normalizedUsers);
-        setMessages(getInitialMessages(taskData.title));
+        // We will fetch real messages below, so no need for getInitialMessages anymore unless we want a fallback
+        // setMessages(getInitialMessages(taskData.title));
       } catch (requestError) {
         setError(
           requestError?.response?.data?.message ||
@@ -210,6 +216,71 @@ const ViewTaskDetails = () => {
     fetchTaskDetails();
   }, [taskId]);
 
+  useEffect(() => {
+    if (!taskId) return;
+
+    const fetchDiscussion = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/task-discussions/${taskId}`);
+        if (response.data && response.data.messages) {
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: msg._id,
+            senderId: msg.sender?._id || msg.sender,
+            user: msg.sender?.name || "Team Member",
+            message: msg.content,
+            isEdited: msg.isEdited,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching discussion", error);
+      }
+    };
+    fetchDiscussion();
+
+    if (!taskId || !socket) return;
+
+    socketRef.current = socket;
+    socket.emit("joinTaskRoom", taskId);
+
+    const handleReceiveTaskMessage = (msgData) => {
+       setMessages((prev) => {
+          if (prev.find(m => m.id === msgData._id)) return prev;
+          
+          return [...prev, {
+            id: msgData._id,
+            senderId: msgData.sender?._id || msgData.sender,
+            user: msgData.sender?.name || "Team Member",
+            message: msgData.content,
+            isEdited: msgData.isEdited,
+            timestamp: new Date(msgData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+       });
+    };
+
+    const handleReceiveEditTaskMessage = (msgData) => {
+       setMessages((prev) =>
+          prev.map(m => m.id === msgData._id ? { ...m, message: msgData.content, isEdited: msgData.isEdited } : m)
+       );
+    };
+
+    const handleReceiveDeleteTaskMessage = (data) => {
+       setMessages((prev) => prev.filter(m => m.id !== data.messageId));
+    };
+
+    socket.on('receive_task_message', handleReceiveTaskMessage);
+    socket.on('receive_edit_task_message', handleReceiveEditTaskMessage);
+    socket.on('receive_delete_task_message', handleReceiveDeleteTaskMessage);
+
+    return () => {
+       socket.emit("leaveTaskRoom", taskId);
+       socket.off('receive_task_message', handleReceiveTaskMessage);
+       socket.off('receive_edit_task_message', handleReceiveEditTaskMessage);
+       socket.off('receive_delete_task_message', handleReceiveDeleteTaskMessage);
+    };
+  }, [taskId, socket]);
+
   const handleChecklistToggle = (itemId) => {
     if (isCompleted) {
       return;
@@ -222,23 +293,124 @@ const ViewTaskDetails = () => {
     );
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const trimmedMessage = queryInput.trim();
 
     if (!trimmedMessage) {
       return;
     }
 
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: Date.now(),
-        user: "You",
-        message: trimmedMessage,
-        timestamp: "Just now",
-      },
-    ]);
-    setQueryInput("");
+    try {
+      const response = await axiosInstance.post(`/api/task-discussions/${taskId}`, {
+        content: trimmedMessage
+      });
+      
+      const savedMessage = response.data.message;
+      
+      const newMsg = {
+         id: savedMessage._id,
+         senderId: user?._id || user?.id,
+         user: "You",
+         message: savedMessage.content,
+         isEdited: savedMessage.isEdited,
+         timestamp: new Date(savedMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setMessages((currentMessages) => [...currentMessages, newMsg]);
+      
+      if (socketRef.current) {
+        socketRef.current.emit("send_task_message", {
+           taskId,
+           messageData: savedMessage
+        });
+      }
+      
+      setQueryInput("");
+    } catch (error) {
+      toast.error("Failed to send message. Please ensure you are authorized.");
+    }
+  };
+
+  const handleEditDiscussionMessage = async (messageId, newContent) => {
+    try {
+      const response = await axiosInstance.put(`/api/task-discussions/message/${messageId}`, {
+        content: newContent
+      });
+      const updatedMessage = response.data.message;
+
+      setMessages(prev => prev.map(m => m.id === messageId ? {
+        ...m,
+        message: updatedMessage.content,
+        isEdited: true
+      } : m));
+
+      if (socketRef.current) {
+        socketRef.current.emit("edit_task_message", {
+          taskId,
+          messageData: updatedMessage
+        });
+      }
+      toast.success("Comment updated");
+    } catch (error) {
+      toast.error("Failed to edit comment");
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const toastId = toast.loading("Uploading attachment...");
+    try {
+      const formData = new FormData();
+      formData.append("image", file); // Backend expects "image" field
+
+      const res = await axiosInstance.post(API_PATHS.IMAGE.UPLOAD_IMAGE, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data && res.data.imageUrl) {
+        const updatedAttachments = [...(task.attachments || []), res.data.imageUrl];
+        
+        const updateRes = await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK(taskId), {
+          attachments: updatedAttachments
+        });
+
+        if (updateRes.data && updateRes.data.task) {
+          const normalizedAttachments = normalizeAttachments(updateRes.data.task.attachments);
+          setAttachmentFiles(normalizedAttachments);
+          setTask(prev => ({ ...prev, attachments: updateRes.data.task.attachments }));
+          toast.success("Attachment uploaded successfully!", { id: toastId });
+        }
+      }
+    } catch (err) {
+      console.error("Upload error", err);
+      toast.error(err.response?.data?.message || "Failed to upload file.", { id: toastId });
+    }
+    e.target.value = null; // reset input
+  };
+
+  const handleDownloadFile = (url) => {
+    if (!url) return;
+    window.open(url, "_blank");
+  };
+
+  const handleDeleteDiscussionMessage = async (messageId) => {
+    try {
+      await axiosInstance.delete(`/api/task-discussions/message/${messageId}`);
+
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+
+      if (socketRef.current) {
+        socketRef.current.emit("delete_task_message", {
+          taskId,
+          messageId
+        });
+      }
+      toast.success("Comment deleted");
+    } catch (error) {
+      toast.error("Failed to delete comment");
+    }
   };
 
   const handleCancelChanges = () => {
@@ -615,6 +787,7 @@ const ViewTaskDetails = () => {
                   </label>
                   <input
                     type="file"
+                    onChange={handleFileUpload}
                     className="
                       w-full
                       bg-[var(--bg-soft)]
@@ -649,6 +822,7 @@ const ViewTaskDetails = () => {
 
                         <button
                           type="button"
+                          onClick={() => handleDownloadFile(file.url)}
                           className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors duration-200 hover:text-[var(--text)]"
                         >
                           <HiOutlineArrowDownTray className="text-sm" />
@@ -709,12 +883,16 @@ const ViewTaskDetails = () => {
       </div>
 
       <TaskDiscussionPanel
+        task={task}
         isOpen={isDiscussionOpen}
         onClose={() => setIsDiscussionOpen(false)}
         messages={messages}
         queryInput={queryInput}
         onQueryInputChange={(event) => setQueryInput(event.target.value)}
         onSend={handleSendMessage}
+        onEditMessage={handleEditDiscussionMessage}
+        onDeleteMessage={handleDeleteDiscussionMessage}
+        currentUser={user}
       />
     </DashboardLayout>
   );

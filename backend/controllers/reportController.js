@@ -519,7 +519,8 @@ const sendWorkbook = async (res, workbook, filename) => {
 
 const exportTasksReport = async (req, res) => {
     try {
-        const tasks = await Task.find()
+        const companyId = req.user.companyId || new mongoose.Types.ObjectId();
+        const tasks = await Task.find({ companyId })
             .populate("assignedTo", "name email")
             .populate("createdBy", "name email");
 
@@ -808,7 +809,7 @@ const exportTasksReport = async (req, res) => {
 const exportUsersReport = async (req, res) => {
     try {
         const users = await User.find({ role: "member" })
-            .select("name email _id")
+            .select("name email skills _id")
             .lean();
         const userTasks = await Task.find()
             .populate("assignedTo", "name email _id")
@@ -820,6 +821,7 @@ const exportUsersReport = async (req, res) => {
             userTaskMap[user._id.toString()] = {
                 name: user.name || "Unnamed",
                 email: user.email || "--",
+                skills: Array.isArray(user.skills) && user.skills.length > 0 ? user.skills.join(", ") : "None",
                 taskCount: 0,
                 pendingTasks: 0,
                 inProgressTasks: 0,
@@ -904,6 +906,7 @@ const exportUsersReport = async (req, res) => {
             { header: "Workload Band", key: "workloadBand", width: 16 },
             { header: "Delivery Band", key: "completionBand", width: 16 },
             { header: "Completion Rate", key: "completionRate", width: 18 },
+            { header: "Skillset", key: "skills", width: 30 },
             { header: "Insights", key: "insights", width: 60 },
         ];
 
@@ -1071,6 +1074,7 @@ const exportUsersReport = async (req, res) => {
                 workloadBand,
                 completionBand,
                 completionRate,
+                skills: user.skills,
                 insights:
                     user.taskCount > 0
                         ? insightParts.join(" | ")
@@ -1089,7 +1093,7 @@ const exportUsersReport = async (req, res) => {
             const workloadBandCell = overviewRow.getCell(11);
             const completionBandCell = overviewRow.getCell(12);
             const rateCell = overviewRow.getCell(13);
-            const insightsCell = overviewRow.getCell(14);
+            const insightsCell = overviewRow.getCell(15);
 
             [
                 rankCell,

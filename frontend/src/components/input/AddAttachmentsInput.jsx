@@ -38,7 +38,7 @@ const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
   return (
     <div className="space-y-4">
 
-      {/* 🔥 DROP ZONE */}
+      {/* DROP ZONE */}
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
@@ -71,7 +71,7 @@ const AddAttachmentsInput = ({ attachments = [], setAttachments }) => {
         />
       </div>
 
-      {/* 🔥 FILE GRID */}
+      {/* FILE GRID */}
       {attachmentList.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
 

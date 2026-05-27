@@ -4,6 +4,7 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
 } from "react-router-dom";
 
 import Dashboard from "./pages/Admin/Dashboard";
@@ -16,6 +17,32 @@ import ManageUsers from "./pages/Admin/ManageUsers";
 import MyTasks from "./pages/User/MyTasks";
 import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
+import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
+import CommunityChat from "./pages/Chat/CommunityChat";
+import DirectChat from "./pages/Chat/DirectChat";
+import useUserAuth from "./hooks/useUserAuth";
+import EditProfile from "./pages/User/Profile/EditProfile";
+
+const RootRedirect = () => {
+  const { isAuthenticated, role, user } = useUserAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (role === "member" && !user?.companyId) {
+    return <Navigate to="/admin/users" replace />;
+  }
+
+  return (
+    <Navigate to={(role === "admin" || role === "ceo") ? "/admin/dashboard" : "/user/dashboard"} replace />
+  );
+};
+
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, role } = useUserAuth();
+  if (isAuthenticated) {
+    return <Navigate to={role === "admin" ? "/admin/dashboard" : "/user/dashboard"} replace />;
+  }
+  return children;
+};
 
 const App = () => {
 
@@ -91,16 +118,19 @@ const App = () => {
 
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
 
           {/* Admin */}
-          <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
+          <Route element={<PrivateRoute allowedRoles={["admin", "ceo"]} />}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/tasks" element={<ManageTasks />} />
             <Route path="/admin/create-task" element={<CreateTask />} />
             <Route path="/admin/tasks/:id" element={<CreateTask />} />
             <Route path="/admin/users" element={<ManageUsers />} />
+            <Route path="/admin/chat" element={<CommunityChat />} />
+            <Route path="/admin/direct-chat" element={<DirectChat />} />
           </Route>
 
           {/* User */}
@@ -108,6 +138,10 @@ const App = () => {
             <Route path="/user/dashboard" element={<UserDashboard />} />
             <Route path="/user/my-tasks" element={<MyTasks />} />
             <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
+            <Route path="/user/team-members" element={<UserTeamMembers />} />
+            <Route path="/user/profile" element={<EditProfile />} />
+            <Route path="/user/chat" element={<CommunityChat />} />
+            <Route path="/user/direct-chat" element={<DirectChat />} />
           </Route>
         </Routes>
       </Router>

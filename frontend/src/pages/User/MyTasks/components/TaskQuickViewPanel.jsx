@@ -1,3 +1,4 @@
+
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -36,7 +37,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
             animate={{ x: 0 }}
             exit={{ x: -420 }}
             transition={{ duration: 0.26, ease: "easeOut" }}
-            className="fixed inset-y-0 left-0 z-[90] flex w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[420px]"
+            className="fixed inset-y-0 left-0 z-[90] flex w-[70vw] sm:w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[420px]"
           >
             <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-soft)]/35 px-5 py-4">
               <div className="flex items-center gap-3">
@@ -44,12 +45,12 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
                   <HiOutlineClipboardDocumentCheck className="text-xl" />
                 </span>
                 <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                  Task Preview
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Assigned work details
-                </p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    Task Preview
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    Assigned work details
+                  </p>
                 </div>
               </div>
               <button
@@ -122,16 +123,14 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
                 <div className="mt-3 divide-y divide-[var(--border)] rounded-xl border border-[var(--border)]">
                   {(task.checklist || []).slice(0, 5).map((item, index) => (
                     <div key={`${item.text}-${index}`} className="flex items-start gap-3 px-4 py-3">
-                      <span className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${
-                        item.completed
+                      <span className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${item.completed
                           ? "border-[#4C7F6A] bg-[rgba(76,127,106,0.14)] text-[#4C7F6A]"
                           : "border-[var(--border)] text-[var(--text-muted)]"
-                      }`}>
+                        }`}>
                         {item.completed ? <HiOutlineCheck /> : index + 1}
                       </span>
-                      <p className={`text-sm leading-6 ${
-                        item.completed ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
-                      }`}>
+                      <p className={`text-sm leading-6 ${item.completed ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
+                        }`}>
                         {item.text}
                       </p>
                     </div>

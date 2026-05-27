@@ -7,15 +7,11 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import TodayTasks from "./Components/TodayTasks";
 import TaskTable from "./Components/TaskTable";
-import InfoCard from "../../../components/Cards/InfoCard";
+import StatCards from "./Components/statCards";
 import {
   HiOutlineArrowRight,
   HiOutlineCalendar,
-  HiOutlineCheckCircle,
-  HiOutlineClock,
-  HiOutlineClipboardList,
   HiOutlineFlag,
-  HiOutlineRefresh,
   HiOutlineSparkles,
 } from "react-icons/hi";
 
@@ -232,7 +228,7 @@ const UserDashboard = () => {
     const getUserTasks = async () => {
       try {
         const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
-        setTasks(response.data?.tasks || []);
+        setTasks(response?.data?.tasks || []);
       } catch (error) {
         console.error("Error fetching user tasks:", error);
       }
@@ -273,32 +269,12 @@ const UserDashboard = () => {
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <InfoCard
-            label="My Tasks"
-            value={normalizedTasks.length}
-            icon={<HiOutlineClipboardList />}
-            color="#2F7A84"
-          />
-          <InfoCard
-            label="In Progress"
-            value={inProgressTasks}
-            icon={<HiOutlineRefresh />}
-            color="#2F7A84"
-          />
-          <InfoCard
-            label="Completed"
-            value={completedTasks}
-            icon={<HiOutlineCheckCircle />}
-            color="#4C7F6A"
-          />
-          <InfoCard
-            label="Overdue"
-            value={overdueTasks}
-            icon={<HiOutlineClock />}
-            color="#B2554A"
-          />
-        </section>
+        <StatCards
+          total={normalizedTasks.length}
+          inProgress={inProgressTasks}
+          completed={completedTasks}
+          overdue={overdueTasks}
+        />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.85fr]">
           <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">

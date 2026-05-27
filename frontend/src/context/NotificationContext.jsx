@@ -74,7 +74,6 @@ export const NotificationProvider = ({ children }) => {
       const res = await axiosInstance.put("/api/notifications/read-all");
       if (res.data && res.data.success) {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-        toast.success("All notifications marked as read");
       }
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
@@ -121,7 +120,6 @@ export const NotificationProvider = ({ children }) => {
       const res = await axiosInstance.delete("/api/notifications/clear-all");
       if (res.data && res.data.success) {
         setNotifications([]);
-        toast.success("All notifications cleared");
       }
     } catch (error) {
       console.error("Error clearing notifications:", error);

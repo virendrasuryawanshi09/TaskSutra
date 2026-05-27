@@ -145,7 +145,7 @@ const parseMessageContent = (text, users = [], currentUser = null) => {
         return (
           <span
             key={index}
-            className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] border border-[var(--accent)]/15 select-none animate-fade-in"
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] select-none animate-fade-in"
           >
             @{token.text}
           </span>
@@ -156,11 +156,15 @@ const parseMessageContent = (text, users = [], currentUser = null) => {
   });
 };
 
-const DirectChat = () => {
+const DirectChat = ({ defaultCommunity = false }) => {
   const { user } = useContext(UserContext);
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [activeChat, setActiveChat] = useState(null); // { type: 'user', data: userObj }, { type: 'task', data: taskObj }, { type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } }
+  const [activeChat, setActiveChat] = useState(
+    defaultCommunity 
+      ? { type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } } 
+      : null
+  );
   
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -865,10 +869,10 @@ const DirectChat = () => {
   return (
     <DashboardLayout activeMenu="Direct Messages">
       {/* Hyper-minimalist Elite Container */}
-      <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4">
+      <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4 relative">
         
         {/* Left Sidebar - Users List */}
-        <div className="hidden md:flex w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10">
+        <div className={`w-full md:w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
           <div className="h-14 px-5 flex items-center border-b border-[var(--border)] shadow-sm">
             <h1 className="text-[14px] font-bold tracking-tight text-[var(--text)]">Direct Messages</h1>
           </div>
@@ -929,7 +933,7 @@ const DirectChat = () => {
                         <span className={`text-[13px] font-medium truncate flex items-center gap-1.5 ${isActive ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
                           {u.name}
                           {u.role && u.role.toLowerCase() === 'admin' && (
-                             <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)] hidden md:inline-block">Admin</span>
+                              <span className="text-[var(--accent)] text-[7px] font-bold tracking-wider uppercase ml-1 shrink-0">Admin</span>
                           )}
                         </span>
                       </div>
@@ -975,8 +979,7 @@ const DirectChat = () => {
           </div>
         </div>
 
-        {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col bg-[var(--bg)] min-w-0">
+        <div className={`flex-1 flex-col bg-[var(--bg)] min-w-0 ${activeChat ? 'flex' : 'hidden md:flex'}`}>
           
           {!activeChat ? (
              <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] p-8 text-center bg-gradient-to-b from-[var(--surface)] to-[var(--bg)]">
@@ -1029,7 +1032,7 @@ const DirectChat = () => {
               </div>
 
               {/* Messages Feed */}
-              <div ref={messagesEndRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-1 scrollbar-thin">
+              <div ref={messagesEndRef} className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 space-y-1 scrollbar-thin">
                 
                 <div className="pb-8 pt-6 max-w-3xl">
                   <div className="w-16 h-16 bg-[var(--surface)] rounded-2xl flex items-center justify-center mb-5 border border-[var(--border)] shadow-sm text-[28px] font-black text-[var(--text)]">
@@ -1074,7 +1077,7 @@ const DirectChat = () => {
                   return (
                     <div 
                       key={msg._id || index} 
-                      className={`group flex gap-4 px-2 py-1.5 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-5'}`}
+                      className={`group flex gap-3 md:gap-4 px-2 py-1 md:py-1.5 -mx-2 hover:bg-[var(--bg-soft)] transition-colors rounded-lg ${isConsecutive ? 'mt-0' : 'mt-4 md:mt-5'}`}
                       onContextMenu={(e) => handleContextMenu(e, msg, isMe)}
                       onTouchStart={(e) => handleTouchStart(e, msg, isMe)}
                       onTouchEnd={handleTouchEnd}
@@ -1083,10 +1086,10 @@ const DirectChat = () => {
                     >
                       
                       {/* Left Column (Avatar or Timestamp) */}
-                      <div className="w-10 flex-shrink-0 flex justify-center">
+                      <div className="w-9 md:w-10 flex-shrink-0 flex justify-center">
                         {!isConsecutive ? (
                           <div className="mt-0.5">
-                              <div className={`w-10 h-10 rounded-md flex items-center justify-center text-[14px] font-bold text-white shadow-sm transition-transform hover:scale-105 ${isMe ? 'bg-[#0f172a]' : 'bg-[var(--accent)]'}`}>
+                              <div className={`w-9 h-9 md:w-10 md:h-10 rounded-md flex items-center justify-center text-[13px] md:text-[14px] font-bold text-white shadow-sm transition-transform hover:scale-105 ${isMe ? 'bg-[#0f172a]' : 'bg-[var(--accent)]'}`}>
                                 {senderName.charAt(0).toUpperCase()}
                               </div>
                           </div>
@@ -1153,23 +1156,23 @@ const DirectChat = () => {
                             </div>
                           </div>
                         ) : (
-                          <div className="text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2 text-left">
-                            <span>{parseMessageContent(msg.content, users, user)}</span>
-                            {msg.isEdited && (
-                              <span className="text-[9px] select-none text-[var(--text-muted)] font-semibold tracking-tight mt-1.5" title="Edited message">
-                                (edited)
-                              </span>
+                          <>
+                            <div className="text-[14px] md:text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2 text-left">
+                              <span>{parseMessageContent(msg.content, users, user)}</span>
+                              {msg.isEdited && (
+                                <span className="text-[9px] select-none text-[var(--text-muted)] font-semibold tracking-tight mt-1.5" title="Edited message">
+                                  (edited)
+                                </span>
+                              )}
+                            </div>
+                            {isMe && activeChat.type === 'user' && msg.isRead && (
+                              <div className="flex justify-start mt-0.5 select-none">
+                                <span className="text-[9.5px] font-semibold text-[var(--text-muted)] tracking-tight leading-none" title="Seen by colleague">
+                                  seen
+                                </span>
+                              </div>
                             )}
-                            {isMe && activeChat.type === 'user' && (
-                               <span className="text-[14px] leading-none mb-0.5 ml-1 inline-block" title={msg.isRead ? "Seen" : "Sent"}>
-                                  {msg.isRead ? (
-                                     <span className="text-blue-500 font-bold">✓✓</span>
-                                  ) : (
-                                     <span className="text-[var(--text-muted)]">✓</span>
-                                  )}
-                               </span>
-                            )}
-                          </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1193,7 +1196,7 @@ const DirectChat = () => {
                 )}
               </div>
               {/* Input Area */}
-              <div className="p-4 md:p-6 pt-2 bg-[var(--bg)] shrink-0 z-10">
+              <div className="p-3 md:p-6 pt-1.5 md:pt-2 bg-[var(--bg)] shrink-0 z-10">
                 <form onSubmit={handleSendMessage} className="relative max-w-5xl mx-auto">
                   
                   {/* Floating Mentions Dropdown */}
@@ -1260,7 +1263,7 @@ const DirectChat = () => {
                       }}
                       placeholder={activeChat.type === 'user' ? `Message ${activeChat.data.name}` : activeChat.type === 'community' ? `Message #community-chat` : `Message in #${activeChat.data.title}`}
                       rows={1}
-                      className="w-full max-h-[40vh] min-h-[48px] bg-transparent text-[15px] text-[var(--text)] px-4 py-3.5 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
+                      className="w-full max-h-[40vh] min-h-[44px] bg-transparent text-[14px] md:text-[15px] px-3.5 md:px-4 py-3 md:py-3.5 resize-none focus:outline-none placeholder:text-[var(--text-muted)]"
                       style={{ overflowY: 'auto' }}
                     />
                     

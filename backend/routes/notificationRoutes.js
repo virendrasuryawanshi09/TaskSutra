@@ -6,6 +6,7 @@ const {
     markAllAsRead,
     deleteNotification,
     clearAllNotifications,
+    markNotificationsOfTypeAsRead,
 } = require("../controllers/notificationController");
 
 const router = express.Router();
@@ -15,6 +16,7 @@ router.use(protect);
 
 router.get("/", getNotifications);
 router.put("/read-all", markAllAsRead);
+router.put("/read-type/:type", markNotificationsOfTypeAsRead);
 router.put("/:id/read", markAsRead);
 router.delete("/clear-all", clearAllNotifications);
 router.delete("/:id", deleteNotification);

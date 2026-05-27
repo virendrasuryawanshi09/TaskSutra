@@ -1,6 +1,7 @@
 const DirectChat = require("../models/DirectChat");
 const DirectMessage = require("../models/DirectMessage");
 const notificationService = require("../services/notificationService");
+const Notification = require("../models/Notification");
 
 // @desc    Get all direct chats for the current user
 // @route   GET /api/direct-chats
@@ -137,6 +138,15 @@ exports.markAsRead = async (req, res) => {
       { chatId, sender: { $ne: userId }, isRead: false },
       { $set: { isRead: true } }
     );
+
+    // Also mark notifications for this direct chat as read
+    const otherParticipantId = chat.participants.find(p => p.toString() !== userId.toString());
+    if (otherParticipantId) {
+      await Notification.updateMany(
+        { recipient: userId, sender: otherParticipantId, type: "direct_message", isRead: false },
+        { $set: { isRead: true } }
+      );
+    }
 
     res.status(200).json({ message: "Marked as read" });
   } catch (error) {

@@ -7,6 +7,7 @@ import axiosInstance from '../../utils/axiosInstance';
 import moment from 'moment';
 import { LuSend, LuMessageSquare } from 'react-icons/lu';
 import toast from 'react-hot-toast';
+import { useNotification } from '../../context/NotificationContext';
 
 const DirectChat = () => {
   const { user } = useContext(UserContext);
@@ -73,12 +74,16 @@ const DirectChat = () => {
         
         if (location.state?.activeTask) {
            const t = fetchedTasks.find(t => String(t._id) === String(location.state.activeTask._id));
-           if (t) {
-              setActiveChat({ type: 'task', data: t });
-           } else {
-              setActiveChat({ type: 'task', data: location.state.activeTask });
-           }
-           window.history.replaceState({}, document.title)
+           setActiveChat({ type: 'task', data: t || location.state.activeTask });
+           window.history.replaceState({}, document.title);
+        } else if (location.state?.activeUser) {
+           const uObj = location.state.activeUser;
+           const u = fetchedUsers.find(u => String(u._id) === String(uObj._id || uObj));
+           setActiveChat({ type: 'user', data: u || uObj });
+           window.history.replaceState({}, document.title);
+        } else if (location.state?.activeCommunity) {
+           setActiveChat({ type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } });
+           window.history.replaceState({}, document.title);
         }
       } catch (error) {
         console.error('Failed to fetch sidebar data:', error);
@@ -88,6 +93,8 @@ const DirectChat = () => {
   }, [user]);
 
   // Fetch messages when active chat changes
+  const { notifications, fetchNotifications } = useNotification();
+
   useEffect(() => {
     const fetchMessages = async () => {
       if (!activeChat) return;
@@ -97,30 +104,36 @@ const DirectChat = () => {
            setMessages(res.data.messages || []);
            // Mark as read
            if (res.data.chat) {
-             await axiosInstance.put(`/api/direct-chats/${res.data.chat._id}/read`);
-             
-             if (socketRef.current) {
-                socketRef.current.emit('mark_messages_seen', {
-                   chatId: res.data.chat._id,
-                   readerId: user?._id || user?.id,
-                   senderId: activeChat.data._id
-                });
-             }
+              await axiosInstance.put(`/api/direct-chats/${res.data.chat._id}/read`);
+              fetchNotifications();
+              
+              if (socketRef.current) {
+                 socketRef.current.emit('mark_messages_seen', {
+                    chatId: res.data.chat._id,
+                    readerId: user?._id || user?.id,
+                    senderId: activeChat.data._id
+                 });
+              }
 
-             // Clear local unread count
-             setDirectChats(prev => prev.map(c => {
-                if (String(c._id) === String(res.data.chat._id)) {
-                   return { ...c, unreadCounts: { ...c.unreadCounts, [user?._id || user?.id]: 0 } };
-                }
-                return c;
-             }));
+              // Clear local unread count
+              setDirectChats(prev => prev.map(c => {
+                 if (String(c._id) === String(res.data.chat._id)) {
+                    return { ...c, unreadCounts: { ...c.unreadCounts, [user?._id || user?.id]: 0 } };
+                 }
+                 return c;
+              }));
            }
         } else if (activeChat.type === 'task') {
            const res = await axiosInstance.get(`/api/task-discussions/${activeChat.data._id}`);
            setMessages(res.data.messages || []);
+           fetchNotifications();
         } else if (activeChat.type === 'community') {
            const res = await axiosInstance.get('/api/chat');
            setMessages(res.data.messages || res.data || []);
+           
+           // Clear community chat notifications
+           await axiosInstance.put('/api/notifications/read-type/community_chat');
+           fetchNotifications();
         }
       } catch (error) {
         console.error('Failed to fetch messages:', error);
@@ -145,6 +158,15 @@ const DirectChat = () => {
         if (activeChat?.type === 'user' && senderId === String(activeChat.data._id)) {
           // Prevent duplicates
           if (prev.find(m => String(m._id) === String(message._id))) return prev;
+          
+          // Mark as read in DB and update notifications context since user is actively viewing this chat
+          const activeDirectChat = directChats.find(c => c.participants.some(p => String(p._id || p) === senderId));
+          if (activeDirectChat) {
+             axiosInstance.put(`/api/direct-chats/${activeDirectChat._id}/read`).then(() => {
+                fetchNotifications();
+             }).catch(err => console.error("Error marking active chat as read:", err));
+          }
+          
           return [...prev, message];
         }
         return prev;
@@ -187,6 +209,12 @@ const DirectChat = () => {
       setMessages((prev) => {
         if (activeChat?.type === 'task' && String(message.discussionId) === String(activeChat.data.discussionId || message.discussionId)) {
           if (prev.find(m => String(m._id) === String(message._id))) return prev;
+          
+          // Clear task message notifications in DB and update context
+          axiosInstance.get(`/api/task-discussions/${activeChat.data._id}`).then(() => {
+             fetchNotifications();
+          }).catch(err => console.error("Error reading task discussion:", err));
+
           return [...prev, message];
         }
         return prev;
@@ -584,10 +612,20 @@ const DirectChat = () => {
               </div>
               <div 
                 onClick={() => setActiveChat({ type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } })}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${activeChat?.type === 'community' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]'}`}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${activeChat?.type === 'community' ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold' : 'text-[var(--text-muted)] hover:bg-[var(--bg-soft)] hover:text-[var(--text)]'}`}
               >
-                <LuMessageSquare className="text-[16px]" />
-                <span className="text-[13px] truncate"># community-chat</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <LuMessageSquare className="text-[16px]" />
+                  <span className="text-[13px] truncate"># community-chat</span>
+                </div>
+                {(() => {
+                  const unreadCommunity = notifications.filter(n => !n.isRead && n.type === 'community_chat').length;
+                  return unreadCommunity > 0 && activeChat?.type !== 'community' ? (
+                    <div className="bg-[var(--accent)] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                       {unreadCommunity}
+                    </div>
+                  ) : null;
+                })()}
               </div>
             </div>
 

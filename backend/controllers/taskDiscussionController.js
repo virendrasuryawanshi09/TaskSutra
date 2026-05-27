@@ -1,6 +1,8 @@
 const TaskDiscussion = require("../models/TaskDiscussion");
 const TaskMessage = require("../models/TaskMessage");
 const Task = require("../models/Task");
+const Notification = require("../models/Notification");
+const notificationService = require("../services/notificationService");
 
 // @desc    Get messages for a task discussion
 // @route   GET /api/task-discussions/:taskId
@@ -21,6 +23,12 @@ exports.getTaskDiscussion = async (req, res) => {
     if (!isAssigned && !isAdmin) {
       return res.status(403).json({ message: "Not authorized to access this task discussion" });
     }
+
+    // Mark notifications of type "task_message" for this task as read
+    await Notification.updateMany(
+      { recipient: userId, task: taskId, type: "task_message", isRead: false },
+      { $set: { isRead: true } }
+    );
 
     let discussion = await TaskDiscussion.findOne({ task: taskId });
     
@@ -87,6 +95,36 @@ exports.sendTaskMessage = async (req, res) => {
       "sender",
       "name profilePicture email"
     );
+
+    // Send notifications to all participants (assigned users + creator) except sender
+    const io = req.app.get("io");
+    (async () => {
+      try {
+        const recipientsSet = new Set();
+        if (task.assignedTo) {
+          task.assignedTo.forEach(id => recipientsSet.add(id.toString()));
+        }
+        if (task.createdBy) {
+          recipientsSet.add(task.createdBy.toString());
+        }
+        // Remove sender from recipients
+        recipientsSet.delete(senderId.toString());
+
+        await Promise.all(Array.from(recipientsSet).map(async (recipientId) => {
+          await notificationService.createAndSendNotification({
+            recipient: recipientId,
+            sender: senderId,
+            type: "task_message",
+            title: `New Message in ${task.title}`,
+            message: `${req.user.name}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+            task: task._id,
+            io
+          });
+        }));
+      } catch (err) {
+        console.error("Error sending task discussion notifications:", err);
+      }
+    })();
 
     res.status(201).json({ message: populatedMessage, discussion });
   } catch (error) {

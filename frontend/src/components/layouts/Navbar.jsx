@@ -1,51 +1,29 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import SideMenu from "./SideMenu";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "react-router-dom";
-import { useSocket } from "../../context/SocketContext";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LuBell, LuTrash2, LuCheck, LuCheckCheck } from "react-icons/lu";
-import axiosInstance from "../../utils/axiosInstance";
-import toast from "react-hot-toast";
+import { useNotification } from "../../context/NotificationContext";
+import { UserContext } from "../../context/UserContextState";
 
 const Navbar = () => {
     const [openSideMenu, setOpenSideMenu] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user } = useContext(UserContext);
 
-    const [notifications, setNotifications] = useState([]);
+    const {
+        notifications,
+        unreadCount,
+        markAsRead,
+        markAllAsRead,
+        deleteNotification,
+        clearAll
+    } = useNotification();
+
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const socket = useSocket();
     const dropdownRef = useRef(null);
-
-    const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-    const fetchNotifications = async () => {
-        try {
-            const res = await axiosInstance.get("/api/notifications");
-            if (res.data && res.data.notifications) {
-                setNotifications(res.data.notifications);
-            }
-        } catch (error) {
-            console.error("Error fetching notifications:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchNotifications();
-
-        if (!socket) return;
-
-        const handleNewNotification = (newNotif) => {
-            setNotifications((prev) => [newNotif, ...prev]);
-            toast.success(`Notification: ${newNotif.title}`);
-        };
-
-        socket.on("new_notification", handleNewNotification);
-
-        return () => {
-            socket.off("new_notification", handleNewNotification);
-        };
-    }, [socket]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -59,67 +37,52 @@ const Navbar = () => {
         };
     }, []);
 
-    // Active notification actions
-    const handleMarkAsRead = async (id, e) => {
+    // Active notification actions wrappers to stop propagation
+    const handleMarkAsRead = (id, e) => {
         if (e) e.stopPropagation();
-        try {
-            const res = await axiosInstance.put(`/api/notifications/${id}/read`);
-            if (res.data && res.data.success) {
-                setNotifications((prev) =>
-                    prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-                );
-            }
-        } catch (error) {
-            console.error("Error marking notification as read:", error);
-            toast.error("Failed to mark notification as read.");
-        }
+        markAsRead(id);
     };
 
-    const handleMarkAllAsRead = async () => {
-        const unreadList = notifications.filter(n => !n.isRead);
-        if (unreadList.length === 0) return;
-        try {
-            const res = await axiosInstance.put("/api/notifications/read-all");
-            if (res.data && res.data.success) {
-                setNotifications((prev) =>
-                    prev.map((n) => ({ ...n, isRead: true }))
-                );
-                toast.success("All notifications marked as read");
-            }
-        } catch (error) {
-            console.error("Error marking all notifications as read:", error);
-            toast.error("Failed to mark all as read.");
-        }
+    const handleMarkAllAsRead = () => {
+        markAllAsRead();
     };
 
-    const handleDeleteNotification = async (id, e) => {
+    const handleDeleteNotification = (id, e) => {
         if (e) e.stopPropagation();
-        try {
-            const res = await axiosInstance.delete(`/api/notifications/${id}`);
-            if (res.data && res.data.success) {
-                setNotifications((prev) => prev.filter((n) => n._id !== id));
-                toast.success("Notification deleted");
-            }
-        } catch (error) {
-            console.error("Error deleting notification:", error);
-            toast.error("Failed to delete notification.");
-        }
+        deleteNotification(id);
     };
 
-    const handleClearAll = async () => {
-        if (notifications.length === 0) return;
-        const confirmClear = window.confirm("Are you sure you want to clear all notifications?");
-        if (!confirmClear) return;
+    const handleClearAll = () => {
+        clearAll();
+    };
 
-        try {
-            const res = await axiosInstance.delete("/api/notifications/clear-all");
-            if (res.data && res.data.success) {
-                setNotifications([]);
-                toast.success("All notifications cleared");
+    const handleNotificationClick = (n) => {
+        if (!n.isRead) {
+            markAsRead(n._id);
+        }
+        setIsDropdownOpen(false);
+
+        const role = user?.role || "member";
+        const basePath = (role === "admin" || role === "ceo") ? "/admin" : "/user";
+
+        if (n.type === "direct_message") {
+            navigate(`${basePath}/direct-chat`, {
+                state: { activeUser: n.sender }
+            });
+        } else if (n.type === "community_chat") {
+            navigate(`${basePath}/direct-chat`, {
+                state: { activeCommunity: true }
+            });
+        } else if (n.type === "task_message") {
+            navigate(`${basePath}/direct-chat`, {
+                state: { activeTask: { _id: n.task?._id || n.task } }
+            });
+        } else if (n.type === "task_assigned" || n.type === "task_updated") {
+            if (role === "admin" || role === "ceo") {
+                navigate(`/admin/tasks`);
+            } else {
+                navigate(`/user/task-details/${n.task?._id || n.task}`);
             }
-        } catch (error) {
-            console.error("Error clearing notifications:", error);
-            toast.error("Failed to clear notifications.");
         }
     };
 
@@ -180,9 +143,7 @@ const Navbar = () => {
                     >
                         <LuBell className="text-[20px]" />
                         {unreadCount > 0 && (
-                            <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm animate-pulse">
-                                {unreadCount}
-                            </span>
+                            <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-[var(--accent)] shadow-sm" />
                         )}
                     </button>
 
@@ -228,7 +189,8 @@ const Navbar = () => {
                                         notifications.map((n) => (
                                             <div
                                                 key={n._id}
-                                                className={`p-3 rounded-xl border transition duration-150 flex flex-col gap-1.5 text-left relative group ${
+                                                onClick={() => handleNotificationClick(n)}
+                                                className={`p-3 rounded-xl border transition duration-150 flex flex-col gap-1.5 text-left relative group cursor-pointer ${
                                                     n.isRead 
                                                         ? "bg-transparent border-transparent hover:bg-[var(--bg-soft)]" 
                                                         : "bg-[var(--bg-soft)] border-[var(--border)] hover:border-[var(--accent)]"

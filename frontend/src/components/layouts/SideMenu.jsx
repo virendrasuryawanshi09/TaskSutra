@@ -129,6 +129,7 @@ const SideMenu = () => {
         {sideMenuData.map((item, index) => {
           const isActive = getIsActive(item);
           const isLogout = item.path === "logout";
+          const isChat = item.label === "Workspace Chat";
 
           return (
             <motion.button

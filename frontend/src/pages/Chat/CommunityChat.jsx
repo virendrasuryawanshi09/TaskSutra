@@ -2,9 +2,156 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
-import { LuHash, LuMessageSquare, LuSend, LuMenu, LuX } from 'react-icons/lu';
+import { LuHash, LuMessageSquare, LuSend, LuMenu, LuX, LuPaperclip } from 'react-icons/lu';
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
+
+const parseMessageContent = (text, users = [], currentUser = null) => {
+  if (!text) return "";
+  
+  const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  const allMentionables = [...users];
+  if (currentUser && !allMentionables.find(u => u._id === currentUser._id)) {
+    allMentionables.push(currentUser);
+  }
+
+  const sortedMentionables = allMentionables
+    .filter(u => u && u.name)
+    .sort((a, b) => b.name.length - a.name.length);
+
+  let mentionRegexStr = '\\B@([a-zA-Z0-9_.-]+)';
+  if (sortedMentionables.length > 0) {
+    const escapedNames = sortedMentionables.map(u => escapeRegExp(u.name)).join('|');
+    mentionRegexStr = `\\B@(${escapedNames}|[a-zA-Z0-9_.-]+)`;
+  }
+  const mentionRegex = new RegExp(mentionRegexStr, 'g');
+
+  let tokens = [{ type: 'text', text }];
+
+  // 1. Parse Links: [text](url)
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    linkRegex.lastIndex = 0;
+    while ((match = linkRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'link', text: match[1], url: match[2] });
+      lastIndex = linkRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  // 2. Parse Bold: **text**
+  const boldRegex = /\*\*([^*]+)\*\*/g;
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    boldRegex.lastIndex = 0;
+    while ((match = boldRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'bold', text: match[1] });
+      lastIndex = boldRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  // 3. Parse Italic: *text*
+  const italicRegex = /\*([^*]+)\*/g;
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    italicRegex.lastIndex = 0;
+    while ((match = italicRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'italic', text: match[1] });
+      lastIndex = italicRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  // 4. Parse Mentions: @Name
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    mentionRegex.lastIndex = 0;
+    while ((match = mentionRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      const matchedName = match[1];
+      const matchedUser = sortedMentionables.find(u => u.name.toLowerCase() === matchedName.toLowerCase());
+      if (matchedUser) {
+        parts.push({ type: 'mention', text: matchedName, userId: matchedUser._id });
+      } else {
+        parts.push({ type: 'text', text: match[0] });
+      }
+      lastIndex = mentionRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  return tokens.map((token, index) => {
+    switch (token.type) {
+      case 'link':
+        return (
+          <a
+            key={index}
+            href={token.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent)] hover:underline font-semibold cursor-pointer inline-flex items-center gap-0.5"
+          >
+            {token.text}
+          </a>
+        );
+      case 'bold':
+        return <strong key={index} className="font-extrabold text-[var(--text)]">{token.text}</strong>;
+      case 'italic':
+        return <em key={index} className="italic text-[var(--text)]">{token.text}</em>;
+      case 'mention':
+        return (
+          <span
+            key={index}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] border border-[var(--accent)]/15 select-none animate-fade-in"
+          >
+            @{token.text}
+          </span>
+        );
+      default:
+        return token.text;
+    }
+  });
+};
 
 const CommunityChat = () => {
   const { user } = useContext(UserContext);
@@ -19,6 +166,13 @@ const CommunityChat = () => {
   const activeChatIdRef = useRef(activeChatId);
   const chatModeRef = useRef(chatMode);
   const userRef = useRef(user);
+  const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [mentionTriggerIndex, setMentionTriggerIndex] = useState(-1);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
 
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
@@ -301,6 +455,125 @@ const CommunityChat = () => {
     setShowMobileSidebar(false);
   };
 
+  const handleFormatText = (type) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    let replacement = "";
+    let cursorOffset = 0;
+
+    if (type === "bold") {
+      replacement = `**${selectedText}**`;
+      cursorOffset = selectedText ? 0 : 2;
+    } else if (type === "italic") {
+      replacement = `*${selectedText}*`;
+      cursorOffset = selectedText ? 0 : 1;
+    }
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    setNewMessage(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + replacement.length - cursorOffset;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleChatFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const toastId = toast.loading(`Uploading "${file.name}"...`);
+    try {
+      const formData = new FormData();
+      formData.append("image", file); // Backend expects "image"
+
+      const res = await axiosInstance.post('/api/auth/upload-image', formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data && res.data.imageUrl) {
+        toast.success("File uploaded successfully!", { id: toastId });
+        
+        const textarea = textareaRef.current;
+        const start = textarea ? textarea.selectionStart : newMessage.length;
+        const end = textarea ? textarea.selectionEnd : newMessage.length;
+        const fileLink = `[${file.name}](${res.data.imageUrl})`;
+        
+        const newValue = newMessage.substring(0, start) + fileLink + newMessage.substring(end);
+        setNewMessage(newValue);
+        
+        setTimeout(() => {
+          if (textarea) {
+            textarea.focus();
+            const newPos = start + fileLink.length;
+            textarea.setSelectionRange(newPos, newPos);
+          }
+        }, 0);
+      }
+    } catch (err) {
+      console.error("Upload error", err);
+      toast.error(err.response?.data?.message || "Failed to upload file.", { id: toastId });
+    }
+    e.target.value = null; // reset input
+  };
+
+  const selectMention = (selectedUser) => {
+    if (!selectedUser) return;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const before = newMessage.substring(0, mentionTriggerIndex);
+    const after = newMessage.substring(textarea.selectionStart);
+    const completedMention = `@${selectedUser.name} `;
+
+    const newValue = before + completedMention + after;
+    setNewMessage(newValue);
+    setShowMentions(false);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = mentionTriggerIndex + completedMention.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
+  const handleTyping = (e) => {
+    const val = e.target.value;
+    setNewMessage(val);
+
+    const selectionEnd = e.target.selectionStart;
+    const lastAt = val.lastIndexOf('@', selectionEnd - 1);
+    
+    if (lastAt !== -1) {
+      const textAfterAt = val.slice(lastAt + 1, selectionEnd);
+      const charBeforeAt = lastAt === 0 ? '' : val[lastAt - 1];
+      const isWordAfterAt = /^[a-zA-Z0-9_.-]*$/.test(textAfterAt);
+      const isPrecededBySpace = lastAt === 0 || /\s/.test(charBeforeAt);
+
+      if (isWordAfterAt && isPrecededBySpace) {
+        setShowMentions(true);
+        setMentionSearch(textAfterAt);
+        setMentionTriggerIndex(lastAt);
+        setActiveMentionIndex(0);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const mentionSuggestions = users.filter(u => 
+    u && u.name && u.name.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
   return (
     <DashboardLayout activeMenu="Workspace Chat">
       {/* Hyper-minimalist Elite Container */}
@@ -545,7 +818,7 @@ const CommunityChat = () => {
                       </div>
                     )}
                     <div className="text-[15px] text-[var(--text)] leading-[1.45] break-words whitespace-pre-wrap">
-                      {msg.content}
+                      {parseMessageContent(msg.content, users, user)}
                     </div>
                   </div>
                 </div>
@@ -556,14 +829,66 @@ const CommunityChat = () => {
           {/* Input Area */}
           <div className="p-5 pt-0 bg-[var(--bg)] shrink-0">
             <form onSubmit={handleSendMessage} className="relative">
+              
+              {/* Floating Mentions Dropdown */}
+              {showMentions && mentionSuggestions.length > 0 && (
+                <div className="absolute bottom-full left-4 mb-2 w-64 max-h-48 overflow-y-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 py-1.5 scrollbar-thin">
+                  <div className="px-3 py-1 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                    Team Members
+                  </div>
+                  {mentionSuggestions.map((u, idx) => (
+                    <button
+                      key={u._id}
+                      type="button"
+                      onClick={() => selectMention(u)}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+                        idx === activeMentionIndex 
+                        ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold' 
+                        : 'hover:bg-[var(--bg-soft)] text-[var(--text)]'
+                      }`}
+                    >
+                      <div className="relative flex items-center justify-center w-5 h-5 shrink-0 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-xs truncate">{u.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleChatFileUpload}
+                className="hidden"
+              />
+
               <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)] transition-all shadow-sm">
                 <textarea
+                  ref={textareaRef}
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleTyping}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage(e);
+                    if (showMentions && mentionSuggestions.length > 0) {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setActiveMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setActiveMentionIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        selectMention(mentionSuggestions[activeMentionIndex]);
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        setShowMentions(false);
+                      }
+                    } else {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
                     }
                   }}
                   placeholder={chatMode === 'community' ? "Message #community-chat" : chatMode === 'direct' ? "Send a direct message" : "Discuss this task"}
@@ -574,12 +899,30 @@ const CommunityChat = () => {
 
                 <div className="flex items-center justify-between px-2 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
                   <div className="flex items-center gap-1 text-[var(--text-muted)]">
-                    <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
+                    <button 
+                      type="button" 
+                      onClick={() => handleFormatText('bold')}
+                      className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" 
+                      title="Bold"
+                    >
                       <span className="font-bold font-mono text-[12px]">B</span>
-                    </div>
-                    <div className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]">
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => handleFormatText('italic')}
+                      className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" 
+                      title="Italic"
+                    >
                       <span className="italic font-serif text-[12px]">I</span>
-                    </div>
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" 
+                      title="Connect File"
+                    >
+                      <LuPaperclip className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                    </button>
                   </div>
 
                   <button

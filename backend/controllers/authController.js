@@ -18,17 +18,14 @@ const generateToken = (userId) => {
 
 const registerUser = async (req, res) => {
     try{
-        const { name, email, password, profileImageUrl, adminInviteToken, inviteToken } = req.body;
+        const { name, email, password, profileImageUrl, inviteToken } = req.body;
 
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        let role = "member";
-        if (adminInviteToken && adminInviteToken === process.env.ADMIN_INVITE_TOKEN) {
-            role = "admin";
-        }
+        const role = "member";
 
         let companyId = null;
         let companyName = "";

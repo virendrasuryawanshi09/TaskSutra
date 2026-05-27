@@ -1,6 +1,13 @@
 const User = require('../models/User');
 const Company = require('../models/Company');
 const Invitation = require('../models/Invitation');
+const Task = require('../models/Task');
+const DirectChat = require('../models/DirectChat');
+const DirectMessage = require('../models/DirectMessage');
+const Message = require('../models/Message');
+const Notification = require('../models/Notification');
+const TaskDiscussion = require('../models/TaskDiscussion');
+const TaskMessage = require('../models/TaskMessage');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -178,10 +185,36 @@ const updateUserProfile = async (req, res) => {
 
 const deleteAccount = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const userId = req.user._id;
+        const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
-        await User.findByIdAndDelete(req.user._id);
-        res.json({ message: 'Account deleted successfully' });
+
+        // 1. Clean up Direct Chats & Direct Messages
+        const directChats = await DirectChat.find({ participants: userId });
+        const directChatIds = directChats.map(chat => chat._id);
+        if (directChatIds.length > 0) {
+            await DirectMessage.deleteMany({ chatId: { $in: directChatIds } });
+            await DirectChat.deleteMany({ _id: { $in: directChatIds } });
+        }
+
+        // 2. Clean up General/Company Messages
+        await Message.deleteMany({ sender: userId });
+
+        // 3. Clean up Tasks (pull from assignedTo, set createdBy to null)
+        await Task.updateMany({ assignedTo: userId }, { $pull: { assignedTo: userId } });
+        await Task.updateMany({ createdBy: userId }, { $set: { createdBy: null } });
+
+        // 4. Clean up Task Discussion Messages and pull user from discussion participants
+        await TaskMessage.deleteMany({ sender: userId });
+        await TaskDiscussion.updateMany({ participants: userId }, { $pull: { participants: userId } });
+
+        // 5. Clean up Notifications
+        await Notification.deleteMany({ $or: [{ recipient: userId }, { sender: userId }] });
+
+        // 6. Finally, delete the User document
+        await User.findByIdAndDelete(userId);
+
+        res.json({ message: 'Account and all associated data deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

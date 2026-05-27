@@ -1,14 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import SideMenu from "./SideMenu";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LuBell, LuTrash2, LuCheck, LuCheckCheck } from "react-icons/lu";
 import { useNotification } from "../../context/NotificationContext";
+import { UserContext } from "../../context/UserContextState";
 
 const Navbar = () => {
     const [openSideMenu, setOpenSideMenu] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user } = useContext(UserContext);
 
     const {
         notifications,
@@ -51,6 +54,36 @@ const Navbar = () => {
 
     const handleClearAll = () => {
         clearAll();
+    };
+
+    const handleNotificationClick = (n) => {
+        if (!n.isRead) {
+            markAsRead(n._id);
+        }
+        setIsDropdownOpen(false);
+
+        const role = user?.role || "member";
+        const basePath = (role === "admin" || role === "ceo") ? "/admin" : "/user";
+
+        if (n.type === "direct_message") {
+            navigate(`${basePath}/direct-chat`, {
+                state: { activeUser: n.sender }
+            });
+        } else if (n.type === "community_chat") {
+            navigate(`${basePath}/direct-chat`, {
+                state: { activeCommunity: true }
+            });
+        } else if (n.type === "task_message") {
+            navigate(`${basePath}/direct-chat`, {
+                state: { activeTask: { _id: n.task?._id || n.task } }
+            });
+        } else if (n.type === "task_assigned" || n.type === "task_updated") {
+            if (role === "admin" || role === "ceo") {
+                navigate(`/admin/tasks`);
+            } else {
+                navigate(`/user/task-details/${n.task?._id || n.task}`);
+            }
+        }
     };
 
     useEffect(() => {
@@ -156,7 +189,8 @@ const Navbar = () => {
                                         notifications.map((n) => (
                                             <div
                                                 key={n._id}
-                                                className={`p-3 rounded-xl border transition duration-150 flex flex-col gap-1.5 text-left relative group ${
+                                                onClick={() => handleNotificationClick(n)}
+                                                className={`p-3 rounded-xl border transition duration-150 flex flex-col gap-1.5 text-left relative group cursor-pointer ${
                                                     n.isRead 
                                                         ? "bg-transparent border-transparent hover:bg-[var(--bg-soft)]" 
                                                         : "bg-[var(--bg-soft)] border-[var(--border)] hover:border-[var(--accent)]"

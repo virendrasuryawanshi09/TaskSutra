@@ -74,12 +74,16 @@ const DirectChat = () => {
         
         if (location.state?.activeTask) {
            const t = fetchedTasks.find(t => String(t._id) === String(location.state.activeTask._id));
-           if (t) {
-              setActiveChat({ type: 'task', data: t });
-           } else {
-              setActiveChat({ type: 'task', data: location.state.activeTask });
-           }
-           window.history.replaceState({}, document.title)
+           setActiveChat({ type: 'task', data: t || location.state.activeTask });
+           window.history.replaceState({}, document.title);
+        } else if (location.state?.activeUser) {
+           const uObj = location.state.activeUser;
+           const u = fetchedUsers.find(u => String(u._id) === String(uObj._id || uObj));
+           setActiveChat({ type: 'user', data: u || uObj });
+           window.history.replaceState({}, document.title);
+        } else if (location.state?.activeCommunity) {
+           setActiveChat({ type: 'community', data: { _id: 'community-chat', name: 'Community Chat' } });
+           window.history.replaceState({}, document.title);
         }
       } catch (error) {
         console.error('Failed to fetch sidebar data:', error);
@@ -122,6 +126,7 @@ const DirectChat = () => {
         } else if (activeChat.type === 'task') {
            const res = await axiosInstance.get(`/api/task-discussions/${activeChat.data._id}`);
            setMessages(res.data.messages || []);
+           fetchNotifications();
         } else if (activeChat.type === 'community') {
            const res = await axiosInstance.get('/api/chat');
            setMessages(res.data.messages || res.data || []);
@@ -204,6 +209,12 @@ const DirectChat = () => {
       setMessages((prev) => {
         if (activeChat?.type === 'task' && String(message.discussionId) === String(activeChat.data.discussionId || message.discussionId)) {
           if (prev.find(m => String(m._id) === String(message._id))) return prev;
+          
+          // Clear task message notifications in DB and update context
+          axiosInstance.get(`/api/task-discussions/${activeChat.data._id}`).then(() => {
+             fetchNotifications();
+          }).catch(err => console.error("Error reading task discussion:", err));
+
           return [...prev, message];
         }
         return prev;

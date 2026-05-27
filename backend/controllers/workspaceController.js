@@ -319,6 +319,12 @@ const createCompany = async (req, res) => {
       return res.status(400).json({ success: false, message: "Workspace name and domain are required" });
     }
 
+    // Check if user is already associated with a company workspace
+    const existingUser = await User.findById(req.user._id);
+    if (existingUser && existingUser.companyId) {
+      return res.status(400).json({ success: false, message: "You are already associated with a company workspace" });
+    }
+
     const cleanDomain = domain.trim().toLowerCase();
     const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'zoho.com', 'protonmail.com', 'mail.com'];
     if (publicDomains.includes(cleanDomain) && process.env.NODE_ENV === 'production') {

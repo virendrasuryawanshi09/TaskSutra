@@ -114,7 +114,7 @@ const SignUp = () => {
       });
 
       if (role === "member" && !user.companyId) {
-        navigate("/admin/users");
+        navigate("/user/dashboard");
       } else {
         navigate(getDashboardRoute(role));
       }

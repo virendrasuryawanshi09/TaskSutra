@@ -111,10 +111,6 @@ export const NotificationProvider = ({ children }) => {
 
   const clearAll = async () => {
     if (notifications.length === 0) return;
-    const confirmClear = window.confirm(
-      "Are you sure you want to clear all notifications?"
-    );
-    if (!confirmClear) return;
 
     try {
       const res = await axiosInstance.delete("/api/notifications/clear-all");

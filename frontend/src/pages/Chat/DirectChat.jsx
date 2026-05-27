@@ -5,9 +5,156 @@ import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import axiosInstance from '../../utils/axiosInstance';
 import moment from 'moment';
-import { LuSend, LuMessageSquare } from 'react-icons/lu';
+import { LuSend, LuMessageSquare, LuPaperclip } from 'react-icons/lu';
 import toast from 'react-hot-toast';
 import { useNotification } from '../../context/NotificationContext';
+
+const parseMessageContent = (text, users = [], currentUser = null) => {
+  if (!text) return "";
+  
+  const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  const allMentionables = [...users];
+  if (currentUser && !allMentionables.find(u => u._id === currentUser._id)) {
+    allMentionables.push(currentUser);
+  }
+
+  const sortedMentionables = allMentionables
+    .filter(u => u && u.name)
+    .sort((a, b) => b.name.length - a.name.length);
+
+  let mentionRegexStr = '\\B@([a-zA-Z0-9_.-]+)';
+  if (sortedMentionables.length > 0) {
+    const escapedNames = sortedMentionables.map(u => escapeRegExp(u.name)).join('|');
+    mentionRegexStr = `\\B@(${escapedNames}|[a-zA-Z0-9_.-]+)`;
+  }
+  const mentionRegex = new RegExp(mentionRegexStr, 'g');
+
+  let tokens = [{ type: 'text', text }];
+
+  // 1. Parse Links: [text](url)
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    linkRegex.lastIndex = 0;
+    while ((match = linkRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'link', text: match[1], url: match[2] });
+      lastIndex = linkRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  // 2. Parse Bold: **text**
+  const boldRegex = /\*\*([^*]+)\*\*/g;
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    boldRegex.lastIndex = 0;
+    while ((match = boldRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'bold', text: match[1] });
+      lastIndex = boldRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  // 3. Parse Italic: *text*
+  const italicRegex = /\*([^*]+)\*/g;
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    italicRegex.lastIndex = 0;
+    while ((match = italicRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'italic', text: match[1] });
+      lastIndex = italicRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  // 4. Parse Mentions: @Name
+  tokens = tokens.flatMap(token => {
+    if (token.type !== 'text') return token;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    mentionRegex.lastIndex = 0;
+    while ((match = mentionRegex.exec(token.text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', text: token.text.slice(lastIndex, match.index) });
+      }
+      const matchedName = match[1];
+      const matchedUser = sortedMentionables.find(u => u.name.toLowerCase() === matchedName.toLowerCase());
+      if (matchedUser) {
+        parts.push({ type: 'mention', text: matchedName, userId: matchedUser._id });
+      } else {
+        parts.push({ type: 'text', text: match[0] });
+      }
+      lastIndex = mentionRegex.lastIndex;
+    }
+    if (lastIndex < token.text.length) {
+      parts.push({ type: 'text', text: token.text.slice(lastIndex) });
+    }
+    return parts;
+  });
+
+  return tokens.map((token, index) => {
+    switch (token.type) {
+      case 'link':
+        return (
+          <a
+            key={index}
+            href={token.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent)] hover:underline font-semibold cursor-pointer inline-flex items-center gap-0.5"
+          >
+            {token.text}
+          </a>
+        );
+      case 'bold':
+        return <strong key={index} className="font-extrabold text-[var(--text)]">{token.text}</strong>;
+      case 'italic':
+        return <em key={index} className="italic text-[var(--text)]">{token.text}</em>;
+      case 'mention':
+        return (
+          <span
+            key={index}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-[13px] border border-[var(--accent)]/15 select-none animate-fade-in"
+          >
+            @{token.text}
+          </span>
+        );
+      default:
+        return token.text;
+    }
+  });
+};
 
 const DirectChat = () => {
   const { user } = useContext(UserContext);
@@ -30,6 +177,13 @@ const DirectChat = () => {
   const [editingId, setEditingId] = useState(null);
   const [editInput, setEditInput] = useState("");
   const longPressTimeout = useRef(null);
+  const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [mentionTriggerIndex, setMentionTriggerIndex] = useState(-1);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
 
   // Auto scroll
   const scrollToBottom = () => {
@@ -539,8 +693,119 @@ const DirectChat = () => {
     }
   };
 
+  const handleFormatText = (type) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    let replacement = "";
+    let cursorOffset = 0;
+
+    if (type === "bold") {
+      replacement = `**${selectedText}**`;
+      cursorOffset = selectedText ? 0 : 2;
+    } else if (type === "italic") {
+      replacement = `*${selectedText}*`;
+      cursorOffset = selectedText ? 0 : 1;
+    }
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    setNewMessage(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + replacement.length - cursorOffset;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleChatFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const toastId = toast.loading(`Uploading "${file.name}"...`);
+    try {
+      const formData = new FormData();
+      formData.append("image", file); // Backend expects "image"
+
+      const res = await axiosInstance.post('/api/auth/upload-image', formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data && res.data.imageUrl) {
+        toast.success("File uploaded successfully!", { id: toastId });
+        
+        const textarea = textareaRef.current;
+        const start = textarea ? textarea.selectionStart : newMessage.length;
+        const end = textarea ? textarea.selectionEnd : newMessage.length;
+        const fileLink = `[${file.name}](${res.data.imageUrl})`;
+        
+        const newValue = newMessage.substring(0, start) + fileLink + newMessage.substring(end);
+        setNewMessage(newValue);
+        
+        setTimeout(() => {
+          if (textarea) {
+            textarea.focus();
+            const newPos = start + fileLink.length;
+            textarea.setSelectionRange(newPos, newPos);
+          }
+        }, 0);
+      }
+    } catch (err) {
+      console.error("Upload error", err);
+      toast.error(err.response?.data?.message || "Failed to upload file.", { id: toastId });
+    }
+    e.target.value = null; // reset input
+  };
+
+  const selectMention = (selectedUser) => {
+    if (!selectedUser) return;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const before = newMessage.substring(0, mentionTriggerIndex);
+    const after = newMessage.substring(textarea.selectionStart);
+    const completedMention = `@${selectedUser.name} `;
+
+    const newValue = before + completedMention + after;
+    setNewMessage(newValue);
+    setShowMentions(false);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = mentionTriggerIndex + completedMention.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
   const handleTyping = (e) => {
-    setNewMessage(e.target.value);
+    const val = e.target.value;
+    setNewMessage(val);
+
+    const selectionEnd = e.target.selectionStart;
+    const lastAt = val.lastIndexOf('@', selectionEnd - 1);
+    
+    if (lastAt !== -1) {
+      const textAfterAt = val.slice(lastAt + 1, selectionEnd);
+      const charBeforeAt = lastAt === 0 ? '' : val[lastAt - 1];
+      const isWordAfterAt = /^[a-zA-Z0-9_.-]*$/.test(textAfterAt);
+      const isPrecededBySpace = lastAt === 0 || /\s/.test(charBeforeAt);
+
+      if (isWordAfterAt && isPrecededBySpace) {
+        setShowMentions(true);
+        setMentionSearch(textAfterAt);
+        setMentionTriggerIndex(lastAt);
+        setActiveMentionIndex(0);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
 
     if (socketRef.current && user && activeChat) {
       const userId = user._id || user.id;
@@ -592,6 +857,10 @@ const DirectChat = () => {
       }
     }
   };
+
+  const mentionSuggestions = users.filter(u => 
+    u && u.name && u.name.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
 
   return (
     <DashboardLayout activeMenu="Direct Messages">
@@ -885,7 +1154,7 @@ const DirectChat = () => {
                           </div>
                         ) : (
                           <div className="text-[15px] text-[var(--text)] leading-[1.5] break-words whitespace-pre-wrap flex items-end gap-2 text-left">
-                            <span>{msg.content}</span>
+                            <span>{parseMessageContent(msg.content, users, user)}</span>
                             {msg.isEdited && (
                               <span className="text-[9px] select-none text-[var(--text-muted)] font-semibold tracking-tight mt-1.5" title="Edited message">
                                 (edited)
@@ -923,19 +1192,70 @@ const DirectChat = () => {
                   </div>
                 )}
               </div>
-
               {/* Input Area */}
               <div className="p-4 md:p-6 pt-2 bg-[var(--bg)] shrink-0 z-10">
                 <form onSubmit={handleSendMessage} className="relative max-w-5xl mx-auto">
+                  
+                  {/* Floating Mentions Dropdown */}
+                  {showMentions && mentionSuggestions.length > 0 && (
+                    <div className="absolute bottom-full left-4 mb-2 w-64 max-h-48 overflow-y-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 py-1.5 scrollbar-thin">
+                      <div className="px-3 py-1 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                        Team Members
+                      </div>
+                      {mentionSuggestions.map((u, idx) => (
+                        <button
+                          key={u._id}
+                          type="button"
+                          onClick={() => selectMention(u)}
+                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+                            idx === activeMentionIndex 
+                            ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-semibold' 
+                            : 'hover:bg-[var(--bg-soft)] text-[var(--text)]'
+                          }`}
+                        >
+                          <div className="relative flex items-center justify-center w-5 h-5 shrink-0 rounded bg-[var(--bg-soft)] border border-[var(--border)] text-[9px] font-bold text-[var(--text-muted)]">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-xs truncate">{u.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Hidden File Input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleChatFileUpload}
+                    className="hidden"
+                  />
+
                   <div className="overflow-hidden border border-[var(--border)] bg-[var(--surface)] rounded-xl focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/20 transition-all shadow-sm">
                     
                     <textarea
+                      ref={textareaRef}
                       value={newMessage}
                       onChange={handleTyping}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e);
+                        if (showMentions && mentionSuggestions.length > 0) {
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setActiveMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setActiveMentionIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
+                          } else if (e.key === "Enter") {
+                            e.preventDefault();
+                            selectMention(mentionSuggestions[activeMentionIndex]);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            setShowMentions(false);
+                          }
+                        } else {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage(e);
+                          }
                         }
                       }}
                       placeholder={activeChat.type === 'user' ? `Message ${activeChat.data.name}` : activeChat.type === 'community' ? `Message #community-chat` : `Message in #${activeChat.data.title}`}
@@ -946,14 +1266,29 @@ const DirectChat = () => {
                     
                     <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-soft)] border-t border-[var(--border)]">
                       <div className="flex items-center gap-1 text-[var(--text-muted)]">
-                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" title="Bold">
+                        <button 
+                          type="button" 
+                          onClick={() => handleFormatText('bold')}
+                          className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" 
+                          title="Bold"
+                        >
                           <span className="font-bold font-mono text-[13px]">B</span>
                         </button>
-                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" title="Italic">
+                        <button 
+                          type="button" 
+                          onClick={() => handleFormatText('italic')}
+                          className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors text-[16px]" 
+                          title="Italic"
+                        >
                           <span className="italic font-serif text-[13px]">I</span>
                         </button>
-                        <button type="button" className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors" title="Link">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <button 
+                          type="button" 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-1.5 hover:bg-[var(--surface)] hover:text-[var(--text)] rounded cursor-pointer transition-colors" 
+                          title="Connect File"
+                        >
+                          <LuPaperclip className="w-4 h-4 text-[var(--text-muted)]" />
                         </button>
                         <div className="w-px h-4 bg-[var(--border)] mx-1"></div>
                         <div className="px-2 py-1 rounded text-[11px] font-medium hidden sm:flex items-center gap-1">
@@ -974,7 +1309,7 @@ const DirectChat = () => {
                         <span className="hidden sm:inline">Send</span>
                       </button>
                     </div>
-
+ 
                   </div>
                 </form>
               </div>

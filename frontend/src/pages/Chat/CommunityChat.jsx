@@ -575,9 +575,9 @@ const CommunityChat = () => {
   );
 
   return (
-    <DashboardLayout activeMenu="Workspace Chat">
+    <DashboardLayout activeMenu="Workspace Chat" noPaddingMobile={true}>
       {/* Hyper-minimalist Elite Container */}
-      <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4 relative">
+      <div className="flex h-[calc(100vh-4rem)] md:h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border-x-0 border-t-0 md:border border-[var(--border)] md:rounded-xl overflow-hidden shadow-none md:shadow-sm md:mt-4 relative">
 
         {/* Mobile Sidebar Overlay */}
         {showMobileSidebar && (
@@ -647,7 +647,7 @@ const CommunityChat = () => {
                           <span className={`text-[13px] truncate flex items-center gap-1.5 transition-colors ${chatMode === 'direct' && activeChatId === u._id ? 'text-[var(--accent)] font-bold' : unreadCount > 0 ? 'text-[var(--text)] font-bold' : 'text-[var(--text-muted)] font-medium group-hover:text-[var(--text)]'}`}>
                             {u.name}
                             {u.role && u.role.toLowerCase() === 'admin' && (
-                              <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)]">Admin</span>
+                              <span className="px-1.5 py-[0.5px] rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-[7px] font-bold tracking-wider uppercase ml-1 shrink-0 border border-[var(--accent)]/15">Admin</span>
                             )}
                           </span>
                         </div>
@@ -810,7 +810,7 @@ const CommunityChat = () => {
                           {senderName}
                         </span>
                         {isAdmin && (
-                          <span className="px-1.5 py-[1px] rounded-[3px] bg-[#C28B2C]/10 text-[#C28B2C] text-[8px] font-extrabold tracking-widest uppercase border border-[#C28B2C]/30 shadow-[0_0_8px_rgba(194,139,44,0.15)]">Admin</span>
+                          <span className="px-1.5 py-[0.5px] rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-[7px] font-bold tracking-wider uppercase ml-1 shrink-0 border border-[var(--accent)]/15">Admin</span>
                         )}
                         <span className="text-[11px] font-medium text-[var(--text-muted)]">
                           {time}

@@ -18,7 +18,6 @@ import MyTasks from "./pages/User/MyTasks";
 import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
 import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
-import CommunityChat from "./pages/Chat/CommunityChat";
 import DirectChat from "./pages/Chat/DirectChat";
 import useUserAuth from "./hooks/useUserAuth";
 import EditProfile from "./pages/User/Profile/EditProfile";
@@ -129,7 +128,7 @@ const App = () => {
             <Route path="/admin/create-task" element={<CreateTask />} />
             <Route path="/admin/tasks/:id" element={<CreateTask />} />
             <Route path="/admin/users" element={<ManageUsers />} />
-            <Route path="/admin/chat" element={<CommunityChat />} />
+            <Route path="/admin/chat" element={<DirectChat defaultCommunity={true} />} />
             <Route path="/admin/direct-chat" element={<DirectChat />} />
           </Route>
 
@@ -140,7 +139,7 @@ const App = () => {
             <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
             <Route path="/user/team-members" element={<UserTeamMembers />} />
             <Route path="/user/profile" element={<EditProfile />} />
-            <Route path="/user/chat" element={<CommunityChat />} />
+            <Route path="/user/chat" element={<DirectChat defaultCommunity={true} />} />
             <Route path="/user/direct-chat" element={<DirectChat />} />
           </Route>
         </Routes>

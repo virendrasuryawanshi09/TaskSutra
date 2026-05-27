@@ -132,7 +132,7 @@ const createInvitation = async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
     await Invitation.create({
       email,
@@ -141,7 +141,7 @@ const createInvitation = async (req, res) => {
       expiresAt,
     });
 
-    const inviteLink = `http://localhost:5173/signup?token=${token}`;
+    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup?token=${token}`;
     
     // Dispatch invite email
     const senderName = req.user.name || req.user.email;

@@ -130,6 +130,12 @@ exports.markAsRead = async (req, res) => {
     const chat = await DirectChat.findById(chatId);
     if (!chat) return res.status(404).json({ message: "Chat not found" });
 
+    // Verify that the logged-in user is a participant in this chat to prevent authorization bypass
+    const isParticipant = chat.participants.some(p => p.toString() === userId.toString());
+    if (!isParticipant) {
+      return res.status(403).json({ message: "Not authorized to access this chat" });
+    }
+
     if (!chat.unreadCounts) chat.unreadCounts = new Map();
     chat.unreadCounts.set(userId.toString(), 0);
     await chat.save();

@@ -45,7 +45,7 @@ input:-webkit-autofill:active {
   --scroll-thumb-hover: rgba(58, 166, 176, 0.54);
 }
 
-html {
+html, body, main, .overflow-y-auto {
   scroll-behavior: smooth;
 }
 

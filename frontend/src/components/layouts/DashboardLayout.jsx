@@ -1,4 +1,5 @@
 import React, { useContext } from "react";
+import { motion } from "framer-motion";
 import Navbar from "./Navbar";
 import SideMenu from "./SideMenu";
 import { UserContext } from "../../context/UserContextState";
@@ -24,7 +25,13 @@ const DashboardLayout = ({ children, noPaddingMobile = false, hideNavbarMobile =
 
           {/* Main Content — this is the ONLY scrolling area */}
           <main className={`min-w-0 flex-1 overflow-y-auto ${noPaddingMobile ? 'p-0 md:p-6 lg:p-8' : 'p-4 md:p-6 lg:p-8'}`}>
-            {children}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              {children}
+            </motion.div>
           </main>
 
         </div>

@@ -259,10 +259,10 @@ const Navbar = () => {
                         />
 
                         <motion.div
-                            initial={{ x: -260 }}
+                            initial={{ x: "-100%" }}
                             animate={{ x: 0 }}
-                            exit={{ x: -260 }}
-                            transition={{ duration: 0.3 }}
+                            exit={{ x: "-100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 280 }}
                             className="fixed inset-y-0 left-0 z-[90] w-[40vw] min-w-[220px] max-w-[280px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_16px_40px_rgba(0,0,0,0.22)]"
                         >
                             <SideMenu />

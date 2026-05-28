@@ -189,8 +189,8 @@ const MemberRowItem = ({
                 </AnimatePresence>
               </div>
             ) : user.role === "admin" ? (
-              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 shadow-sm">
-                Admin
+              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 shadow-sm">
+                ADMIN
               </span>
             ) : (
               <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-[var(--bg-soft)] text-[var(--text-muted)] border border-[var(--border)] shadow-sm">

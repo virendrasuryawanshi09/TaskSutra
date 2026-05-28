@@ -43,7 +43,6 @@ export const NotificationProvider = ({ children }) => {
 
     const handleNewNotification = (newNotif) => {
       setNotifications((prev) => [newNotif, ...prev]);
-      toast.success(`Notification: ${newNotif.title}`);
     };
 
     socket.on("new_notification", handleNewNotification);

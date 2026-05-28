@@ -120,10 +120,10 @@ const createInvitation = async (req, res) => {
       return res.status(400).json({ success: false, message: "User is not associated with any company workspace" });
     }
 
-    // Check if there is already a pending invitation for this email
-    const existingInvite = await Invitation.findOne({ email, status: "pending", expiresAt: { $gt: new Date() } });
-    if (existingInvite) {
-      return res.status(400).json({ success: false, message: "A pending invitation already exists for this email" });
+    // Check if the user is already registered
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: "User with this email is already registered in this system" });
     }
 
     const company = await Company.findById(req.user.companyId);
@@ -134,27 +134,47 @@ const createInvitation = async (req, res) => {
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
-    await Invitation.create({
-      email,
-      companyId: req.user.companyId,
-      token,
-      expiresAt,
-    });
+    // If an invitation already exists, reuse/update it instead of failing
+    let invitation = await Invitation.findOne({ email, status: "pending" });
+    if (invitation) {
+      invitation.token = token;
+      invitation.expiresAt = expiresAt;
+      invitation.companyId = req.user.companyId;
+      await invitation.save();
+    } else {
+      invitation = await Invitation.create({
+        email,
+        companyId: req.user.companyId,
+        token,
+        expiresAt,
+      });
+    }
 
     const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/signup?token=${token}`;
     
-    // Dispatch invite email
+    // Dispatch invite email (safely handle failures so that the link is still generated)
     const senderName = req.user.name || req.user.email;
-    const emailResult = await sendInviteEmail(email, inviteLink, company.name, senderName);
+    let emailResult = { success: false, nodemailerMissing: false };
+    try {
+      emailResult = await sendInviteEmail(email, inviteLink, company.name, senderName);
+    } catch (mailError) {
+      console.error("[MAIL ERROR] Failed to dispatch invitation email:", mailError);
+      emailResult.mailError = mailError.message;
+    }
+
+    const isFailedMail = !!emailResult.mailError;
+    const isNodemailerMissing = !!emailResult.nodemailerMissing;
 
     res.status(201).json({
       success: true,
-      message: emailResult.nodemailerMissing 
+      message: isNodemailerMissing 
         ? "Invitation generated, but nodemailer was not installed. Check console fallback."
+        : isFailedMail
+        ? `Invitation generated, but email sending failed: ${emailResult.mailError}. You can copy the fallback link below.`
         : "Invitation link sent to member email successfully",
       inviteLink,
       previewUrl: emailResult?.previewUrl || null,
-      nodemailerMissing: !!emailResult.nodemailerMissing,
+      nodemailerMissing: isNodemailerMissing || isFailedMail,
       expiresAt
     });
   } catch (error) {

@@ -94,21 +94,14 @@ const ManageUsers = () => {
   };
 
   const handleExportUsersReport = async () => {
-    const toastId = toast.loading("Preparing users report...");
     try {
       setIsExporting(true);
       await downloadReport({
         url: API_PATHS.REPORTS.EXPORT_USERS,
         fallbackFileName: "user_report.xlsx",
       });
-      toast.success("Users report downloaded successfully.", { id: toastId });
     } catch (error) {
-      toast.error(
-        error?.message ||
-        error?.response?.data?.message ||
-        "Failed to download users report.",
-        { id: toastId }
-      );
+      console.error("Failed to download users report:", error);
     } finally {
       setIsExporting(false);
     }

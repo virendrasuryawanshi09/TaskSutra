@@ -145,7 +145,7 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
           !generatedLink ? (
             <form onSubmit={handleSendInvite} className="flex flex-col gap-4 text-left">
               <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                Generate a secure link to allow the user to sign up themselves. Link will expire in 10 minutes.
+                Generate a secure link to allow the user to sign up themselves. Link will expire in 48 hours.
               </p>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-[var(--text)] font-semibold">

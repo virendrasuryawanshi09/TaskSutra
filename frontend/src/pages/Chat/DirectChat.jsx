@@ -604,7 +604,6 @@ const DirectChat = ({ defaultCommunity = false }) => {
           });
         }
       }
-      toast.success('Message updated');
     } catch (error) {
       console.error('Failed to edit message:', error);
       toast.error('Failed to edit message');
@@ -639,7 +638,6 @@ const DirectChat = ({ defaultCommunity = false }) => {
           });
         }
       }
-      toast.success('Message deleted');
     } catch (error) {
       console.error('Failed to delete message:', error);
       toast.error('Failed to delete message');

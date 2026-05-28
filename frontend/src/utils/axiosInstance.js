@@ -31,9 +31,14 @@ axiosInstance.interceptors.response.use(
     (error) => {
         if(error.response) {
             if(error.response.status === 401) {
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                window.location.href = "/login";
+                const isAuthPath = window.location.pathname === "/login" || window.location.pathname === "/signup";
+                const isAuthApi = error.config && (error.config.url.includes("/login") || error.config.url.includes("/register"));
+                
+                if (!isAuthPath && !isAuthApi) {
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("user");
+                    window.location.href = "/login";
+                }
             } else if(error.response.status === 500) {
                 console.error("Server error Please try again");
             }

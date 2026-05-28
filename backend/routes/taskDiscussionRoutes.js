@@ -7,10 +7,11 @@ const {
   deleteTaskMessage
 } = require("../controllers/taskDiscussionController");
 const { protect } = require("../middlewares/authMiddleware");
+const validateObjectId = require("../middlewares/validateObjectId");
 
-router.get("/:taskId", protect, getTaskDiscussion);
-router.post("/:taskId", protect, sendTaskMessage);
-router.put("/message/:messageId", protect, editTaskMessage);
-router.delete("/message/:messageId", protect, deleteTaskMessage);
+router.get("/:taskId", protect, validateObjectId, getTaskDiscussion);
+router.post("/:taskId", protect, validateObjectId, sendTaskMessage);
+router.put("/message/:messageId", protect, validateObjectId, editTaskMessage);
+router.delete("/message/:messageId", protect, validateObjectId, deleteTaskMessage);
 
 module.exports = router;

@@ -20,14 +20,16 @@ router.get("/invitations/validate/:token", validateInvitation);
 // Apply protect middleware to all routes below
 router.use(protect);
 
+const validateObjectId = require("../middlewares/validateObjectId");
+
 // Company Info Endpoints (available to Admin & CEO, creation only checks JWT)
 router.get("/company", adminOrCeo, getCompanyDetails);
 router.post("/company", createCompany);
 
 // Workspace Member Endpoints (requires Admin or CEO)
 router.post("/members", adminOrCeo, addWorkspaceMember);
-router.delete("/members/:id", adminOrCeo, removeWorkspaceMember);
-router.put("/members/:id", adminOrCeo, updateWorkspaceMember);
+router.delete("/members/:id", adminOrCeo, validateObjectId, removeWorkspaceMember);
+router.put("/members/:id", adminOrCeo, validateObjectId, updateWorkspaceMember);
 
 // Domain Verification Endpoints (requires CEO Only)
 router.post("/verify-domain", ceoOnly, verifyDomain);

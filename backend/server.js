@@ -77,6 +77,14 @@ app.use((req, res) => {
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
+    // Format Mongoose invalid ObjectId CastErrors cleanly as 400 Bad Request
+    if (err.name === "CastError" && err.kind === "ObjectId") {
+        return res.status(400).json({
+            success: false,
+            message: `Invalid resource identifier format: ${err.value}`
+        });
+    }
+
     console.error("Unhandled Error:", err);
     res.status(err.status || err.statusCode || 500).json({
         success: false,

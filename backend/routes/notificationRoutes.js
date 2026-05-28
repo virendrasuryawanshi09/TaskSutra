@@ -8,6 +8,7 @@ const {
     clearAllNotifications,
     markNotificationsOfTypeAsRead,
 } = require("../controllers/notificationController");
+const validateObjectId = require("../middlewares/validateObjectId");
 
 const router = express.Router();
 
@@ -17,8 +18,8 @@ router.use(protect);
 router.get("/", getNotifications);
 router.put("/read-all", markAllAsRead);
 router.put("/read-type/:type", markNotificationsOfTypeAsRead);
-router.put("/:id/read", markAsRead);
+router.put("/:id/read", validateObjectId, markAsRead);
 router.delete("/clear-all", clearAllNotifications);
-router.delete("/:id", deleteNotification);
+router.delete("/:id", validateObjectId, deleteNotification);
 
 module.exports = router;

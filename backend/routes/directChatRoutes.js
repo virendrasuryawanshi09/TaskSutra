@@ -9,12 +9,13 @@ const {
   deleteDirectMessage,
 } = require("../controllers/directChatController");
 const { protect } = require("../middlewares/authMiddleware");
+const validateObjectId = require("../middlewares/validateObjectId");
 
 router.get("/", protect, getDirectChats);
 router.post("/", protect, sendDirectMessage);
-router.get("/:otherUserId", protect, getDirectMessages);
-router.put("/:chatId/read", protect, markAsRead);
-router.put("/message/:messageId", protect, editDirectMessage);
-router.delete("/message/:messageId", protect, deleteDirectMessage);
+router.get("/:otherUserId", protect, validateObjectId, getDirectMessages);
+router.put("/:chatId/read", protect, validateObjectId, markAsRead);
+router.put("/message/:messageId", protect, validateObjectId, editDirectMessage);
+router.delete("/message/:messageId", protect, validateObjectId, deleteDirectMessage);
 
 module.exports = router;

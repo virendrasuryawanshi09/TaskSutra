@@ -74,10 +74,35 @@ module.exports = (io) => {
         
         // --- Global Chat Events ---
         socket.on("send_message", (messageData) => {
-            if (socket.user && socket.user.companyId) {
-                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_message", messageData);
+            if (!messageData || typeof messageData !== "object" || !messageData.content) {
+                return;
+            }
+
+            // Rebuild payload from validated database user context to prevent spoofing
+            const verifiedMessage = {
+                _id: messageData._id,
+                content: String(messageData.content).trim(),
+                isEdited: !!messageData.isEdited,
+                createdAt: messageData.createdAt || new Date().toISOString(),
+                sender: {
+                    _id: socket.user._id,
+                    name: socket.user.name,
+                    email: socket.user.email,
+                    role: socket.user.role,
+                    profileImageUrl: socket.user.profileImageUrl || null
+                },
+                companyId: socket.user.companyId ? socket.user.companyId.toString() : null
+            };
+
+            // Restrict message payload length to prevent DDoS/crash attempts
+            if (verifiedMessage.content.length > 5000) {
+                verifiedMessage.content = verifiedMessage.content.substring(0, 5000);
+            }
+
+            if (socket.user.companyId) {
+                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_message", verifiedMessage);
             } else {
-                io.emit("receive_message", messageData);
+                io.emit("receive_message", verifiedMessage);
             }
         });
 

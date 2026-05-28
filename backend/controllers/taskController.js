@@ -414,18 +414,23 @@ const updateTaskChecklist = async (req, res) => {
 const getDashboardData = async (req, res) => {
     try {
         const companyId = req.user.companyId;
-        const totalTasks = await Task.countDocuments({ companyId });
-        const pendingTasks = await Task.countDocuments({ companyId, status: "Pending" });
-        const completedTasks = await Task.countDocuments({ companyId, status: "Completed" });
+        if (!companyId) {
+            return res.status(400).json({ message: "No company associated with user" });
+        }
+        const companyObjectId = new mongoose.Types.ObjectId(companyId.toString());
+
+        const totalTasks = await Task.countDocuments({ companyId: companyObjectId });
+        const pendingTasks = await Task.countDocuments({ companyId: companyObjectId, status: "Pending" });
+        const completedTasks = await Task.countDocuments({ companyId: companyObjectId, status: "Completed" });
         const overdueTasks = await Task.countDocuments({
-            companyId,
+            companyId: companyObjectId,
             status: { $ne: "Completed" },
             dueDate: { $lt: new Date() }
         });
 
         const taskStatuses = ["Pending", "In-progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
-            { $match: { companyId } },
+            { $match: { companyId: companyObjectId } },
             {
                 $group: {
                     _id: "$status",
@@ -444,7 +449,7 @@ const getDashboardData = async (req, res) => {
 
         const taskPriorities = ["Low", "Medium", "High"];
         const taskPriorityLevelsRaw = await Task.aggregate([
-            { $match: { companyId } },
+            { $match: { companyId: companyObjectId } },
             {
                 $group: {
                     _id: "$priority",
@@ -489,20 +494,26 @@ const getUserDashboardData = async (req, res) => {
     try {
         const userId = req.user._id;
         const companyId = req.user.companyId;
+        if (!companyId) {
+            return res.status(400).json({ message: "No company associated with user" });
+        }
 
-        const totalTasks = await Task.countDocuments({ companyId, assignedTo: userId });
-        const pendingTasks = await Task.countDocuments({ companyId, assignedTo: userId, status: "Pending" });
-        const completedTasks = await Task.countDocuments({ companyId, assignedTo: userId, status: "Completed" });
+        const userObjectId = new mongoose.Types.ObjectId(userId.toString());
+        const companyObjectId = new mongoose.Types.ObjectId(companyId.toString());
+
+        const totalTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId });
+        const pendingTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId, status: "Pending" });
+        const completedTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId, status: "Completed" });
         const overdueTasks = await Task.countDocuments({
-            companyId,
-            assignedTo: userId,
+            companyId: companyObjectId,
+            assignedTo: userObjectId,
             status: { $ne: "Completed" },
             dueDate: { $lt: new Date() }
         });
 
         const taskStatuses = ["Pending", "In-progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
-            { $match: { companyId, assignedTo: userId } },
+            { $match: { companyId: companyObjectId, assignedTo: userObjectId } },
             {
                 $group: {
                     _id: "$status",
@@ -520,7 +531,7 @@ const getUserDashboardData = async (req, res) => {
 
         const taskPriorities = ["Low", "Medium", "High"];
         const taskPriorityLevelsRaw = await Task.aggregate([
-            { $match: { companyId, assignedTo: userId } },
+            { $match: { companyId: companyObjectId, assignedTo: userObjectId } },
             {
                 $group: {
                     _id: "$priority",

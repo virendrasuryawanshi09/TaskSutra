@@ -32,17 +32,19 @@ const MemberRowItem = ({
 
   return (
     <div
-      className="
+      className={`
         p-4 rounded-xl
         bg-[var(--surface)]
         border border-[var(--border)]
         shadow-sm
         hover:border-[var(--accent)]
-        hover:-translate-y-0.5
+        hover:shadow-md
         transition-all duration-200
         flex flex-col gap-3
         sm:flex-row sm:items-center sm:justify-between sm:gap-4
-      "
+        relative overflow-visible
+        ${isOpen ? "z-10" : "z-0"}
+      `}
     >
       {/* Left section: Avatar & Info */}
       <div className="flex items-start gap-3.5 min-w-0">
@@ -140,7 +142,7 @@ const MemberRowItem = ({
                       className="
                         absolute right-0 mt-1.5 w-32 rounded-xl
                         bg-[var(--surface)] border border-[var(--border)]
-                        shadow-lg py-1 z-50 overflow-hidden
+                        shadow-lg py-1 z-[100] overflow-hidden
                       "
                     >
                       <button

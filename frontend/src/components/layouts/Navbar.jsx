@@ -91,12 +91,10 @@ const Navbar = () => {
             document.body.style.overflow = "hidden";
         } else {
             document.body.style.overflow = "";
-            document.body.style.overflowY = "scroll";
         }
 
         return () => {
             document.body.style.overflow = "";
-            document.body.style.overflowY = "";
         };
     }, [openSideMenu]);
     useEffect(() => {

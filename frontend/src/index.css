@@ -47,7 +47,6 @@ input:-webkit-autofill:active {
 
 html {
   scroll-behavior: smooth;
-  scrollbar-gutter: stable;
 }
 
 body {
@@ -55,8 +54,7 @@ body {
   color: var(--text);
   font-family: 'Inter', sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
-  overflow-y: scroll;
-  scroll-behavior: smooth;
+  overflow: hidden;
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

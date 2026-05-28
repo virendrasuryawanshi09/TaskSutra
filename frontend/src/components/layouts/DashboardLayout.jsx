@@ -7,22 +7,23 @@ const DashboardLayout = ({ children, noPaddingMobile = false, hideNavbarMobile =
   const { user } = useContext(UserContext);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="h-screen overflow-hidden flex flex-col bg-[var(--bg)] text-[var(--text)]">
 
-      <div className={hideNavbarMobile ? "hidden md:block" : ""}>
+      {/* Sticky Navbar — always visible at the top */}
+      <div className={hideNavbarMobile ? "hidden md:block flex-shrink-0" : "flex-shrink-0"}>
         <Navbar />
       </div>
 
       {user && (
-        <div className={`flex ${hideNavbarMobile ? "min-h-screen md:min-h-[calc(100vh-4rem)]" : "min-h-[calc(100vh-4rem)]"} w-full items-stretch`}>
+        <div className="flex flex-1 min-h-0 w-full">
 
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:block lg:w-[260px] lg:flex-shrink-0 lg:border-r lg:border-[var(--border)] lg:bg-[var(--surface)]">
+          {/* Desktop Sidebar — full height, no scroll needed */}
+          <div className="hidden lg:flex lg:w-[260px] lg:flex-shrink-0 lg:border-r lg:border-[var(--border)] lg:bg-[var(--surface)]">
             <SideMenu />
           </div>
 
-          {/* Main Content */}
-          <main className={`min-w-0 flex-1 ${noPaddingMobile ? 'p-0 md:p-6 lg:p-8' : 'p-4 md:p-6 lg:p-8'}`}>
+          {/* Main Content — this is the ONLY scrolling area */}
+          <main className={`min-w-0 flex-1 overflow-y-auto ${noPaddingMobile ? 'p-0 md:p-6 lg:p-8' : 'p-4 md:p-6 lg:p-8'}`}>
             {children}
           </main>
 

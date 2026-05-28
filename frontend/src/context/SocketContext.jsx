@@ -10,7 +10,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
+    if (!isAuthenticated) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -29,7 +29,13 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (socket && token) {
+      socket.auth = { ...socket.auth, token };
+    }
+  }, [token, socket]);
 
   return (
     <SocketContext.Provider value={socket}>

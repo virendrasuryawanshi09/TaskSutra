@@ -76,9 +76,9 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/direct-chats", directChatRoutes);
 app.use("/api/task-discussions", taskDiscussionRoutes);
-app.use("/api/ai", aiRoutes);
 app.use("/api/workspace", workspaceRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/ai", aiRoutes);
 
 
 // 404 catch-all — must be after all routes

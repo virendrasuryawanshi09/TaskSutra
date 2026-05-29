@@ -577,7 +577,7 @@ const CommunityChat = () => {
   return (
     <DashboardLayout activeMenu="Workspace Chat" noPaddingMobile={true}>
       {/* Hyper-minimalist Elite Container */}
-      <div className="flex h-[calc(100vh-4rem)] md:h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border-x-0 border-t-0 md:border border-[var(--border)] md:rounded-xl overflow-hidden shadow-none md:shadow-sm md:mt-4 relative">
+      <div className="flex h-[calc(100dvh-4rem)] md:h-[calc(100dvh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--bg)] border-x-0 border-t-0 md:border border-[var(--border)] md:rounded-xl overflow-hidden shadow-none md:shadow-sm md:mt-4 relative">
 
         {/* Mobile Sidebar Overlay */}
         {showMobileSidebar && (

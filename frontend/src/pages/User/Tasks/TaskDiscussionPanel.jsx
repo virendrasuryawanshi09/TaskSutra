@@ -101,7 +101,7 @@ const TaskDiscussionPanel = ({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed right-0 top-0 z-[80] flex h-screen w-[75vw] sm:w-[420px] flex-col bg-[var(--surface)] shadow-2xl"
+            className="fixed right-0 top-0 z-[80] flex h-dvh w-[75vw] sm:w-[420px] flex-col bg-[var(--surface)] shadow-2xl"
           >
         {/* Sticky Header */}
         <div className="flex-none border-b border-[var(--border)] px-4 sm:px-6 py-4 sm:py-5 bg-[var(--surface)]/95 backdrop-blur-md z-10 relative">

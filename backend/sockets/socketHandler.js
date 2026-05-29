@@ -8,22 +8,32 @@ module.exports = (io) => {
     io.on("connection", (socket) => {
         console.log(`New socket connection: ${socket.id}`);
         
-        // The user ID is attached to the socket by the auth middleware
-        const userId = socket.user.id || socket.user._id || (socket.user.user && socket.user.user.id);
+        // Ensure socket.user exists and has a valid ID
+        if (!socket.user) {
+            console.error(`Socket connection ${socket.id} has no authenticated user. Disconnecting.`);
+            socket.disconnect(true);
+            return;
+        }
+
+        const userId = socket.user._id || socket.user.id;
+        if (!userId) {
+            console.error(`Socket connection ${socket.id} user has no valid ID. Disconnecting.`);
+            socket.disconnect(true);
+            return;
+        }
         
-        if (userId) {
-            addUser(userId.toString(), socket.id);
-            console.log(`User ${userId} connected with socket ${socket.id}`);
-            
-            // Join the user to their company room if they are associated with a company
-            if (socket.user && socket.user.companyId) {
-                socket.join(`company_${socket.user.companyId.toString()}`);
-                console.log(`User ${userId} joined company room: company_${socket.user.companyId}`);
-                // Broadcast only to their company that they are online
-                io.to(`company_${socket.user.companyId.toString()}`).emit("userOnline", { userId: userId.toString(), onlineUsers: getAllUsers() });
-            } else {
-                io.emit("userOnline", { userId: userId.toString(), onlineUsers: getAllUsers() });
-            }
+        const userIdStr = userId.toString();
+        addUser(userIdStr, socket.id);
+        console.log(`User ${userIdStr} connected with socket ${socket.id}`);
+        
+        // Join the user to their company room if they are associated with a company
+        if (socket.user.companyId) {
+            socket.join(`company_${socket.user.companyId.toString()}`);
+            console.log(`User ${userIdStr} joined company room: company_${socket.user.companyId}`);
+            // Broadcast only to their company that they are online
+            io.to(`company_${socket.user.companyId.toString()}`).emit("userOnline", { userId: userIdStr, onlineUsers: getAllUsers() });
+        } else {
+            io.emit("userOnline", { userId: userIdStr, onlineUsers: getAllUsers() });
         }
 
         // --- Room based architecture ---
@@ -64,10 +74,35 @@ module.exports = (io) => {
         
         // --- Global Chat Events ---
         socket.on("send_message", (messageData) => {
-            if (socket.user && socket.user.companyId) {
-                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_message", messageData);
+            if (!messageData || typeof messageData !== "object" || !messageData.content) {
+                return;
+            }
+
+            // Rebuild payload from validated database user context to prevent spoofing
+            const verifiedMessage = {
+                _id: messageData._id,
+                content: String(messageData.content).trim(),
+                isEdited: !!messageData.isEdited,
+                createdAt: messageData.createdAt || new Date().toISOString(),
+                sender: {
+                    _id: socket.user._id,
+                    name: socket.user.name,
+                    email: socket.user.email,
+                    role: socket.user.role,
+                    profileImageUrl: socket.user.profileImageUrl || null
+                },
+                companyId: socket.user.companyId ? socket.user.companyId.toString() : null
+            };
+
+            // Restrict message payload length to prevent DDoS/crash attempts
+            if (verifiedMessage.content.length > 5000) {
+                verifiedMessage.content = verifiedMessage.content.substring(0, 5000);
+            }
+
+            if (socket.user.companyId) {
+                io.to(`company_${socket.user.companyId.toString()}`).emit("receive_message", verifiedMessage);
             } else {
-                io.emit("receive_message", messageData);
+                io.emit("receive_message", verifiedMessage);
             }
         });
 

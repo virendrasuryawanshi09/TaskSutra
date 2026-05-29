@@ -531,7 +531,7 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
           </div>
 
           {/* Option 2: Default Role */}
-          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[var(--bg-soft)] border border-[var(--border)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-[var(--bg-soft)] border border-[var(--border)]">
             <div className="space-y-0.5 text-left">
               <span className="text-xs font-bold text-[var(--text)]">Default Registration Role</span>
               <span className="text-[10px] text-[var(--text-muted)] block leading-relaxed font-sans">
@@ -548,7 +548,7 @@ const DomainSettingsForm = ({ companyDetails, currentUser, onCompanyCreated, onF
                 setDefaultSignupRole(e.target.value);
                 toast.success(`Default signup role set to ${e.target.value}`);
               }}
-              className="px-2.5 py-1.5 text-xs font-semibold bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] cursor-pointer"
+              className="w-full sm:w-auto px-2.5 py-1.5 text-xs font-semibold bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--text)] cursor-pointer"
             >
               <option value="member">Member (Read/Write Tasks)</option>
               <option value="admin">Admin (Full Workspace Access)</option>

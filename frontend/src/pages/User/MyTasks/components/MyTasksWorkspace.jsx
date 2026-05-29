@@ -180,7 +180,7 @@ const MyTasksWorkspace = ({
   return (
     <div className="relative w-full sm:max-w-6xl sm:mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
-      <div className="min-h-[calc(100vh-9rem)]">
+      <div className="min-h-[calc(100dvh-9rem)]">
         <main className="min-w-0 w-full">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
@@ -316,16 +316,14 @@ const InlineStatusDropdown = ({ status, onChange }) => {
   return (
     <Menu as="div" className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
       <Menu.Button className="flex items-center gap-1.5 rounded p-1 hover:bg-[var(--bg-soft)] transition-colors focus:outline-none">
-        <span className={`text-xs font-semibold ${
-           status === "Completed" ? "text-green-600" : 
-           status === "In Progress" ? "text-blue-500" : "text-gray-500"
-        }`}>
+        <span className={`text-xs font-semibold ${status === "Completed" ? "text-green-600" :
+            status === "In Progress" ? "text-blue-500" : "text-gray-500"
+          }`}>
           {status}
         </span>
-        <span className={`h-1.5 w-1.5 rounded-full ${
-           status === "Completed" ? "bg-green-600" : 
-           status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
-        }`} />
+        <span className={`h-1.5 w-1.5 rounded-full ${status === "Completed" ? "bg-green-600" :
+            status === "In Progress" ? "bg-blue-500" : "bg-gray-500"
+          }`} />
       </Menu.Button>
       <Transition
         as={Fragment}
@@ -343,9 +341,8 @@ const InlineStatusDropdown = ({ status, onChange }) => {
                 <button
                   type="button"
                   onClick={() => onChange(option.value)}
-                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${
-                    active ? "bg-[var(--bg-soft)]" : ""
-                  } ${option.value === status ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
+                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${active ? "bg-[var(--bg-soft)]" : ""
+                    } ${option.value === status ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
                 >
                   {option.label}
                 </button>
@@ -380,9 +377,8 @@ const InlinePriorityDropdown = ({ priority, onChange }) => {
                 <button
                   type="button"
                   onClick={() => onChange(option.value)}
-                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${
-                    active ? "bg-[var(--bg-soft)]" : ""
-                  } ${option.value === priority ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
+                  className={`block w-full text-left px-4 py-2 text-xs transition-colors ${active ? "bg-[var(--bg-soft)]" : ""
+                    } ${option.value === priority ? "font-bold text-[var(--accent)]" : "text-[var(--text)]"}`}
                 >
                   {option.label}
                 </button>
@@ -396,10 +392,10 @@ const InlinePriorityDropdown = ({ priority, onChange }) => {
 };
 
 const InlineDateInput = forwardRef(({ value, onClick }, ref) => (
-  <button 
+  <button
     type="button"
-    className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors focus:outline-none" 
-    onClick={(e) => { e.stopPropagation(); onClick(e); }} 
+    className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors focus:outline-none"
+    onClick={(e) => { e.stopPropagation(); onClick(e); }}
     ref={ref}
   >
     Due : {value || "Set date"}
@@ -467,17 +463,17 @@ const TaskCard = ({
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <InlineStatusDropdown 
-              status={task.status} 
-              onChange={(newStatus) => onStatusChange?.(task, newStatus)} 
+            <InlineStatusDropdown
+              status={task.status}
+              onChange={(newStatus) => onStatusChange?.(task, newStatus)}
             />
             <InlinePriorityDropdown
               priority={task.priority}
               onChange={(newPriority) => onPriorityChange?.(task, newPriority)}
             />
           </div>
-          <InlineDatePicker 
-            date={task.dueDateValue} 
+          <InlineDatePicker
+            date={task.dueDateValue}
             onChange={(newDate) => onDueDateChange?.(task, newDate)}
           />
         </div>
@@ -489,20 +485,18 @@ const TaskCard = ({
               e.stopPropagation();
               onStatusChange?.(task, task.status === "Completed" ? "Pending" : "Completed");
             }}
-            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none ${
-              task.status === "Completed"
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none ${task.status === "Completed"
                 ? "border-green-500 bg-green-500 text-white"
                 : "border-[var(--text-muted)] text-transparent hover:border-green-500 hover:text-green-500"
-            }`}
+              }`}
             title={task.status === "Completed" ? "Mark as pending" : "Mark as completed"}
           >
             <HiCheck className="h-3.5 w-3.5" />
           </button>
-          
+
           <div>
-            <h3 className={`text-[15px] font-bold leading-tight mb-1 transition-colors ${
-              task.status === "Completed" ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
-            }`}>
+            <h3 className={`text-[15px] font-bold leading-tight mb-1 transition-colors ${task.status === "Completed" ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
+              }`}>
               {task.title || "Untitled task"}
             </h3>
             <p className="line-clamp-2 text-[13px] text-[var(--text-muted)] mb-4">
@@ -527,9 +521,9 @@ const TaskCard = ({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                onDiscussionClick?.(task); 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDiscussionClick?.(task);
               }}
               className="relative text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors p-1"
               title="Open discussion"

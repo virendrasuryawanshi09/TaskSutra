@@ -3,9 +3,9 @@ import React from "react";
 
 const AuthLayout = ({ children, title }) => {
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
+    <div className="min-h-dvh bg-[var(--bg)] text-[var(--text)] transition-colors duration-300 flex flex-col justify-center overflow-y-auto py-8 md:py-0">
 
-      <div className="max-w-[1100px] mx-auto min-h-screen flex items-center justify-center px-6 md:grid md:grid-cols-[1.2fr_1fr] md:gap-[80px] relative">
+      <div className="w-full max-w-[1100px] mx-auto flex flex-col justify-center items-center md:grid md:grid-cols-[1.2fr_1fr] md:gap-[80px] px-6 relative">
 
         {/* Divider */}
         <div className="hidden md:block absolute left-1/2 top-[20%] bottom-[20%] w-px bg-[var(--border)]" />
@@ -30,8 +30,8 @@ const AuthLayout = ({ children, title }) => {
         </div>
 
         {/* RIGHT */}
-        <div className="flex justify-start">
-          <div className="w-full max-w-[360px] mx-auto md:mx-0">
+        <div className="w-full flex justify-center md:justify-start">
+          <div className="w-full max-w-[400px] md:max-w-[360px] mx-auto md:mx-0">
 
             <div className="text-[20px] font-semibold mb-[25px]">
               {title}

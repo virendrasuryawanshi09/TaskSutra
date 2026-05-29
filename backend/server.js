@@ -23,7 +23,17 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5000"], // Add your frontend origins here
+    origin: function (origin, callback) {
+      if (!origin || 
+          origin.startsWith("http://localhost") || 
+          origin.startsWith("http://127.0.0.1") || 
+          (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) ||
+          origin.endsWith(".vercel.app")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
@@ -36,18 +46,17 @@ app.set("io", io);
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (Postman, mobile apps)
       if (!origin) return callback(null, true);
 
-      // allow local development origins on any port
       if (
         origin.startsWith("http://localhost") ||
-        origin.startsWith("http://127.0.0.1")
+        origin.startsWith("http://127.0.0.1") ||
+        (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) ||
+        origin.endsWith(".vercel.app")
       ) {
         return callback(null, true);
       }
 
-      // block others
       return callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -71,10 +80,22 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/workspace", workspaceRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// 404 catch-all — must be after all routes
+app.use((req, res) => {
+    res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
+});
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
+    // Format Mongoose invalid ObjectId CastErrors cleanly as 400 Bad Request
+    if (err.name === "CastError" && err.kind === "ObjectId") {
+        return res.status(400).json({
+            success: false,
+            message: `Invalid resource identifier format: ${err.value}`
+        });
+    }
+
     console.error("Unhandled Error:", err);
     res.status(err.status || err.statusCode || 500).json({
         success: false,

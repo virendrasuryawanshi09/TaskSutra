@@ -98,10 +98,29 @@ const clearAllNotifications = async (req, res) => {
     }
 };
 
+// Mark all notifications of a specific type as read
+const markNotificationsOfTypeAsRead = async (req, res) => {
+    try {
+        const { type } = req.params;
+        await Notification.updateMany(
+            { recipient: req.user._id, type, isRead: false },
+            { isRead: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `Notifications of type ${type} marked as read`,
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
+
 module.exports = {
     getNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
     clearAllNotifications,
+    markNotificationsOfTypeAsRead,
 };

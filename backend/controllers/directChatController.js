@@ -1,6 +1,7 @@
 const DirectChat = require("../models/DirectChat");
 const DirectMessage = require("../models/DirectMessage");
 const notificationService = require("../services/notificationService");
+const Notification = require("../models/Notification");
 
 // @desc    Get all direct chats for the current user
 // @route   GET /api/direct-chats
@@ -10,7 +11,7 @@ exports.getDirectChats = async (req, res) => {
     const userId = req.user.id || req.user._id;
 
     const chats = await DirectChat.find({ participants: userId })
-      .populate("participants", "name profilePicture email role")
+      .populate("participants", "name profileImageUrl email role")
       .populate("lastMessage")
       .sort({ updatedAt: -1 });
 
@@ -38,7 +39,7 @@ exports.getDirectMessages = async (req, res) => {
     }
 
     const messages = await DirectMessage.find({ chatId: chat._id })
-      .populate("sender", "name profilePicture email")
+      .populate("sender", "name profileImageUrl email")
       .sort({ createdAt: 1 });
 
     res.status(200).json({ chat, messages });
@@ -65,7 +66,7 @@ exports.sendDirectMessage = async (req, res) => {
     });
 
     if (!chat) {
-      chat = new DirectChat({
+      chat = await DirectChat.create({
         participants: [senderId, receiverId],
         unreadCounts: { [receiverId.toString()]: 0 },
       });
@@ -91,7 +92,7 @@ exports.sendDirectMessage = async (req, res) => {
 
     const populatedMessage = await DirectMessage.findById(newMessage._id).populate(
       "sender",
-      "name profilePicture email"
+      "name profileImageUrl email"
     );
 
     // Send notification to the receiver asynchronously
@@ -129,6 +130,12 @@ exports.markAsRead = async (req, res) => {
     const chat = await DirectChat.findById(chatId);
     if (!chat) return res.status(404).json({ message: "Chat not found" });
 
+    // Verify that the logged-in user is a participant in this chat to prevent authorization bypass
+    const isParticipant = chat.participants.some(p => p.toString() === userId.toString());
+    if (!isParticipant) {
+      return res.status(403).json({ message: "Not authorized to access this chat" });
+    }
+
     if (!chat.unreadCounts) chat.unreadCounts = new Map();
     chat.unreadCounts.set(userId.toString(), 0);
     await chat.save();
@@ -137,6 +144,15 @@ exports.markAsRead = async (req, res) => {
       { chatId, sender: { $ne: userId }, isRead: false },
       { $set: { isRead: true } }
     );
+
+    // Also mark notifications for this direct chat as read
+    const otherParticipantId = chat.participants.find(p => p.toString() !== userId.toString());
+    if (otherParticipantId) {
+      await Notification.updateMany(
+        { recipient: userId, sender: otherParticipantId, type: "direct_message", isRead: false },
+        { $set: { isRead: true } }
+      );
+    }
 
     res.status(200).json({ message: "Marked as read" });
   } catch (error) {
@@ -174,7 +190,7 @@ exports.editDirectMessage = async (req, res) => {
 
     const populatedMessage = await DirectMessage.findById(message._id).populate(
       "sender",
-      "name profilePicture email"
+      "name profileImageUrl email"
     );
 
     res.status(200).json({ message: populatedMessage });

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { HiOutlineXMark, HiPaperAirplane, HiOutlineChatBubbleOvalLeftEllipsis, HiOutlineClock } from "react-icons/hi2";
 import AvatarGroup from "../../../components/AvatarGroup";
 import moment from "moment";
+import { motion, AnimatePresence } from "framer-motion";
 
 const TaskDiscussionPanel = ({
   task,
@@ -83,17 +84,25 @@ const TaskDiscussionPanel = ({
   };
 
   return (
-    <>
-      <div
-        onClick={onClose}
-        className={`fixed inset-0 z-[70] bg-[rgba(15,23,42,0.2)] backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            className="fixed inset-0 z-[70] bg-[rgba(15,23,42,0.2)] backdrop-blur-sm"
+          />
 
-      <aside
-        className={`fixed right-0 top-0 z-[80] flex h-screen w-[75vw] sm:w-[420px] flex-col bg-[var(--surface)] shadow-2xl transition-transform duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-      >
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            className="fixed right-0 top-0 z-[80] flex h-dvh w-[75vw] sm:w-[420px] flex-col bg-[var(--surface)] shadow-2xl"
+          >
         {/* Sticky Header */}
         <div className="flex-none border-b border-[var(--border)] px-4 sm:px-6 py-4 sm:py-5 bg-[var(--surface)]/95 backdrop-blur-md z-10 relative">
           <div className="flex items-start justify-between gap-4">
@@ -272,7 +281,7 @@ const TaskDiscussionPanel = ({
             </div>
           </div>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Context Menu Overlay */}
       {contextMenu && (
@@ -348,8 +357,10 @@ const TaskDiscussionPanel = ({
           </div>
         </div>
       )}
-    </>
-  );
+      </>
+    )}
+  </AnimatePresence>
+);
 };
 
 export default TaskDiscussionPanel;

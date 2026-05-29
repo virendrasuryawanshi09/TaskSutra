@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import axiosInstance from "../../utils/axiosInstance";
+import { motion, AnimatePresence } from "framer-motion";
 
 const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdded }) => {
   const [memberModalTab, setMemberModalTab] = useState("invite"); // 'invite' or 'direct'
@@ -20,7 +21,7 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
   });
   const [isAddingDirectly, setIsAddingDirectly] = useState(false);
 
-  if (!isOpen) return null;
+
 
   const handleSendInvite = async (e) => {
     e.preventDefault();
@@ -107,8 +108,24 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[4px] p-4">
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/45 backdrop-blur-[4px]"
+            onClick={handleClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl relative z-10"
+          >
         <h2 className="text-lg font-semibold text-[var(--text)] mb-3 text-left">
           Manage Workspace Members
         </h2>
@@ -145,7 +162,7 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
           !generatedLink ? (
             <form onSubmit={handleSendInvite} className="flex flex-col gap-4 text-left">
               <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                Generate a secure link to allow the user to sign up themselves. Link will expire in 10 minutes.
+                Generate a secure link to allow the user to sign up themselves. Link will expire in 48 hours.
               </p>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-[var(--text)] font-semibold">
@@ -391,8 +408,10 @@ const InviteModal = ({ isOpen, onClose, companyDetails, currentUser, onMemberAdd
             </div>
           </form>
         )}
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
 

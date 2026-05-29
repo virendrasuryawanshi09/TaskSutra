@@ -29,22 +29,14 @@ const ManageTasks = () => {
   };
 
   const handleExportTasksReport = async () => {
-    const toastId = toast.loading('Preparing tasks report...');
-
     try {
       setIsExporting(true);
       await downloadReport({
         url: API_PATHS.REPORTS.EXPORT_TASKS,
         fallbackFileName: 'task_report.xlsx',
       });
-      toast.success('Tasks report downloaded successfully.', { id: toastId });
     } catch (error) {
-      toast.error(
-        error?.message ||
-        error?.response?.data?.message ||
-        'Failed to download tasks report.',
-        { id: toastId }
-      );
+      console.error('Failed to download tasks report:', error);
     } finally {
       setIsExporting(false);
     }

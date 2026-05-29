@@ -1,73 +1,69 @@
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Modal = ({ children, isOpen, onClose, title }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-
-      {/* BACKDROP */}
-      <div
-        className="
-          absolute inset-0
-          bg-black/40 backdrop-blur-sm
-          transition-opacity duration-300
-        "
-        onClick={onClose}
-      />
-
-      {/* MODAL */}
-      <div
-        className="
-          relative z-10
-          w-full max-w-lg
-          bg-[var(--surface)]
-          border border-[var(--border)]
-          rounded-2xl
-          shadow-xl
-
-          animate-[fadeIn_0.2s_ease]
-        "
-      >
-
-        {/* HEADER */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
-          <h3 className="text-sm font-semibold text-[var(--text)] tracking-tight">
-            {title}
-          </h3>
-
-          <button
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* BACKDROP */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
-            className="
-              p-1.5 rounded-md
-              text-[var(--text-muted)]
-              hover:text-[var(--text)]
-              hover:bg-[var(--bg-soft)]
-              transition
-            "
+          />
+
+          {/* MODAL */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="relative z-10 w-full max-w-lg bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden"
           >
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 14 14"
-              fill="none"
-            >
-              <path
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                d="M1 1l12 12M13 1L1 13"
-              />
-            </svg>
-          </button>
-        </div>
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+              <h3 className="text-sm font-semibold text-[var(--text)] tracking-tight">
+                {title}
+              </h3>
 
-        {/* BODY */}
-        <div className="p-5 max-h-[400px] overflow-y-auto">
-          {children}
-        </div>
+              <button
+                onClick={onClose}
+                className="
+                  p-1.5 rounded-md
+                  text-[var(--text-muted)]
+                  hover:text-[var(--text)]
+                  hover:bg-[var(--bg-soft)]
+                  transition
+                  cursor-pointer
+                "
+              >
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    d="M1 1l12 12M13 1L1 13"
+                  />
+                </svg>
+              </button>
+            </div>
 
-      </div>
-    </div>
+            {/* BODY */}
+            <div className="p-5 max-h-[400px] overflow-y-auto">
+              {children}
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -178,9 +178,21 @@ const UserTeamMembers = () => {
                     </div>
 
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[13px] font-medium text-[var(--text)] truncate">
-                        {member.name || "Unnamed"}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[13px] font-medium text-[var(--text)] truncate">
+                          {member.name || "Unnamed"}
+                        </span>
+                        {member.role === "ceo" && (
+                          <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+                            CEO
+                          </span>
+                        )}
+                        {member.role === "admin" && (
+                          <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                            Admin
+                          </span>
+                        )}
+                      </div>
 
                       <span className="text-[12px] text-[var(--text-muted)] truncate">
                         {member.email}

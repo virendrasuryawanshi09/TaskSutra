@@ -1,13 +1,13 @@
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-       cb(null, `${Date.now()}-${file.originalname}`);
-    },
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     // Allowed MIME types
@@ -40,4 +40,15 @@ const upload = multer({
     }
 });
 
-module.exports = upload;
+const uploadToCloudinary = (file) => {
+    return new Promise((resolve, reject) => {
+        const fileBuffer = file.buffer.toString('base64');
+        const dataURI = `data:${file.mimetype};base64,${fileBuffer}`;
+        cloudinary.uploader.upload(dataURI, { folder: 'tasksutra', resource_type: 'auto' }, (err, result) => {
+            if (err) return reject(err);
+            resolve(result);
+        });
+    });
+};
+
+module.exports = { upload, uploadToCloudinary };

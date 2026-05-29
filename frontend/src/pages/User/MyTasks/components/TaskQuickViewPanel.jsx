@@ -33,10 +33,10 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
           />
 
           <motion.aside
-            initial={{ x: -420 }}
+            initial={{ x: "-100%" }}
             animate={{ x: 0 }}
-            exit={{ x: -420 }}
-            transition={{ duration: 0.26, ease: "easeOut" }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
             className="fixed inset-y-0 left-0 z-[90] flex w-[70vw] sm:w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[420px]"
           >
             <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-soft)]/35 px-5 py-4">

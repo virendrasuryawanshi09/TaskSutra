@@ -180,7 +180,7 @@ const MyTasksWorkspace = ({
   return (
     <div className="relative w-full sm:max-w-6xl sm:mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
-      <div className="min-h-[calc(100vh-9rem)]">
+      <div className="min-h-[calc(100dvh-9rem)]">
         <main className="min-w-0 w-full">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>

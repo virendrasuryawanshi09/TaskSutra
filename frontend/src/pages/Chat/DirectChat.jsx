@@ -867,7 +867,7 @@ const DirectChat = ({ defaultCommunity = false }) => {
   return (
     <DashboardLayout activeMenu="Direct Messages">
       {/* Hyper-minimalist Elite Container */}
-      <div className="flex h-[calc(100vh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4 relative">
+      <div className="flex h-[calc(100dvh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4 relative">
         
         {/* Left Sidebar - Users List */}
         <div className={`w-full md:w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10 ${activeChat ? 'hidden md:flex' : 'flex'}`}>

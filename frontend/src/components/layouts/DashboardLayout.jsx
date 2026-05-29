@@ -8,7 +8,7 @@ const DashboardLayout = ({ children, noPaddingMobile = false, hideNavbarMobile =
   const { user } = useContext(UserContext);
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[var(--bg)] text-[var(--text)]">
+    <div className="h-dvh overflow-hidden flex flex-col bg-[var(--bg)] text-[var(--text)]">
 
       {/* Sticky Navbar — always visible at the top */}
       <div className={hideNavbarMobile ? "hidden md:block flex-shrink-0" : "flex-shrink-0"}>

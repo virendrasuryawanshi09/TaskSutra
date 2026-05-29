@@ -8,7 +8,7 @@ const {
     deleteAccount,
 } = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/uploadMiddleware');
+const { upload, uploadToCloudinary } = require('../middlewares/uploadMiddleware');
 
 const router = express.Router();
 
@@ -28,12 +28,16 @@ router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 router.delete('/profile', protect, deleteAccount);
 
-router.post("/upload-image", upload.single("image"), (req, res) => {
+router.post("/upload-image", upload.single("image"), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
     }
-    const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-    res.status(200).json({ imageUrl });
+    try {
+        const result = await uploadToCloudinary(req.file);
+        res.status(200).json({ imageUrl: result.secure_url });
+    } catch (error) {
+        res.status(500).json({ message: "Cloudinary upload failed", error: error.message });
+    }
 });
 
 module.exports = router;

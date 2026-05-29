@@ -281,7 +281,7 @@ const TaskDiscussionPanel = ({
             </div>
           </div>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Context Menu Overlay */}
       {contextMenu && (
@@ -356,11 +356,11 @@ const TaskDiscussionPanel = ({
             </div>
           </div>
         </div>
-          </motion.aside>
-        </>
       )}
-    </AnimatePresence>
-  );
+      </>
+    )}
+  </AnimatePresence>
+);
 };
 
 export default TaskDiscussionPanel;

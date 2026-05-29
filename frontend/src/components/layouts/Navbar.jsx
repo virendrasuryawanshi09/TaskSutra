@@ -158,7 +158,7 @@ const Navbar = () => {
                                 <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
                                     <h3 className="text-sm font-semibold text-[var(--text)]">Notifications</h3>
                                     <div className="flex gap-2">
-                                        <button 
+                                        <button
                                             onClick={handleMarkAllAsRead}
                                             className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1 font-medium transition cursor-pointer"
                                             title="Mark all as read"
@@ -166,7 +166,7 @@ const Navbar = () => {
                                             <LuCheckCheck className="text-sm" />
                                             Read All
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={handleClearAll}
                                             className="text-xs text-red-500 hover:underline flex items-center gap-1 font-medium transition cursor-pointer"
                                             title="Clear all"
@@ -188,17 +188,15 @@ const Navbar = () => {
                                             <div
                                                 key={n._id}
                                                 onClick={() => handleNotificationClick(n)}
-                                                className={`p-3 rounded-xl border transition duration-150 flex flex-col gap-1.5 text-left relative group cursor-pointer ${
-                                                    n.isRead 
-                                                        ? "bg-transparent border-transparent hover:bg-[var(--bg-soft)]" 
+                                                className={`p-3 rounded-xl border transition duration-150 flex flex-col gap-1.5 text-left relative group cursor-pointer ${n.isRead
+                                                        ? "bg-transparent border-transparent hover:bg-[var(--bg-soft)]"
                                                         : "bg-[var(--bg-soft)] border-[var(--border)] hover:border-[var(--accent)]"
-                                                }`}
+                                                    }`}
                                             >
                                                 {/* Top row: Title and Badge/Action */}
                                                 <div className="flex items-start justify-between gap-2 min-w-0">
-                                                    <span className={`text-xs font-semibold truncate ${
-                                                        n.isRead ? "text-[var(--text)]" : "text-[var(--accent)]"
-                                                    }`}>
+                                                    <span className={`text-xs font-semibold truncate ${n.isRead ? "text-[var(--text)]" : "text-[var(--accent)]"
+                                                        }`}>
                                                         {n.title}
                                                     </span>
                                                     <div className="flex items-center gap-1 shrink-0">
@@ -263,7 +261,7 @@ const Navbar = () => {
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
                             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-                            className="fixed inset-y-0 left-0 z-[90] w-[40vw] min-w-[220px] max-w-[280px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_16px_40px_rgba(0,0,0,0.22)]"
+                            className="fixed inset-y-0 left-0 z-[90] w-[75vw] min-w-[270px] max-w-[280px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_16px_40px_rgba(0,0,0,0.22)]"
                         >
                             <SideMenu />
                         </motion.div>

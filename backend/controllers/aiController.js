@@ -83,7 +83,6 @@ exports.generateOrgHealthReport = async (req, res) => {
 
         // 4. Initialize Gemini Generative AI SDK
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // 5. Structure context-aware operational analytics prompt
         const prompt = `You are a Chief Operations Officer (COO) and organization analyst. Analyze this company's performance telemetry:
@@ -115,7 +114,30 @@ You MUST respond strictly in a valid JSON object matching this schema:
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
         // 6. Request reasoning from Gemini
-        const result = await model.generateContent(prompt);
+        let result;
+        let success = false;
+        let lastError = null;
+        const modelsToTry = [
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ];
+
+        for (const modelName of modelsToTry) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                result = await model.generateContent(prompt);
+                success = true;
+                break;
+            } catch (err) {
+                console.warn(`Model ${modelName} failed or not found:`, err.message);
+                lastError = err;
+            }
+        }
+
+        if (!success) {
+            throw lastError || new Error("All tried Gemini models failed to generate content.");
+        }
+
         let responseText = result.response.text().trim();
 
         // Strip markdown backticks if returned
@@ -180,7 +202,6 @@ exports.generateTaskBreakdown = async (req, res) => {
 
         // Initialize Gemini Generative AI SDK
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // Design the breakdown prompt
         const prompt = `You are an expert product manager and technical coordinator.
@@ -203,7 +224,36 @@ Respond strictly in a valid JSON object matching this schema:
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
         // Request content generation
-        const result = await model.generateContent(prompt);
+        let result;
+        let success = false;
+        let lastError = null;
+        const modelsToTry = [
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ];
+
+        const errors = [];
+        for (const modelName of modelsToTry) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                result = await model.generateContent(prompt);
+                success = true;
+                break;
+            } catch (err) {
+                console.warn(`Model ${modelName} failed or not found:`, err.message);
+                errors.push({ model: modelName, error: err.message });
+                lastError = err;
+            }
+        }
+
+        if (!success) {
+            return res.status(500).json({
+                success: false,
+                message: "Gemini API call failed for all models.",
+                details: errors
+            });
+        }
+
         let responseText = result.response.text().trim();
 
         // Strip markdown backticks if returned

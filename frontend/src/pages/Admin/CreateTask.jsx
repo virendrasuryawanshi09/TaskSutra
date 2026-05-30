@@ -170,7 +170,7 @@ const CreateTask = () => {
         toast.error("Failed to parse AI checklist response.");
       }
     } catch (err) {
-      console.error("AI breakdown generation error:", err);
+      console.error("AI breakdown generation error details:", err.response?.data || err);
       toast.error(err.response?.data?.message || "Failed to generate AI checklist.");
     } finally {
       setIsGeneratingAI(false);

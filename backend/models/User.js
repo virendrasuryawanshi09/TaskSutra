@@ -11,6 +11,19 @@ const userSchema = new mongoose.Schema(
         bio: { type: String, default: '' },
         title: { type: String, default: '' },
         company: { type: String, default: '' },
+        // AI Pillar 4: Work Personality Profile
+        behavioralProfile: {
+            traits: { 
+                type: [String], 
+                enum: ['Deep-Focus', 'Hyper-Speed Debugger', 'Architect', 'Stabilizer', 'High-Pressure Delivery'],
+                default: ['Deep-Focus'] 
+            },
+            performanceMetrics: {
+                avgChecklistCompletionTime: { type: Number, default: 0 }, 
+                lateSubmissionRate: { type: Number, default: 0 }, 
+                reviewAccuracyRate: { type: Number, default: 100 }
+            }
+        },
         companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
         status: { type: String, enum: ['active', 'suspended'], default: 'active' },
         taskOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: [] }],

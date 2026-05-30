@@ -6,7 +6,7 @@ import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { LuTrash2 } from "react-icons/lu";
+import { LuTrash2, LuMessageSquare, LuSparkles, LuLoader } from "react-icons/lu";
 import moment from "moment";
 import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
@@ -14,7 +14,6 @@ import SelectUsers from "../../components/input/SelectUsers";
 import TodoListInput from "../../components/input/TodoListInput";
 import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 import DeleteAlert from "../../components/DeleteAlert";
-import { LuMessageSquare } from "react-icons/lu";
 import { useSocket } from "../../context/SocketContext";
 import TaskDiscussionPanel from "../User/Tasks/TaskDiscussionPanel";
 
@@ -37,6 +36,7 @@ const CreateTask = () => {
 
   const [currentTask, setCurrentTask] = useState(null);
   const [error, setError] = useState("");
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
@@ -139,6 +139,43 @@ const CreateTask = () => {
       return () => clearTimeout(timer);
     }
   }, [error]);
+
+  const handleAIBreakdown = async () => {
+    if (!taskData.title.trim()) {
+      toast.error("Please enter a Task Title first!");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      const response = await axiosInstance.post("/api/ai/breakdown", {
+        title: taskData.title,
+        description: taskData.description,
+      });
+
+      if (response.data && response.data.success && response.data.data.checklist) {
+        const aiItems = response.data.data.checklist.map((item) => ({
+          text: `${item.subTask} (Est: ${item.estHours}h)`,
+          completed: false,
+          isNew: true,
+        }));
+
+        setTaskData((prev) => ({
+          ...prev,
+          todoCheckList: [...prev.todoCheckList, ...aiItems],
+        }));
+
+        toast.success(`AI Checklist generated! (Est: ${response.data.data.totalEstimatedHours}h)`);
+      } else {
+        toast.error("Failed to parse AI checklist response.");
+      }
+    } catch (err) {
+      console.error("AI breakdown generation error:", err);
+      toast.error(err.response?.data?.message || "Failed to generate AI checklist.");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   const [loading, setLoading] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
@@ -512,9 +549,35 @@ const CreateTask = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs text-[var(--text-muted)] tracking-wide">
-                TODO Checklist
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs text-[var(--text-muted)] tracking-wide">
+                  TODO Checklist
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAIBreakdown}
+                  disabled={isGeneratingAI}
+                  className="
+                    flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold
+                    border border-[var(--border)] rounded-lg
+                    text-[var(--accent)] bg-transparent hover:bg-[var(--bg-soft)] hover:border-[var(--accent)]
+                    active:scale-95 transition-all duration-200 cursor-pointer
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                  "
+                >
+                  {isGeneratingAI ? (
+                    <>
+                      <LuLoader className="animate-spin text-xs" />
+                      <span>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LuSparkles className="text-xs" />
+                      <span>AI Checklist</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               <div
                 className="

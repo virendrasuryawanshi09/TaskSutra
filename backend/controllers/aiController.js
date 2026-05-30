@@ -149,7 +149,7 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
         console.error("Org Health Diagnostic Error:", error);
         return res.status(500).json({
             success: false,
-            message: "Failed to generate organizational health diagnostic report.",
+            message: `AI Error: ${error.message}`,
             error: error.message
         });
     }
@@ -236,7 +236,7 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
         console.error("Task Breakdown Error:", error);
         return res.status(500).json({
             success: false,
-            message: "Failed to generate task breakdown.",
+            message: `AI Error: ${error.message}`,
             error: error.message
         });
     }

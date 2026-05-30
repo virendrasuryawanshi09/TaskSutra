@@ -30,6 +30,17 @@ const TodoListInput = ({ todoList = [], setTodoList, isEditMode = false }) => {
 
     return (
         <div className="space-y-4">
+            <style>{`
+                @keyframes checklistFadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .checklist-item-entry {
+                    opacity: 0;
+                    transform: translateY(10px);
+                    animation: checklistFadeIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                }
+            `}</style>
 
             {isEditMode && todoList.length > 0 && (
                 <div className="flex items-center justify-between">
@@ -54,15 +65,16 @@ const TodoListInput = ({ todoList = [], setTodoList, isEditMode = false }) => {
                     {todoList.map((item, index) => (
                         <div
                             key={index}
-                            className="
-                flex items-center justify-between
-                bg-[var(--bg-soft)]
-                border border-[var(--border)]
-                rounded-lg px-3 py-2
-
-                hover:border-[var(--text-muted)]
-                transition-all duration-200
-              "
+                            className={`
+                                flex items-center justify-between
+                                bg-[var(--bg-soft)]
+                                border border-[var(--border)]
+                                rounded-lg px-3 py-2
+                                hover:border-[var(--text-muted)]
+                                transition-all duration-200
+                                ${item.isNew ? "checklist-item-entry" : ""}
+                            `}
+                            style={item.isNew ? { animationDelay: `${index * 0.08}s` } : {}}
                         >
                             <div className="flex items-center gap-3">
 

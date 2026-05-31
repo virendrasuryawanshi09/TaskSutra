@@ -1,6 +1,51 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+/**
+ * Helper function to call Groq Chat Completion API using native fetch
+ */
+const callGroqAPI = async (prompt, systemInstruction = "") => {
+    const modelsToTry = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant"
+    ];
+
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: modelName,
+                    messages: [
+                        ...(systemInstruction ? [{ role: "system", content: systemInstruction }] : []),
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.1,
+                    response_format: { type: "json_object" }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `Groq API status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content.trim();
+        } catch (err) {
+            console.warn(`Groq model ${modelName} failed:`, err.message);
+            lastError = err;
+        }
+    }
+
+    throw lastError || new Error("All tried Groq models failed to generate content.");
+};
 
 /**
  * Generates an Organizational Health Diagnostic report for the CEO
@@ -73,18 +118,15 @@ exports.generateOrgHealthReport = async (req, res) => {
             };
         }));
 
-        // 3. Validate Gemini API Key configuration
-        if (!process.env.GEMINI_API_KEY) {
+        // 3. Validate Groq API Key configuration
+        if (!process.env.GROQ_API_KEY) {
             return res.status(500).json({
                 success: false,
-                message: "Gemini API key is not configured on the server."
+                message: "Groq API key is not configured on the server."
             });
         }
 
-        // 4. Initialize Gemini Generative AI SDK
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-        // 5. Structure context-aware operational analytics prompt
+        // 4. Structure context-aware operational analytics prompt
         const prompt = `You are a Chief Operations Officer (COO) and organization analyst. Analyze this company's performance telemetry:
 - Total Tasks in System: ${totalTasks}
 - Completed Tasks: ${completedTasksCount}
@@ -113,43 +155,16 @@ You MUST respond strictly in a valid JSON object matching this schema:
 
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
-        // 6. Request reasoning from Gemini
-        let result;
-        let success = false;
-        let lastError = null;
-        const modelsToTry = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
-        ];
+        const systemInstruction = "You are an expert Chief Operations Officer (COO) and organization analyst. Respond strictly in a valid JSON object matching the requested schema. Do not add markdown codeblocks, just return the JSON object.";
 
-        for (const modelName of modelsToTry) {
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                result = await model.generateContent(prompt);
-                success = true;
-                break;
-            } catch (err) {
-                console.warn(`Model ${modelName} failed or not found:`, err.message);
-                lastError = err;
-            }
-        }
-
-        if (!success) {
-            throw lastError || new Error("All tried Gemini models failed to generate content.");
-        }
-
-        let responseText = result.response.text().trim();
-
-        // Strip markdown backticks if returned
-        if (responseText.startsWith('```')) {
-            responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        }
+        // 5. Request diagnostic from Groq
+        const responseText = await callGroqAPI(prompt, systemInstruction);
 
         let parsedReport;
         try {
             parsedReport = JSON.parse(responseText);
         } catch (parseError) {
-            console.error("Failed to parse Gemini output as JSON. Raw output:", responseText);
+            console.error("Failed to parse Groq output as JSON. Raw output:", responseText);
             // Fallback response if JSON parsing fails
             parsedReport = {
                 overallHealthScore: Math.round(((completedTasksCount || 1) / (totalTasks || 1)) * 100),
@@ -192,16 +207,13 @@ exports.generateTaskBreakdown = async (req, res) => {
             });
         }
 
-        // Validate Gemini API Key configuration
-        if (!process.env.GEMINI_API_KEY) {
+        // Validate Groq API Key configuration
+        if (!process.env.GROQ_API_KEY) {
             return res.status(500).json({
                 success: false,
-                message: "Gemini API key is not configured on the server."
+                message: "Groq API key is not configured on the server."
             });
         }
-
-        // Initialize Gemini Generative AI SDK
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
         // Design the breakdown prompt
         const prompt = `You are an expert product manager and technical coordinator.
@@ -223,49 +235,16 @@ Respond strictly in a valid JSON object matching this schema:
 
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
-        // Request content generation
-        let result;
-        let success = false;
-        let lastError = null;
-        const modelsToTry = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
-        ];
+        const systemInstruction = "You are an expert product manager and technical coordinator. Respond strictly in a valid JSON object matching the requested schema. Do not add markdown codeblocks, just return the JSON object.";
 
-        const errors = [];
-        for (const modelName of modelsToTry) {
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                result = await model.generateContent(prompt);
-                success = true;
-                break;
-            } catch (err) {
-                console.warn(`Model ${modelName} failed or not found:`, err.message);
-                errors.push({ model: modelName, error: err.message });
-                lastError = err;
-            }
-        }
-
-        if (!success) {
-            return res.status(500).json({
-                success: false,
-                message: "Gemini API call failed for all models.",
-                details: errors
-            });
-        }
-
-        let responseText = result.response.text().trim();
-
-        // Strip markdown backticks if returned
-        if (responseText.startsWith('```')) {
-            responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        }
+        // Request content generation from Groq
+        const responseText = await callGroqAPI(prompt, systemInstruction);
 
         let parsedBreakdown;
         try {
             parsedBreakdown = JSON.parse(responseText);
         } catch (parseError) {
-            console.error("Failed to parse Gemini task breakdown as JSON. Raw output:", responseText);
+            console.error("Failed to parse Groq task breakdown as JSON. Raw output:", responseText);
             // Fallback response if JSON parsing fails
             parsedBreakdown = {
                 totalEstimatedHours: 6,
@@ -291,4 +270,3 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
         });
     }
 };
-

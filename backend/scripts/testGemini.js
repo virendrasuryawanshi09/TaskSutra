@@ -1,16 +1,25 @@
-require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 async function test() {
-    console.log("Checking API key present:", !!process.env.GEMINI_API_KEY);
-    console.log("API Key preview:", process.env.GEMINI_API_KEY?.substring(0, 10) + "...");
-    try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent("Hello! Respond with 'OK' if you can read this.");
-        console.log("SUCCESS! Response text:", result.response.text());
-    } catch (err) {
-        console.error("GEMINI API ERROR DETECTED:", err);
+    console.log("Using API Key:", process.env.GEMINI_API_KEY ? "Found (Starts with " + process.env.GEMINI_API_KEY.substring(0, 6) + "...)" : "Not found!");
+    if (!process.env.GEMINI_API_KEY) {
+        console.error("No GEMINI_API_KEY found in backend/.env!");
+        return;
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"];
+
+    for (const modelName of models) {
+        console.log(`\nTesting model: ${modelName}...`);
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent("Say 'hello' in one word.");
+            console.log(`Success! Response: "${result.response.text().trim()}"`);
+        } catch (error) {
+            console.error(`Failed:`, error.message);
+        }
     }
 }
 

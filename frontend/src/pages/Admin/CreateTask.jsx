@@ -151,6 +151,8 @@ const CreateTask = () => {
       const response = await axiosInstance.post("/api/ai/breakdown", {
         title: taskData.title,
         description: taskData.description,
+      }, {
+        timeout: 60000
       });
 
       if (response.data && response.data.success && response.data.data.checklist) {

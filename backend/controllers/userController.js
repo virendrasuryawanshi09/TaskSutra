@@ -86,8 +86,34 @@ const reorderTasks = async (req, res) => {
     }
 };
 
+const getTeamWorkloads = async (companyId) => {
+    try {
+        const users = await User.find({ companyId, role: "member" }).select("name title skills behavioralProfile");
+        const workloads = await Promise.all(
+            users.map(async (user) => {
+                const activeTasks = await Task.countDocuments({
+                    assignedTo: user._id,
+                    status: { $in: ["Pending", "In-progress", "In Progress"] }
+                });
+                return {
+                    _id: user._id,
+                    name: user.name,
+                    title: user.title,
+                    skills: user.skills || [],
+                    behavioralProfile: user.behavioralProfile,
+                    activeTasks
+                };
+            })
+        );
+        return workloads;
+    } catch (error) {
+        throw new Error(`Failed to get team workloads: ${error.message}`);
+    }
+};
+
 module.exports = {
     getUsers,
     getUserById,
     reorderTasks,
+    getTeamWorkloads
 };

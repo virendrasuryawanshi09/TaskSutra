@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
+const fs = require('fs');
 const { getTeamWorkloads } = require('./userController');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -179,6 +180,87 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
 };
 
 /**
+ * Helper to query Groq Completions API
+ */
+const queryGroq = async (prompt) => {
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY is not configured.");
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Groq API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+};
+
+/**
+ * Local fallback matching calculation when AI APIs are unreachable or fail
+ */
+const calculateLocalRecommendations = (teamWorkloads, title, description) => {
+    const textToMatch = `${title} ${description || ""}`.toLowerCase();
+    
+    return teamWorkloads.map(w => {
+        const matchingSkills = [];
+        if (Array.isArray(w.skills)) {
+            w.skills.forEach(skill => {
+                if (skill && textToMatch.includes(skill.toLowerCase())) {
+                    matchingSkills.push(skill);
+                }
+            });
+        }
+        
+        // Base score starts at 60
+        let score = 60;
+        
+        // Add 15 points per matched skill, capped at +30
+        score += Math.min(30, matchingSkills.length * 15);
+        
+        // Deduct 10 points per active task, capped at -40
+        const activeCount = w.activeTasks || 0;
+        score -= Math.min(40, activeCount * 10);
+        
+        // Clamp score between 15 and 95
+        score = Math.max(15, Math.min(95, score));
+        
+        let reasoning = "";
+        if (matchingSkills.length > 0) {
+            reasoning = `Matched skill(s) [${matchingSkills.join(", ")}] with an active workload of ${activeCount} task(s). (Fallback Match)`;
+        } else {
+            reasoning = `Allocated based on active workload of ${activeCount} task(s). (Fallback Match)`;
+        }
+        
+        return {
+            developerId: w._id.toString(),
+            score,
+            matchingSkills,
+            reasoning
+        };
+    });
+};
+
+/**
  * Recommends and ranks team members for a task based on skills and workloads
  * Endpoint: POST /api/ai/recommend-assignees
  */
@@ -210,18 +292,7 @@ exports.recommendAssignees = async (req, res) => {
             });
         }
 
-        // 2. Validate Gemini API Key configuration
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({
-                success: false,
-                message: "Groq API key is not configured on the server."
-            });
-        }
-
-        // 3. Initialize Gemini Generative AI SDK
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-        // 4. Structure the prompt
+        // 2. Structure the prompt (asking for a JSON object containing the recommendations list)
         const prompt = `You are a project manager allocating a task to the most compatible team member.
 Task details:
 Title: "${title}"
@@ -234,62 +305,102 @@ Evaluate compatibility based on:
 1. Skills matching (match task requirements semantically against developer skill arrays).
 2. Workload balance (penalize developers with higher active tasks to prevent burnout).
 
-You must respond strictly in a valid JSON array matching this schema:
-[
-  {
-    "developerId": "<Developer _id>",
-    "score": <Integer between 0 and 100 representing compatibility rating>,
-    "matchingSkills": ["<list of matched skills>"],
-    "reasoning": "<Short, professional explanation of why this score was assigned>"
-  }
-]
+You must respond strictly in a valid JSON object matching this schema:
+{
+  "recommendations": [
+    {
+      "developerId": "<Developer _id>",
+      "score": <Integer between 0 and 100 representing compatibility rating>,
+      "matchingSkills": ["<list of matched skills>"],
+      "reasoning": "<Short, professional explanation of why this score was assigned>"
+    }
+  ]
+}
 
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
-        // 5. Query Gemini with fallback models
-        let result;
+        // 3. Request completions from Groq or Gemini
+        let responseText = "";
         let success = false;
         let lastError = null;
-        const modelsToTry = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
-        ];
+        let groqError = null;
 
-        for (const modelName of modelsToTry) {
+        // Try Groq first if key exists
+        if (process.env.GROQ_API_KEY) {
             try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                result = await model.generateContent(prompt);
+                responseText = await queryGroq(prompt);
                 success = true;
-                break;
             } catch (err) {
-                console.warn(`Model ${modelName} failed or not found:`, err.message);
-                lastError = err;
+                console.warn("Groq query failed, trying Gemini...", err.message);
+                groqError = err;
             }
         }
 
+        // Fallback to Gemini if Groq fails or key is missing
         if (!success) {
-            throw lastError || new Error("All tried Gemini models failed to generate content.");
+            if (process.env.GEMINI_API_KEY) {
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+                const modelsToTry = [
+                    "gemini-2.0-flash",
+                    "gemini-1.5-flash",
+                    "gemini-1.5-flash-latest",
+                    "gemini-1.5-pro",
+                    "gemini-pro"
+                ];
+
+                for (const modelName of modelsToTry) {
+                    try {
+                        const model = genAI.getGenerativeModel({ model: modelName });
+                        const result = await model.generateContent(prompt);
+                        responseText = result.response.text().trim();
+                        success = true;
+                        break;
+                    } catch (err) {
+                        console.warn(`Model ${modelName} failed or not found:`, err.message);
+                        lastError = err;
+                    }
+                }
+            }
         }
 
-        let responseText = result.response.text().trim();
+        let recommendations = [];
 
-        // Strip markdown backticks if returned
-        if (responseText.startsWith('```')) {
-            responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        }
+        if (!success) {
+            const errMsg = groqError 
+                ? `Groq failed (${groqError.message}) and Gemini failed (${lastError ? lastError.message : "unknown/disabled"})`
+                : `Gemini failed: ${lastError ? lastError.message : "unknown/disabled"}`;
+            
+            console.error("All AI services failed, falling back to local workload-matching logic. Details:", errMsg);
+            
+            // Log the error for local debugging
+            try {
+                fs.writeFileSync('C:\\TaskSutra\\backend_error.log', `AI Services Failed:\n${errMsg}\n`);
+            } catch (fsErr) {
+                console.error("Failed to write error log file:", fsErr);
+            }
 
-        let recommendations;
-        try {
-            recommendations = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error("Failed to parse Gemini task breakdown as JSON. Raw output:", responseText);
-            // Fallback response if JSON parsing fails
-            recommendations = teamWorkloads.map(w => ({
-                developerId: w._id,
-                score: w.activeTasks > 4 ? 30 : w.activeTasks > 2 ? 60 : 90,
-                matchingSkills: w.skills,
-                reasoning: "System fallback allocation based on active task count."
-            }));
+            recommendations = calculateLocalRecommendations(teamWorkloads, title, description);
+        } else {
+            responseText = responseText.trim();
+
+            // Strip markdown backticks if returned
+            if (responseText.startsWith('```')) {
+                responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+            }
+
+            try {
+                const parsed = JSON.parse(responseText);
+                if (parsed && Array.isArray(parsed.recommendations)) {
+                    recommendations = parsed.recommendations;
+                } else if (Array.isArray(parsed)) {
+                    recommendations = parsed;
+                } else {
+                    throw new Error("Invalid structure returned by AI model: " + responseText.substring(0, 100));
+                }
+            } catch (parseError) {
+                console.error("Failed to parse AI recommendations as JSON. Raw output:", responseText, parseError);
+                recommendations = calculateLocalRecommendations(teamWorkloads, title, description);
+            }
         }
 
         // Enrich recommendations with user details
@@ -313,6 +424,11 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
 
     } catch (error) {
         console.error("Recommend Assignees Error:", error);
+        try {
+            fs.writeFileSync('C:\\TaskSutra\\backend_error.log', `Error Message: ${error.message}\nStack Trace:\n${error.stack}\n`);
+        } catch (fsErr) {
+            console.error("Failed to write error log file:", fsErr);
+        }
         return res.status(500).json({
             success: false,
             message: `AI Error: ${error.message}`,

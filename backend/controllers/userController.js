@@ -88,7 +88,11 @@ const reorderTasks = async (req, res) => {
 
 const getTeamWorkloads = async (companyId) => {
     try {
-        const users = await User.find({ companyId, role: "member" }).select("name title skills behavioralProfile");
+        const users = await User.find({ 
+            companyId, 
+            role: { $in: ["member", "admin", "ceo"] } 
+        }).select("name title skills behavioralProfile role");
+        
         const workloads = await Promise.all(
             users.map(async (user) => {
                 const activeTasks = await Task.countDocuments({

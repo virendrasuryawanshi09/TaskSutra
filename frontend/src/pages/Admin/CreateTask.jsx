@@ -501,6 +501,8 @@ const CreateTask = () => {
                   </label>
 
                   <SelectUsers
+                    taskTitle={taskData.title}
+                    taskDescription={taskData.description}
                     selectedUsers={taskData.assignedTo}
                     setSelectedUsers={(users) =>
                       handleValueChange("assignedTo", users)

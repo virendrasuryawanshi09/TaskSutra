@@ -37,4 +37,9 @@ export const API_PATHS = {
   IMAGE: {
     UPLOAD_IMAGE: "/api/auth/upload-image",
   },
+
+  AI: {
+    GET_ORG_HEALTH: "/api/ai/org-health",
+    RECOMMEND_ASSIGNEES: "/api/ai/recommend-assignees",
+  },
 };

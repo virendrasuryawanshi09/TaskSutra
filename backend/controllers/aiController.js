@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
+const { getTeamWorkloads } = require('./userController');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 /**
@@ -10,9 +11,9 @@ exports.generateOrgHealthReport = async (req, res) => {
     try {
         const companyId = req.user.companyId;
         if (!companyId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "User is not associated with a company." 
+            return res.status(400).json({
+                success: false,
+                message: "User is not associated with a company."
             });
         }
 
@@ -23,7 +24,7 @@ exports.generateOrgHealthReport = async (req, res) => {
         const completedTasksCount = await Task.countDocuments({ companyId, status: 'Completed' });
         const pendingTasksCount = await Task.countDocuments({ companyId, status: 'Pending' });
         const inProgressTasksCount = await Task.countDocuments({ companyId, status: 'In-progress' });
-        
+
         const overdueTasksCount = await Task.countDocuments({
             companyId,
             status: { $ne: 'Completed' },
@@ -169,6 +170,138 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
 
     } catch (error) {
         console.error("Org Health Diagnostic Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: `AI Error: ${error.message}`,
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Recommends and ranks team members for a task based on skills and workloads
+ * Endpoint: POST /api/ai/recommend-assignees
+ */
+exports.recommendAssignees = async (req, res) => {
+    try {
+        const { title, description } = req.body;
+        const companyId = req.user.companyId;
+
+        if (!title) {
+            return res.status(400).json({
+                success: false,
+                message: "Task title is required."
+            });
+        }
+
+        if (!companyId) {
+            return res.status(400).json({
+                success: false,
+                message: "User is not associated with a company."
+            });
+        }
+
+        // 1. Fetch team workloads
+        const teamWorkloads = await getTeamWorkloads(companyId);
+        if (teamWorkloads.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        // 2. Validate Gemini API Key configuration
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: "Groq API key is not configured on the server."
+            });
+        }
+
+        // 3. Initialize Gemini Generative AI SDK
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+        // 4. Structure the prompt
+        const prompt = `You are a project manager allocating a task to the most compatible team member.
+Task details:
+Title: "${title}"
+Description: "${description || 'No description'}"
+
+Here is the list of candidates with their skills, behavioral traits, and current active task load:
+${JSON.stringify(teamWorkloads, null, 2)}
+
+Evaluate compatibility based on:
+1. Skills matching (match task requirements semantically against developer skill arrays).
+2. Workload balance (penalize developers with higher active tasks to prevent burnout).
+
+You must respond strictly in a valid JSON array matching this schema:
+[
+  {
+    "developerId": "<Developer _id>",
+    "score": <Integer between 0 and 100 representing compatibility rating>,
+    "matchingSkills": ["<list of matched skills>"],
+    "reasoning": "<Short, professional explanation of why this score was assigned>"
+  }
+]
+
+Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
+
+        // 5. Query Gemini with fallback models
+        let result;
+        let success = false;
+        let lastError = null;
+        const modelsToTry = [
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ];
+
+        for (const modelName of modelsToTry) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                result = await model.generateContent(prompt);
+                success = true;
+                break;
+            } catch (err) {
+                console.warn(`Model ${modelName} failed or not found:`, err.message);
+                lastError = err;
+            }
+        }
+
+        if (!success) {
+            throw lastError || new Error("All tried Gemini models failed to generate content.");
+        }
+
+        let responseText = result.response.text().trim();
+
+        // Strip markdown backticks if returned
+        if (responseText.startsWith('```')) {
+            responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        }
+
+        let recommendations;
+        try {
+            recommendations = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error("Failed to parse Gemini task breakdown as JSON. Raw output:", responseText);
+            // Fallback response if JSON parsing fails
+            recommendations = teamWorkloads.map(w => ({
+                developerId: w._id,
+                score: w.activeTasks > 4 ? 30 : w.activeTasks > 2 ? 60 : 90,
+                matchingSkills: w.skills,
+                reasoning: "System fallback allocation based on active task count."
+            }));
+        }
+
+        // Sort candidates by score descending (highest score at index 0)
+        const sortedRecommendations = recommendations.sort((a, b) => b.score - a.score);
+
+        return res.json({
+            success: true,
+            data: sortedRecommendations
+        });
+
+    } catch (error) {
+        console.error("Recommend Assignees Error:", error);
         return res.status(500).json({
             success: false,
             message: `AI Error: ${error.message}`,

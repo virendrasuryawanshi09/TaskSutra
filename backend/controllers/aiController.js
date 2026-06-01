@@ -246,9 +246,9 @@ const calculateLocalRecommendations = (teamWorkloads, title, description) => {
         
         let reasoning = "";
         if (matchingSkills.length > 0) {
-            reasoning = `Matched skill(s) [${matchingSkills.join(", ")}] with an active workload of ${activeCount} task(s). (Fallback Match)`;
+            reasoning = `Matched skill(s) [${matchingSkills.join(", ")}] with ${activeCount} active task(s).`;
         } else {
-            reasoning = `Allocated based on active workload of ${activeCount} task(s). (Fallback Match)`;
+            reasoning = `Matched on active workload of ${activeCount} task(s).`;
         }
         
         return {
@@ -312,7 +312,7 @@ You must respond strictly in a valid JSON object matching this schema:
       "developerId": "<Developer _id>",
       "score": <Integer between 0 and 100 representing compatibility rating>,
       "matchingSkills": ["<list of matched skills>"],
-      "reasoning": "<Short, professional explanation of why this score was assigned>"
+      "reasoning": "<Extremely short and impactful explanation under 15 words. Highlight matching skills and workload impact without repeating the candidate's name or listing all matching skills. Example: 'Complete skill match, but 2 active tasks reduce compatibility.'>"
     }
   ]
 }

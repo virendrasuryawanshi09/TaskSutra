@@ -19,21 +19,13 @@ const getUsers = async (req, res) => {
         }).select("-password");
 
         const userWithTaskCounts = await Promise.all(users.map(async(user) => {
-            const totalTasks = await Task.countDocuments({
-                assignedTo: user._id,
-            });
-            const pendingTasks = await Task.countDocuments({
-                assignedTo: user._id, 
-                status: "Pending"
-            });
-            const inProgressTasks = await Task.countDocuments({
-                assignedTo: user._id,
-                status: { $in: ["In Progress", "In-progress", "in-Progress"] }
-            });
-            const completedTasks = await Task.countDocuments({
-                assignedTo: user._id, 
-                status: "Completed"
-            });
+            // Run all 4 count queries in parallel instead of one by one
+            const [totalTasks, pendingTasks, inProgressTasks, completedTasks] = await Promise.all([
+                Task.countDocuments({ assignedTo: user._id }),
+                Task.countDocuments({ assignedTo: user._id, status: "Pending" }),
+                Task.countDocuments({ assignedTo: user._id, status: { $in: ["In Progress", "In-progress", "in-Progress"] } }),
+                Task.countDocuments({ assignedTo: user._id, status: "Completed" })
+            ]);
 
             return {
                 ...user._doc,

@@ -56,6 +56,8 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescripti
           const response = await axiosInstance.post(API_PATHS.AI.RECOMMEND_ASSIGNEES, {
             title: taskTitle,
             description: taskDescription || ""
+          }, {
+            timeout: 60000 // 60s — AI inference takes longer than standard API calls
           });
           if (response.data && response.data.success) {
             setAiRecommendations(response.data.data);

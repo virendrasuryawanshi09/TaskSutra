@@ -292,8 +292,19 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
             }));
         }
 
+        // Enrich recommendations with user details
+        const enrichedRecommendations = recommendations.map(rec => {
+            const devInfo = teamWorkloads.find(w => w._id.toString() === rec.developerId.toString());
+            return {
+                ...rec,
+                name: devInfo ? devInfo.name : "Unknown",
+                title: devInfo ? devInfo.title : "Team Member",
+                activeTasks: devInfo ? devInfo.activeTasks : 0
+            };
+        });
+
         // Sort candidates by score descending (highest score at index 0)
-        const sortedRecommendations = recommendations.sort((a, b) => b.score - a.score);
+        const sortedRecommendations = enrichedRecommendations.sort((a, b) => b.score - a.score);
 
         return res.json({
             success: true,

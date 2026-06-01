@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>🧵 TaskSutra</h1>
+  <h1>TaskSutra</h1>
   <p><strong>An Enterprise-Grade, Real-Time Task Orchestration & Team Intelligence Workspace</strong></p>
   <p>
     <em>Engineered to transform complex project workflows into granular, real-time actionable feedback loops — with AI-powered team allocation, workspace intelligence, and seamless collaboration.</em>
@@ -32,7 +32,7 @@
 
 ## Overview
 
-**TaskSutra** is a production-grade, multi-tenant team collaboration platform designed for enterprises that demand:
+**TaskSutra** is a, multi-tenant team collaboration platform designed for enterprises that demand:
 - **Zero-latency real-time synchronization** across distributed teams via Socket.io
 - **AI-powered team intelligence** — smart assignee recommendations and org health diagnostics
 - **Clear role-based execution models** (CEO → Admin → Member workflows)
@@ -43,7 +43,7 @@ Unlike traditional CRUD task managers, TaskSutra treats tasks as **execution int
 
 ---
 
-## The Engineering Problems We Solve
+## Problems We Solve
 
 ### 1. **The Out-of-Sync Dashboard Problem**
 Traditional REST-based dashboards suffer from stale data. TaskSutra uses a **Socket.io event matrix** to push real-time updates:
@@ -88,7 +88,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 
 ## Core Features
 
-### **🤖 AI-Powered Intelligence**
+### **AI-Powered Intelligence**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Smart Assignee Recommender** | Groq (LLaMA-3.3-70B) → Gemini fallback → Local rule engine | Zero-guesswork task allocation based on skills + workload |
@@ -96,7 +96,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Behavioral Work Profiles** | User schema `behavioralProfile.traits` with 5 personality types | Context-aware allocation beyond simple skill matching |
 | **AI Fallback Chain** | Groq → Gemini 2.0 Flash → Gemini 1.5 Flash → Local scoring | 100% uptime even when primary AI APIs are unavailable |
 
-### **🧠 Workspace Intelligence**
+### **Workspace Intelligence**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Multi-Tenant Architecture** | Company domain-based data isolation, company-scoped queries | Enterprise-grade data hermiticity |
@@ -105,7 +105,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Domain Verification** | Email/DNS-based company domain validation | Prevents domain spoofing |
 | **Role Hierarchy** | CEO → Admin → Member with cascading permissions | Clear organizational accountability |
 
-### **📋 Task Execution Intelligence**
+### **Task Execution Intelligence**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Transactional Checklists** | Sub-documents in Task schema with atomic updates | Granular micro-milestone tracking |
@@ -114,7 +114,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Dynamic Progress Calculation** | Checklist completion % + status state | Real-time burndown on admin dashboard |
 | **Due Date Monitoring** | Automatic overdue classification and alerts | Identify blocked work immediately |
 
-### **💬 Real-Time Collaboration Hub**
+### **Real-Time Collaboration Hub**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Task-Scoped Discussions** | Embedded TaskDiscussion + TaskMessage models | Context-aware conversations tied to work items |
@@ -122,14 +122,14 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Community Chat** | Shared Message repository accessed by all users | Broadcast announcements, team-wide decisions |
 | **Socket-Powered Sync** | Binary JSON frames via Socket.io for sub-100ms latency | Live message delivery without polling |
 
-### **🔔 Notification System**
+### **Notification System**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **In-App Notifications** | Notification model with type-based categorization | Users never miss task assignments or updates |
 | **Mark as Read / Clear All** | Granular read control per notification or by type | Clean notification UX without clutter |
 | **Real-Time Delivery** | Socket.io push on task assignment/status change | Instant awareness without page refresh |
 
-### **📊 Operational Analytics**
+### **Operational Analytics**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Dashboard Analytics** | Recharts visualizations of completion velocity, overdue ratios, workload distribution | Fast operational insights at a glance |
@@ -137,7 +137,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **User Workload View** | Task assignment distribution and completion rates per team member | Identify overloaded vs underutilized resources |
 | **AI Org Health Report** | Groq/Gemini powered org health score + recommendations | Strategic CEO-level visibility |
 
-### **👤 Elite User Profiles**
+### **User Profiles**
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Profile Image Upload** | Multer + Cloudinary cloud storage | High-fidelity team roster visibility, no disk storage burden |
@@ -145,7 +145,6 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Skill Tags** | Dynamic skill array on user model | Capability discovery for AI and manual task assignment |
 | **Tenure Tracking** | Auto-computed from `createdAt` timestamp | Understand team composition and experience level |
 | **Bio & Title** | Custom user metadata | Personalized team identity |
-| **Performance Metrics** | `avgChecklistCompletionTime`, `lateSubmissionRate`, `reviewAccuracyRate` | Quantified execution quality per member |
 
 ---
 
@@ -198,7 +197,7 @@ Express 5.2 Server
 
 ### **Frontend Architecture**
 ```
-React 19 + Vite 7
+React + Vite 
 ├── Authentication Pages
 │   ├── Register flow (with company selection)
 │   ├── Login flow (with role-based redirect)

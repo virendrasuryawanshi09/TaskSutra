@@ -55,9 +55,9 @@ exports.generateOrgHealthReport = async (req, res) => {
     try {
         const companyId = req.user.companyId;
         if (!companyId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "User is not associated with a company." 
+            return res.status(400).json({
+                success: false,
+                message: "User is not associated with a company."
             });
         }
 
@@ -68,7 +68,7 @@ exports.generateOrgHealthReport = async (req, res) => {
         const completedTasksCount = await Task.countDocuments({ companyId, status: 'Completed' });
         const pendingTasksCount = await Task.countDocuments({ companyId, status: 'Pending' });
         const inProgressTasksCount = await Task.countDocuments({ companyId, status: 'In-progress' });
-        
+
         const overdueTasksCount = await Task.countDocuments({
             companyId,
             status: { $ne: 'Completed' },
@@ -193,12 +193,94 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
 };
 
 /**
- * Generates an automated task checklist breakdown and time estimations
- * Endpoint: POST /api/ai/breakdown
+ * Helper to query Groq Completions API
  */
-exports.generateTaskBreakdown = async (req, res) => {
+const queryGroq = async (prompt) => {
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY is not configured.");
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Groq API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+};
+
+/**
+ * Local fallback matching calculation when AI APIs are unreachable or fail
+ */
+const calculateLocalRecommendations = (teamWorkloads, title, description) => {
+    const textToMatch = `${title} ${description || ""}`.toLowerCase();
+    
+    return teamWorkloads.map(w => {
+        const matchingSkills = [];
+        if (Array.isArray(w.skills)) {
+            w.skills.forEach(skill => {
+                if (skill && textToMatch.includes(skill.toLowerCase())) {
+                    matchingSkills.push(skill);
+                }
+            });
+        }
+        
+        // Base score starts at 60
+        let score = 60;
+        
+        // Add 15 points per matched skill, capped at +30
+        score += Math.min(30, matchingSkills.length * 15);
+        
+        // Deduct 10 points per active task, capped at -40
+        const activeCount = w.activeTasks || 0;
+        score -= Math.min(40, activeCount * 10);
+        
+        // Clamp score between 15 and 95
+        score = Math.max(15, Math.min(95, score));
+        
+        let reasoning = "";
+        if (matchingSkills.length > 0) {
+            reasoning = `Matched skill(s) [${matchingSkills.join(", ")}] with ${activeCount} active task(s).`;
+        } else {
+            reasoning = `Matched on active workload of ${activeCount} task(s).`;
+        }
+        
+        return {
+            developerId: w._id.toString(),
+            score,
+            matchingSkills,
+            reasoning
+        };
+    });
+};
+
+/**
+ * Recommends and ranks team members for a task based on skills and workloads
+ * Endpoint: POST /api/ai/recommend-assignees
+ */
+exports.recommendAssignees = async (req, res) => {
     try {
         const { title, description } = req.body;
+        const companyId = req.user.companyId;
 
         if (!title) {
             return res.status(400).json({
@@ -219,16 +301,23 @@ exports.generateTaskBreakdown = async (req, res) => {
         const prompt = `You are an expert product manager and technical coordinator.
 Analyze this high-level task:
 Title: "${title}"
-Description: "${description || 'No description provided'}"
+Description: "${description || 'No description'}"
 
-Generate a list of 4 to 7 actionable, granular sub-tasks to complete this task. For each sub-task, assign a realistic completion estimate in hours (e.g. 1, 2, 4 hours).
-Respond strictly in a valid JSON object matching this schema:
+Here is the list of candidates with their skills, behavioral traits, and current active task load:
+${JSON.stringify(teamWorkloads, null, 2)}
+
+Evaluate compatibility based on:
+1. Skills matching (match task requirements semantically against developer skill arrays).
+2. Workload balance (penalize developers with higher active tasks to prevent burnout).
+
+You must respond strictly in a valid JSON object matching this schema:
 {
-  "totalEstimatedHours": <Integer representing sum of all estHours>,
-  "checklist": [
+  "recommendations": [
     {
-      "subTask": "<String describing the concrete actionable sub-task>",
-      "estHours": <Integer representing estimated hours to complete>
+      "developerId": "<Developer _id>",
+      "score": <Integer between 0 and 100 representing compatibility rating>,
+      "matchingSkills": ["<list of matched skills>"],
+      "reasoning": "<Extremely short and impactful explanation under 15 words. Highlight matching skills and workload impact without repeating the candidate's name or listing all matching skills. Example: 'Complete skill match, but 2 active tasks reduce compatibility.'>"
     }
   ]
 }
@@ -254,15 +343,23 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
                     { subTask: "Testing and verification", estHours: 1 }
                 ]
             };
-        }
+        });
+
+        // Sort candidates by score descending (highest score at index 0)
+        const sortedRecommendations = enrichedRecommendations.sort((a, b) => b.score - a.score);
 
         return res.json({
             success: true,
-            data: parsedBreakdown
+            data: sortedRecommendations
         });
 
     } catch (error) {
-        console.error("Task Breakdown Error:", error);
+        console.error("Recommend Assignees Error:", error);
+        try {
+            fs.writeFileSync('C:\\TaskSutra\\backend_error.log', `Error Message: ${error.message}\nStack Trace:\n${error.stack}\n`);
+        } catch (fsErr) {
+            console.error("Failed to write error log file:", fsErr);
+        }
         return res.status(500).json({
             success: false,
             message: `AI Error: ${error.message}`,

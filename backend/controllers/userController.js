@@ -19,21 +19,13 @@ const getUsers = async (req, res) => {
         }).select("-password");
 
         const userWithTaskCounts = await Promise.all(users.map(async(user) => {
-            const totalTasks = await Task.countDocuments({
-                assignedTo: user._id,
-            });
-            const pendingTasks = await Task.countDocuments({
-                assignedTo: user._id, 
-                status: "Pending"
-            });
-            const inProgressTasks = await Task.countDocuments({
-                assignedTo: user._id,
-                status: { $in: ["In Progress", "In-progress", "in-Progress"] }
-            });
-            const completedTasks = await Task.countDocuments({
-                assignedTo: user._id, 
-                status: "Completed"
-            });
+            // Run all 4 count queries in parallel instead of one by one
+            const [totalTasks, pendingTasks, inProgressTasks, completedTasks] = await Promise.all([
+                Task.countDocuments({ assignedTo: user._id }),
+                Task.countDocuments({ assignedTo: user._id, status: "Pending" }),
+                Task.countDocuments({ assignedTo: user._id, status: { $in: ["In Progress", "In-progress", "in-Progress"] } }),
+                Task.countDocuments({ assignedTo: user._id, status: "Completed" })
+            ]);
 
             return {
                 ...user._doc,
@@ -86,8 +78,38 @@ const reorderTasks = async (req, res) => {
     }
 };
 
+const getTeamWorkloads = async (companyId) => {
+    try {
+        const users = await User.find({ 
+            companyId, 
+            role: { $in: ["member", "admin", "ceo"] } 
+        }).select("name title skills behavioralProfile role");
+        
+        const workloads = await Promise.all(
+            users.map(async (user) => {
+                const activeTasks = await Task.countDocuments({
+                    assignedTo: user._id,
+                    status: { $in: ["Pending", "In-progress", "In Progress"] }
+                });
+                return {
+                    _id: user._id,
+                    name: user.name,
+                    title: user.title,
+                    skills: user.skills || [],
+                    behavioralProfile: user.behavioralProfile,
+                    activeTasks
+                };
+            })
+        );
+        return workloads;
+    } catch (error) {
+        throw new Error(`Failed to get team workloads: ${error.message}`);
+    }
+};
+
 module.exports = {
     getUsers,
     getUserById,
     reorderTasks,
+    getTeamWorkloads
 };

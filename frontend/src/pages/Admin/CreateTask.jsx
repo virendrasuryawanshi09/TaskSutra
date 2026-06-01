@@ -6,7 +6,7 @@ import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { LuTrash2, LuMessageSquare, LuSparkles, LuLoader } from "react-icons/lu";
+import { LuTrash2, LuMessageSquare } from "react-icons/lu";
 import moment from "moment";
 import "react-datepicker/dist/react-datepicker.css";
 import "./CreateTask.css";
@@ -36,7 +36,6 @@ const CreateTask = () => {
 
   const [currentTask, setCurrentTask] = useState(null);
   const [error, setError] = useState("");
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
@@ -541,6 +540,8 @@ const CreateTask = () => {
                   </label>
 
                   <SelectUsers
+                    taskTitle={taskData.title}
+                    taskDescription={taskData.description}
                     selectedUsers={taskData.assignedTo}
                     setSelectedUsers={(users) =>
                       handleValueChange("assignedTo", users)
@@ -555,30 +556,6 @@ const CreateTask = () => {
                 <label className="block text-xs text-[var(--text-muted)] tracking-wide">
                   TODO Checklist
                 </label>
-                <button
-                  type="button"
-                  onClick={handleAIBreakdown}
-                  disabled={isGeneratingAI}
-                  className="
-                    flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold
-                    border border-[var(--border)] rounded-lg
-                    text-[var(--accent)] bg-transparent hover:bg-[var(--bg-soft)] hover:border-[var(--accent)]
-                    active:scale-95 transition-all duration-200 cursor-pointer
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                  "
-                >
-                  {isGeneratingAI ? (
-                    <>
-                      <LuLoader className="animate-spin text-xs" />
-                      <span>Analyzing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <LuSparkles className="text-xs" />
-                      <span>AI Checklist</span>
-                    </>
-                  )}
-                </button>
               </div>
 
               <div

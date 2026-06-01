@@ -1,8 +1,51 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
-const fs = require('fs');
-const { getTeamWorkloads } = require('./userController');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+/**
+ * Helper function to call Groq Chat Completion API using native fetch
+ */
+const callGroqAPI = async (prompt, systemInstruction = "") => {
+    const modelsToTry = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant"
+    ];
+
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: modelName,
+                    messages: [
+                        ...(systemInstruction ? [{ role: "system", content: systemInstruction }] : []),
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.1,
+                    response_format: { type: "json_object" }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `Groq API status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content.trim();
+        } catch (err) {
+            console.warn(`Groq model ${modelName} failed:`, err.message);
+            lastError = err;
+        }
+    }
+
+    throw lastError || new Error("All tried Groq models failed to generate content.");
+};
 
 /**
  * Generates an Organizational Health Diagnostic report for the CEO
@@ -75,18 +118,15 @@ exports.generateOrgHealthReport = async (req, res) => {
             };
         }));
 
-        // 3. Validate Gemini API Key configuration
-        if (!process.env.GEMINI_API_KEY) {
+        // 3. Validate Groq API Key configuration
+        if (!process.env.GROQ_API_KEY) {
             return res.status(500).json({
                 success: false,
-                message: "Gemini API key is not configured on the server."
+                message: "Groq API key is not configured on the server."
             });
         }
 
-        // 4. Initialize Gemini Generative AI SDK
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-        // 5. Structure context-aware operational analytics prompt
+        // 4. Structure context-aware operational analytics prompt
         const prompt = `You are a Chief Operations Officer (COO) and organization analyst. Analyze this company's performance telemetry:
 - Total Tasks in System: ${totalTasks}
 - Completed Tasks: ${completedTasksCount}
@@ -115,43 +155,16 @@ You MUST respond strictly in a valid JSON object matching this schema:
 
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
-        // 6. Request reasoning from Gemini
-        let result;
-        let success = false;
-        let lastError = null;
-        const modelsToTry = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
-        ];
+        const systemInstruction = "You are an expert Chief Operations Officer (COO) and organization analyst. Respond strictly in a valid JSON object matching the requested schema. Do not add markdown codeblocks, just return the JSON object.";
 
-        for (const modelName of modelsToTry) {
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                result = await model.generateContent(prompt);
-                success = true;
-                break;
-            } catch (err) {
-                console.warn(`Model ${modelName} failed or not found:`, err.message);
-                lastError = err;
-            }
-        }
-
-        if (!success) {
-            throw lastError || new Error("All tried Gemini models failed to generate content.");
-        }
-
-        let responseText = result.response.text().trim();
-
-        // Strip markdown backticks if returned
-        if (responseText.startsWith('```')) {
-            responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        }
+        // 5. Request diagnostic from Groq
+        const responseText = await callGroqAPI(prompt, systemInstruction);
 
         let parsedReport;
         try {
             parsedReport = JSON.parse(responseText);
         } catch (parseError) {
-            console.error("Failed to parse Gemini output as JSON. Raw output:", responseText);
+            console.error("Failed to parse Groq output as JSON. Raw output:", responseText);
             // Fallback response if JSON parsing fails
             parsedReport = {
                 overallHealthScore: Math.round(((completedTasksCount || 1) / (totalTasks || 1)) * 100),
@@ -276,25 +289,17 @@ exports.recommendAssignees = async (req, res) => {
             });
         }
 
-        if (!companyId) {
-            return res.status(400).json({
+        // Validate Groq API Key configuration
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(500).json({
                 success: false,
-                message: "User is not associated with a company."
+                message: "Groq API key is not configured on the server."
             });
         }
 
-        // 1. Fetch team workloads
-        const teamWorkloads = await getTeamWorkloads(companyId);
-        if (teamWorkloads.length === 0) {
-            return res.json({
-                success: true,
-                data: []
-            });
-        }
-
-        // 2. Structure the prompt (asking for a JSON object containing the recommendations list)
-        const prompt = `You are a project manager allocating a task to the most compatible team member.
-Task details:
+        // Design the breakdown prompt
+        const prompt = `You are an expert product manager and technical coordinator.
+Analyze this high-level task:
 Title: "${title}"
 Description: "${description || 'No description'}"
 
@@ -319,98 +324,24 @@ You must respond strictly in a valid JSON object matching this schema:
 
 Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Output ONLY the JSON block.`;
 
-        // 3. Request completions from Groq or Gemini
-        let responseText = "";
-        let success = false;
-        let lastError = null;
-        let groqError = null;
+        const systemInstruction = "You are an expert product manager and technical coordinator. Respond strictly in a valid JSON object matching the requested schema. Do not add markdown codeblocks, just return the JSON object.";
 
-        // Try Groq first if key exists
-        if (process.env.GROQ_API_KEY) {
-            try {
-                responseText = await queryGroq(prompt);
-                success = true;
-            } catch (err) {
-                console.warn("Groq query failed, trying Gemini...", err.message);
-                groqError = err;
-            }
-        }
+        // Request content generation from Groq
+        const responseText = await callGroqAPI(prompt, systemInstruction);
 
-        // Fallback to Gemini if Groq fails or key is missing
-        if (!success) {
-            if (process.env.GEMINI_API_KEY) {
-                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-                const modelsToTry = [
-                    "gemini-2.0-flash",
-                    "gemini-1.5-flash",
-                    "gemini-1.5-flash-latest",
-                    "gemini-1.5-pro",
-                    "gemini-pro"
-                ];
-
-                for (const modelName of modelsToTry) {
-                    try {
-                        const model = genAI.getGenerativeModel({ model: modelName });
-                        const result = await model.generateContent(prompt);
-                        responseText = result.response.text().trim();
-                        success = true;
-                        break;
-                    } catch (err) {
-                        console.warn(`Model ${modelName} failed or not found:`, err.message);
-                        lastError = err;
-                    }
-                }
-            }
-        }
-
-        let recommendations = [];
-
-        if (!success) {
-            const errMsg = groqError 
-                ? `Groq failed (${groqError.message}) and Gemini failed (${lastError ? lastError.message : "unknown/disabled"})`
-                : `Gemini failed: ${lastError ? lastError.message : "unknown/disabled"}`;
-            
-            console.error("All AI services failed, falling back to local workload-matching logic. Details:", errMsg);
-            
-            // Log the error for local debugging
-            try {
-                fs.writeFileSync('C:\\TaskSutra\\backend_error.log', `AI Services Failed:\n${errMsg}\n`);
-            } catch (fsErr) {
-                console.error("Failed to write error log file:", fsErr);
-            }
-
-            recommendations = calculateLocalRecommendations(teamWorkloads, title, description);
-        } else {
-            responseText = responseText.trim();
-
-            // Strip markdown backticks if returned
-            if (responseText.startsWith('```')) {
-                responseText = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-            }
-
-            try {
-                const parsed = JSON.parse(responseText);
-                if (parsed && Array.isArray(parsed.recommendations)) {
-                    recommendations = parsed.recommendations;
-                } else if (Array.isArray(parsed)) {
-                    recommendations = parsed;
-                } else {
-                    throw new Error("Invalid structure returned by AI model: " + responseText.substring(0, 100));
-                }
-            } catch (parseError) {
-                console.error("Failed to parse AI recommendations as JSON. Raw output:", responseText, parseError);
-                recommendations = calculateLocalRecommendations(teamWorkloads, title, description);
-            }
-        }
-
-        // Enrich recommendations with user details
-        const enrichedRecommendations = recommendations.map(rec => {
-            const devInfo = teamWorkloads.find(w => w._id.toString() === rec.developerId.toString());
-            return {
-                ...rec,
-                name: devInfo ? devInfo.name : "Unknown",
-                title: devInfo ? devInfo.title : "Team Member",
-                activeTasks: devInfo ? devInfo.activeTasks : 0
+        let parsedBreakdown;
+        try {
+            parsedBreakdown = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error("Failed to parse Groq task breakdown as JSON. Raw output:", responseText);
+            // Fallback response if JSON parsing fails
+            parsedBreakdown = {
+                totalEstimatedHours: 6,
+                checklist: [
+                    { subTask: "Requirement scoping & analysis", estHours: 1 },
+                    { subTask: "Core implementation", estHours: 4 },
+                    { subTask: "Testing and verification", estHours: 1 }
+                ]
             };
         });
 
@@ -436,6 +367,3 @@ Ensure your output has NO markdown wrapping (like \`\`\`json) or extra text. Out
         });
     }
 };
-
-
-

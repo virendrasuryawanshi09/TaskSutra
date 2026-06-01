@@ -139,6 +139,45 @@ const CreateTask = () => {
     }
   }, [error]);
 
+  const handleAIBreakdown = async () => {
+    if (!taskData.title.trim()) {
+      toast.error("Please enter a Task Title first!");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      const response = await axiosInstance.post("/api/ai/breakdown", {
+        title: taskData.title,
+        description: taskData.description,
+      }, {
+        timeout: 60000
+      });
+
+      if (response.data && response.data.success && response.data.data.checklist) {
+        const aiItems = response.data.data.checklist.map((item) => ({
+          text: `${item.subTask} (Est: ${item.estHours}h)`,
+          completed: false,
+          isNew: true,
+        }));
+
+        setTaskData((prev) => ({
+          ...prev,
+          todoCheckList: [...prev.todoCheckList, ...aiItems],
+        }));
+
+        toast.success(`AI Checklist generated! (Est: ${response.data.data.totalEstimatedHours}h)`);
+      } else {
+        toast.error("Failed to parse AI checklist response.");
+      }
+    } catch (err) {
+      console.error("AI breakdown generation error details:", err.response?.data || err);
+      toast.error(err.response?.data?.message || "Failed to generate AI checklist.");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const [loading, setLoading] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const handleValueChange = (key, value) => {

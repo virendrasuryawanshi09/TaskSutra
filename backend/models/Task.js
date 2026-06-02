@@ -25,6 +25,12 @@ const taskSchema = new mongoose.Schema({
             default: ['Deep-Focus']
         },
         estimatedComplexityScore: { type: Number, default: 5 } // 1-10 scale
+    },
+    // AI Feature 2: Task Technical Domain classification
+    domain: {
+        type: String,
+        enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'QA', 'Design', 'Management', 'Other'],
+        default: 'Frontend'
     }
 }, {timestamps: true});
 

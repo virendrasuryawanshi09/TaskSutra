@@ -41,5 +41,6 @@ export const API_PATHS = {
   AI: {
     GET_ORG_HEALTH: "/api/ai/org-health",
     RECOMMEND_ASSIGNEES: "/api/ai/recommend-assignees",
+    GET_COGNITIVE_LOAD: (userId) => `/api/ai/cognitive-load/${userId}`,
   },
 };

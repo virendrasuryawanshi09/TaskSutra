@@ -343,3 +343,42 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
         });
     }
 };
+
+/**
+ * Evaluates and analyzes a team member's cognitive load and delivery probability
+ * Endpoint: GET /api/ai/cognitive-load/:userId
+ */
+exports.getCognitiveLoadAnalysis = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const companyId = req.user.companyId;
+
+        if (!companyId) {
+            return res.status(400).json({ success: false, message: "User is not associated with a company." });
+        }
+
+        // Stub response for Commit 1 architecture verification
+        return res.json({
+            success: true,
+            data: {
+                developerId: userId,
+                deliveryProbability: 100,
+                cognitiveLoadScore: 0,
+                activeTasksCount: 0,
+                detectedDomains: [],
+                contextSwitchPenalty: 0,
+                deadlinesTimeline: [],
+                schedulingOverlaps: [],
+                warnings: [],
+                assessment: "Initial architectural setup. Analysis stub."
+            }
+        });
+    } catch (error) {
+        console.error("Cognitive Load Analysis Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: `AI Error: ${error.message}`,
+            error: error.message
+        });
+    }
+};

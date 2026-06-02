@@ -240,7 +240,6 @@ const ManageUsers = () => {
       <Helmet>
         <title>Manage Team | TaskSutra</title>
         <meta name="description" content="View, invite, edit, or remove workspace members. Configure workspace domain permissions and track team tasks." />
-        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout activeMenu="manage-users">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">

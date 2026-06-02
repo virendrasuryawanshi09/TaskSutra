@@ -505,7 +505,6 @@ const MyTasksPage = () => {
       <Helmet>
         <title>My Tasks | TaskSutra</title>
         <meta name="description" content="Manage and track your assigned tasks, organize checklist items, and communicate with your team." />
-        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout>
         <MyTasksWorkspace

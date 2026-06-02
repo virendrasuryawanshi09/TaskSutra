@@ -284,7 +284,6 @@ const UserDashboard = () => {
       <Helmet>
         <title>Dashboard | TaskSutra</title>
         <meta name="description" content="View your task workload, upcoming deadlines, and progress analytics on your TaskSutra dashboard." />
-        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout>
         <div className="mx-auto w-full max-w-6xl space-y-6">

@@ -870,7 +870,6 @@ const DirectChat = ({ defaultCommunity = false }) => {
       <Helmet>
         <title>Workspace Chat | TaskSutra</title>
         <meta name="description" content="Collaborate and message colleagues inside your company workspace." />
-        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout activeMenu="Direct Messages">
       {/* Hyper-minimalist Elite Container */}

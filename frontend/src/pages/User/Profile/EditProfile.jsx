@@ -134,7 +134,6 @@ const EditProfile = () => {
       <Helmet>
         <title>Edit Profile | TaskSutra</title>
         <meta name="description" content="Update your personal details, profile picture, password, and workspace skills." />
-        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout activeMenu="Edit Profile">
         <div className="pb-16">

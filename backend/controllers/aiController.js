@@ -779,10 +779,32 @@ exports.executeNLQuery = async (req, res) => {
             });
         }
 
+        // Ensure the query is strictly scoped to the CEO's company
+        const mongoose = require('mongoose');
+        const companyMatch = {
+            $match: {
+                companyId: new mongoose.Types.ObjectId(companyId)
+            }
+        };
+        
+        // Inject company matching stage at the very beginning of the pipeline
+        const safePipeline = [companyMatch, ...parsed.pipeline];
+
+        // Execute validated pipeline with a 5-second timeout safeguard
+        const startTime = process.hrtime();
+        const rawData = await Task.aggregate(safePipeline).maxTimeMS(5000);
+        const diff = process.hrtime(startTime);
+        const executionTimeMs = Math.round((diff[0] * 1000) + (diff[1] / 1000000));
+
+        // Enforce maximum aggregation result limit
+        const limitedData = rawData.slice(0, 100);
+
         return res.json({
             success: true,
-            message: "Pipeline generated and validated successfully (execution stubbed)",
-            pipeline: parsed.pipeline,
+            rawData: limitedData,
+            executionTimeMs,
+            resultCount: limitedData.length,
+            pipeline: safePipeline,
             question
         });
 
@@ -795,7 +817,114 @@ exports.executeNLQuery = async (req, res) => {
     }
 };
 
-
+/**
+ * Stream Natural Language Query Answer (Phase 2)
+ * Endpoint: POST /api/ai/ceo/nl-query/stream
+ */
 exports.streamNLAnswer = async (req, res) => {
-    return res.status(501).json({ success: false, message: "Not Implemented" });
+    try {
+        const { question, rawData } = req.body;
+        if (!question || !rawData) {
+            return res.status(400).json({ success: false, message: "Question and rawData are required." });
+        }
+
+        if (!process.env.GROQ_API_KEY_ENGINE) {
+            return res.status(500).json({ success: false, message: "GROQ_API_KEY_ENGINE is not configured." });
+        }
+
+        // Set response headers for Server-Sent Events (SSE)
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.GROQ_API_KEY_ENGINE}`
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a professional executive operations assistant. Synthesize and summarize the database query results for the CEO in a concise, high-level Google AI Overview style. Use clean markdown. Use bullet points, bold key figures, and emoji indicators (🔴 High / 🟡 Medium / ✅ Completed / None). Keep it concise, professional, and enterprise-grade. No emojis outside status indicators. Do not mention technical terms like Mongoose, JSON, MongoDB, or pipeline. Speak directly to the business data."
+                    },
+                    {
+                        role: "user",
+                        content: `User Question: "${question}"\nDatabase Query Results:\n${JSON.stringify(rawData, null, 2)}`
+                    }
+                ],
+                temperature: 0.2,
+                stream: true
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            res.write(`data: ${JSON.stringify({ error: "Groq stream connection failed" })}\n\n`);
+            res.write("data: [DONE]\n\n");
+            return res.end();
+        }
+
+        let buffer = "";
+        const processChunk = (chunk) => {
+            buffer += chunk;
+            const lines = buffer.split("\n");
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const cleaned = line.trim();
+                if (!cleaned) continue;
+                if (cleaned.startsWith("data: [DONE]")) {
+                    break;
+                }
+                if (cleaned.startsWith("data: ")) {
+                    try {
+                        const jsonStr = cleaned.slice(6);
+                        const parsedObj = JSON.parse(jsonStr);
+                        const token = parsedObj.choices[0]?.delta?.content || "";
+                        if (token) {
+                            res.write(`data: ${JSON.stringify({ token })}\n\n`);
+                        }
+                    } catch (err) {
+                        // ignore parsing error for incomplete chunks
+                    }
+                }
+            }
+        };
+
+        if (response.body.getReader) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            req.on("close", () => {
+                reader.cancel().catch(() => {});
+            });
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                processChunk(decoder.decode(value, { stream: true }));
+            }
+        } else {
+            req.on("close", () => {
+                response.body.destroy();
+            });
+            for await (const chunk of response.body) {
+                processChunk(chunk.toString());
+            }
+        }
+
+        res.write("data: [DONE]\n\n");
+        res.end();
+
+    } catch (error) {
+        console.error("Stream NL Answer Error:", error);
+        try {
+            res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+            res.write("data: [DONE]\n\n");
+            res.end();
+        } catch (e) {
+            // response might already be closed
+        }
+    }
 };

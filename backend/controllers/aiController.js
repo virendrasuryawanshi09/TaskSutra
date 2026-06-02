@@ -3,10 +3,9 @@ const User = require('../models/User');
 const fs = require('fs');
 const { getTeamWorkloads } = require('./userController');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { validatePipeline } = require('../services/queryValidator');
 
-/**
- * Helper to query Groq Completions API
- */
+
 const queryGroq = async (prompt) => {
     if (!process.env.GROQ_API_KEY) {
         throw new Error("GROQ_API_KEY is not configured.");
@@ -35,9 +34,7 @@ const queryGroq = async (prompt) => {
     return data.choices[0].message.content;
 };
 
-/**
- * Local fallback matching when AI APIs fail
- */
+
 const calculateLocalRecommendations = (teamWorkloads, title, description) => {
     const textToMatch = `${title} ${description || ""}`.toLowerCase();
 
@@ -74,44 +71,41 @@ const calculateLocalRecommendations = (teamWorkloads, title, description) => {
     });
 };
 
-/**
- * Mathematical rule-based local fallback cognitive load calculator
- */
+
 const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
     const now = new Date();
     let deliveryProbability = 100;
     let cognitiveLoadScore = 0;
     const warnings = [];
     const schedulingOverlaps = [];
-    
+
     // 1. Analyze domains for context-switching
     const domains = new Set();
     activeTasks.forEach(t => {
         if (t.domain) {
             domains.add(t.domain);
         } else {
-            domains.add("Frontend"); // default fallback
+            domains.add("Frontend");
         }
     });
-    
+
     const detectedDomains = Array.from(domains);
     const domainCount = detectedDomains.length;
     const contextSwitchPenalty = Math.max(0, (domainCount - 1) * 10);
     deliveryProbability -= contextSwitchPenalty;
-    
+
     if (contextSwitchPenalty > 0) {
         warnings.push(`Context-switching penalty applied for working across ${domainCount} domains.`);
     }
 
-    // 2. Analyze tasks, priorities, and complexity
+
     activeTasks.forEach(task => {
         let taskPenalty = 0;
         const complexity = task.taskDna?.estimatedComplexityScore || 5;
-        
-        // Base load contribution from complexity
-        cognitiveLoadScore += complexity * 6; // max 60
-        
-        // Priority weight
+
+
+        cognitiveLoadScore += complexity * 6;
+
         if (task.priority === 'High') {
             cognitiveLoadScore += 15;
             taskPenalty += 12;
@@ -122,17 +116,16 @@ const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
             cognitiveLoadScore += 3;
             taskPenalty += 2;
         }
-        
-        // Check if overdue
+
         if (task.dueDate && new Date(task.dueDate) < now) {
             taskPenalty += 15;
             warnings.push(`Task "${task.title}" is overdue.`);
         }
-        
+
         deliveryProbability -= taskPenalty;
     });
 
-    // 3. Analyze scheduling overlaps (deadlines within 48 hours of each other)
+
     for (let i = 0; i < deadlinesTimeline.length; i++) {
         for (let j = i + 1; j < deadlinesTimeline.length; j++) {
             if (!deadlinesTimeline[i].dueDate || !deadlinesTimeline[j].dueDate) continue;
@@ -140,7 +133,7 @@ const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
             const date2 = new Date(deadlinesTimeline[j].dueDate);
             const diffTime = Math.abs(date2 - date1);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays <= 2) {
                 const overlapDesc = `Deadline collision: "${deadlinesTimeline[i].title}" and "${deadlinesTimeline[j].title}" are due within ${diffDays} day(s) of each other.`;
                 schedulingOverlaps.push({ description: overlapDesc });
@@ -151,15 +144,13 @@ const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
         }
     }
 
-    // 4. Integrate user metrics
+
     const lateRate = user.behavioralProfile?.performanceMetrics?.lateSubmissionRate || 0;
     deliveryProbability -= Math.round(lateRate * 0.4);
 
-    // 5. Clamping
     deliveryProbability = Math.max(10, Math.min(98, deliveryProbability));
     cognitiveLoadScore = Math.max(5, Math.min(95, cognitiveLoadScore));
 
-    // Compile assessment
     let assessment = "";
     if (cognitiveLoadScore > 75) {
         assessment = `Critical cognitive load with high risk of delivery delays. Needs workload rebalancing immediately.`;
@@ -181,10 +172,6 @@ const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
     };
 };
 
-/**
- * Generates an Organizational Health Diagnostic report for the CEO
- * Endpoint: GET /api/ai/org-health
- */
 exports.generateOrgHealthReport = async (req, res) => {
     try {
         const companyId = req.user.companyId;
@@ -318,10 +305,6 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
     }
 };
 
-/**
- * Recommends and ranks team members for a task based on skills and workloads
- * Endpoint: POST /api/ai/recommend-assignees
- */
 exports.recommendAssignees = async (req, res) => {
     try {
         const { title, description } = req.body;
@@ -463,7 +446,7 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
                     })).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
                     const localAnalysis = calculateLocalCognitiveLoad(devInfo, activeTasks, deadlinesTimeline);
-                    
+
                     cogProfile = {
                         cognitiveLoadScore: localAnalysis.cognitiveLoadScore,
                         deliveryProbability: localAnalysis.deliveryProbability,
@@ -503,12 +486,7 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
     }
 };
 
-// Moved to top of file
 
-/**
- * Evaluates and analyzes a team member's cognitive load and delivery probability
- * Endpoint: GET /api/ai/cognitive-load/:userId
- */
 exports.getCognitiveLoadAnalysis = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -672,9 +650,7 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
     }
 };
 
-/**
- * Helper to query Groq Completions API using the Engine Key
- */
+
 const queryGroqEngine = async (prompt, jsonMode = true) => {
     if (!process.env.GROQ_API_KEY_ENGINE) {
         throw new Error("GROQ_API_KEY_ENGINE is not configured.");
@@ -708,9 +684,7 @@ const queryGroqEngine = async (prompt, jsonMode = true) => {
     return data.choices[0].message.content;
 };
 
-/**
- * Builds schema injection prompt for translation into MongoDB aggregation pipeline
- */
+
 const buildNLQueryPrompt = (question, companyId) => {
     return `You are a MongoDB database aggregation pipeline generator.
 Translate the user's natural language question into a valid MongoDB aggregation pipeline JSON object for the "tasks" collection.
@@ -762,10 +736,7 @@ Rules:
 User Question: "${question}"`;
 };
 
-/**
- * Execute Natural Language Query (Phase 1 Foundation)
- * Endpoint: POST /api/ai/ceo/nl-query
- */
+
 exports.executeNLQuery = async (req, res) => {
     try {
         const { question } = req.body;
@@ -799,9 +770,18 @@ exports.executeNLQuery = async (req, res) => {
             return res.status(422).json({ success: false, message: "AI failed to generate a valid database query pipeline." });
         }
 
+        // Validate the pipeline for security and read-only constraints
+        const validation = validatePipeline(parsed.pipeline);
+        if (!validation.valid) {
+            return res.status(400).json({
+                success: false,
+                message: `Security validation failed: ${validation.error}`
+            });
+        }
+
         return res.json({
             success: true,
-            message: "Pipeline generated successfully (execution stubbed)",
+            message: "Pipeline generated and validated successfully (execution stubbed)",
             pipeline: parsed.pipeline,
             question
         });
@@ -815,10 +795,7 @@ exports.executeNLQuery = async (req, res) => {
     }
 };
 
-/**
- * Stream Natural Language Query Answer (Phase 2 Stub)
- * Endpoint: POST /api/ai/ceo/nl-query/stream
- */
+
 exports.streamNLAnswer = async (req, res) => {
     return res.status(501).json({ success: false, message: "Not Implemented" });
 };

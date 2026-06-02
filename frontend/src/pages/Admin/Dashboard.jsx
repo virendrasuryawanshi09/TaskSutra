@@ -14,6 +14,7 @@ import CustomPieChart from '../../components/Charts/CustomPieChart';
 import CustomBarChart from '../../components/Charts/CustomBarChart';
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell as RechartsCell } from 'recharts';
 
 
 const COLORS = [
@@ -21,6 +22,125 @@ const COLORS = [
   "#2F7A84", // In Progress
   "#4C7F6A", // Completed
 ];
+
+const AutoChart = ({ data }) => {
+  if (!Array.isArray(data) || data.length < 2) return null;
+  const sample = data[0];
+  const keys = Object.keys(sample);
+  const valueKey = keys.find(k => typeof sample[k] === 'number' && k !== '__v' && k !== 'progress' && k !== 'estimatedComplexityScore');
+  const labelKey = keys.find(k => typeof sample[k] === 'string' && k !== '_id' && k !== 'companyId');
+
+  if (!valueKey || !labelKey) return null;
+
+  const chartData = data.map(item => ({
+    name: item[labelKey] || "Unknown",
+    value: item[valueKey]
+  }));
+
+  const chartColors = ["#4F46E5", "#D97706", "#059669", "#2563EB", "#7C3AED", "#EC4899", "#10B981"];
+
+  return (
+    <div className="p-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm space-y-3">
+      <span className="text-[10px] font-bold text-[var(--accent)] tracking-wider uppercase flex items-center gap-1.5">
+        <LuLayers size={13} className="text-[var(--accent)]" /> Data Visualization
+      </span>
+      <div className="h-[200px] w-full pt-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+            <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+            <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+            <RechartsTooltip 
+              cursor={{ fill: 'var(--bg-soft)', opacity: 0.4 }}
+              contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '11px', color: 'var(--text)' }}
+            />
+            <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
+              {chartData.map((entry, index) => (
+                <RechartsCell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+const KeyMetricPills = ({ rawData, isTaskData, isUserData }) => {
+  if (!Array.isArray(rawData) || rawData.length === 0) return null;
+
+  if (isTaskData) {
+    const total = rawData.length;
+    const totalProgress = rawData.reduce((sum, t) => sum + (t.progress || 0), 0);
+    const avgProgress = Math.round(totalProgress / total);
+    const highPriority = rawData.filter(t => t.priority === 'High').length;
+    const now = new Date();
+    const overdue = rawData.filter(t => t.dueDate && new Date(t.dueDate) < now && t.status !== 'Completed').length;
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Total Tasks</span>
+          <span className="text-base font-bold text-[var(--text)] mt-0.5">{total}</span>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Avg Progress</span>
+          <span className="text-base font-bold text-[var(--text)] mt-0.5">{avgProgress}%</span>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">High Priority</span>
+          <span className="text-base font-bold text-red-500 mt-0.5">{highPriority}</span>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Overdue</span>
+          <span className="text-base font-bold text-amber-600 mt-0.5">{overdue}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isUserData) {
+    const total = rawData.length;
+    const members = rawData.filter(u => u.role === 'member').length;
+    const admins = rawData.filter(u => u.role === 'admin').length;
+    const totalSkills = rawData.reduce((sum, u) => sum + (Array.isArray(u.skills) ? u.skills.length : 0), 0);
+    const avgSkills = Math.round(totalSkills / total) || 0;
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Total Matched</span>
+          <span className="text-base font-bold text-[var(--text)] mt-0.5">{total}</span>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Members</span>
+          <span className="text-base font-bold text-[var(--text)] mt-0.5">{members}</span>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Admins</span>
+          <span className="text-base font-bold text-[var(--text)] mt-0.5">{admins}</span>
+        </div>
+        <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+          <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Avg Skills</span>
+          <span className="text-base font-bold text-[var(--text)] mt-0.5">{avgSkills}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+        <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Total Records</span>
+        <span className="text-base font-bold text-[var(--text)] mt-0.5">{rawData.length}</span>
+      </div>
+      <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/30 flex flex-col">
+        <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Data Fields</span>
+        <span className="text-base font-bold text-[var(--text)] mt-0.5">{Object.keys(rawData[0]).filter(k => k !== '__v' && k !== 'companyId').length}</span>
+      </div>
+    </div>
+  );
+};
 
 const parseInlineStyles = (text) => {
   if (typeof text !== 'string') return text;
@@ -843,17 +963,26 @@ const Dashboard = () => {
                         </div>
                       </div>
                     ) : rawData && rawData.length > 0 ? (
-                      isTaskData ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {rawData.map(task => renderTaskCard(task))}
-                        </div>
-                      ) : isUserData ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {rawData.map(dev => renderUserCard(dev))}
-                        </div>
-                      ) : (
-                        <ResultTable rawData={rawData} />
-                      )
+                      <div className="space-y-6">
+                        {/* Key Metric Pills */}
+                        <KeyMetricPills rawData={rawData} isTaskData={isTaskData} isUserData={isUserData} />
+
+                        {/* Auto Chart (if applicable) */}
+                        <AutoChart data={rawData} />
+
+                        {/* Structured Data View (Cards or Table) */}
+                        {isTaskData ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {rawData.map(task => renderTaskCard(task))}
+                          </div>
+                        ) : isUserData ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {rawData.map(dev => renderUserCard(dev))}
+                          </div>
+                        ) : (
+                          <ResultTable rawData={rawData} />
+                        )}
+                      </div>
                     ) : (
                       !isQueryLoading && (
                         <div className="flex-1 flex flex-col items-center justify-center py-16 text-center border border-dashed border-[var(--border)] rounded-2xl bg-[var(--bg-soft)]/10">

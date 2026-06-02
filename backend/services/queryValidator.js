@@ -102,8 +102,8 @@ const validatePipeline = (pipeline) => {
                 return { valid: false, error: `Malformed $lookup operator at index ${i}.` };
             }
 
-            if (lookup.from !== 'users') {
-                return { valid: false, error: `Unauthorized join target "${lookup.from}" in $lookup at index ${i}. Can only join with "users" collection.` };
+            if (lookup.from !== 'users' && lookup.from !== 'tasks') {
+                return { valid: false, error: `Unauthorized join target "${lookup.from}" in $lookup at index ${i}. Can only join with "users" or "tasks" collections.` };
             }
         }
 

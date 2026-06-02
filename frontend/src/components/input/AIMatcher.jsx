@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
 import { 
   LuActivity, 
   LuCalendar, 
-  LuAlertTriangle, 
   LuLoader, 
   LuLayers, 
   LuX, 
@@ -86,7 +84,9 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
           </div>
         ) : error ? (
           <div className="flex flex-1 flex-col items-center justify-center py-16 text-center px-4">
-            <LuAlertTriangle className="text-3xl text-rose-500 mb-2" />
+            <svg className="w-8 h-8 text-rose-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
             <p className="text-sm font-semibold text-rose-500">Diagnostic Failed</p>
             <p className="text-xs text-[var(--text-muted)] mt-1 max-w-sm">{error}</p>
           </div>
@@ -99,7 +99,14 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
             {/* METRICS HEADER */}
             <div className="grid grid-cols-2 gap-4">
               {/* Delivery Probability Circle */}
-              <div className="bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between">
+              <div 
+                className="bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between transition-all duration-300 hover:shadow-sm"
+                role="progressbar"
+                aria-valuenow={analysisData.deliveryProbability}
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="On-Time Delivery Probability"
+              >
                 <div className="flex flex-col">
                   <span className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-wider">
                     On-Time Delivery
@@ -135,7 +142,14 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
               </div>
 
               {/* Cognitive Load Slider-style */}
-              <div className="bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between">
+              <div 
+                className="bg-[var(--bg-soft)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-sm"
+                role="progressbar"
+                aria-valuenow={analysisData.cognitiveLoadScore}
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="Cognitive Load Index"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-wider">
@@ -175,7 +189,9 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
             {analysisData.warnings && analysisData.warnings.length > 0 && (
               <div className="border border-amber-500/10 bg-amber-500/5 rounded-xl p-3.5 space-y-1.5">
                 <div className="flex items-center gap-2 text-amber-500 font-semibold text-xs">
-                  <LuAlertTriangle className="shrink-0 text-xs" />
+                  <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
                   <span>Cognitive Friction Warning</span>
                 </div>
                 <div className="space-y-1 pl-5">
@@ -256,8 +272,10 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-6 text-[10px] text-[var(--text-muted)] italic">
-                  No scheduled deadlines in pipeline.
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-[var(--surface)] border border-[var(--border)] rounded-lg">
+                  <LuCalendar className="text-lg text-[var(--text-muted)] mb-1.5" />
+                  <span className="text-[10px] font-medium text-[var(--text)]">No Deadlines In Pipeline</span>
+                  <span className="text-[9px] text-[var(--text-muted)] mt-0.5">Developer has full availability and no active deadlines.</span>
                 </div>
               )}
             </div>
@@ -266,13 +284,6 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
       </div>
     </Modal>
   );
-};
-
-AIMatcher.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  userId: PropTypes.string,
-  userName: PropTypes.string,
 };
 
 export default AIMatcher;

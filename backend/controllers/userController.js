@@ -83,7 +83,7 @@ const getTeamWorkloads = async (companyId) => {
         const users = await User.find({ 
             companyId, 
             role: { $in: ["member", "admin", "ceo"] } 
-        }).select("name title skills behavioralProfile role");
+        }).select("name title skills behavioralProfile role cognitiveProfile");
         
         const workloads = await Promise.all(
             users.map(async (user) => {
@@ -97,6 +97,11 @@ const getTeamWorkloads = async (companyId) => {
                     title: user.title,
                     skills: user.skills || [],
                     behavioralProfile: user.behavioralProfile,
+                    cognitiveProfile: user.cognitiveProfile || {
+                        cognitiveLoadScore: 0,
+                        deliveryProbability: 100,
+                        lastUpdated: null
+                    },
                     activeTasks
                 };
             })

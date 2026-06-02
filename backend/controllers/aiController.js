@@ -325,7 +325,12 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
                 ...rec,
                 name: devInfo ? devInfo.name : "Unknown",
                 title: devInfo ? devInfo.title : "Team Member",
-                activeTasks: devInfo ? devInfo.activeTasks : 0
+                activeTasks: devInfo ? devInfo.activeTasks : 0,
+                cognitiveProfile: devInfo ? devInfo.cognitiveProfile : {
+                    cognitiveLoadScore: 0,
+                    deliveryProbability: 100,
+                    lastUpdated: null
+                }
             };
         });
 
@@ -345,6 +350,113 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
 };
 
 /**
+ * Mathematical rule-based local fallback cognitive load calculator
+ */
+const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
+    const now = new Date();
+    let deliveryProbability = 100;
+    let cognitiveLoadScore = 0;
+    const warnings = [];
+    const schedulingOverlaps = [];
+    
+    // 1. Analyze domains for context-switching
+    const domains = new Set();
+    activeTasks.forEach(t => {
+        if (t.domain) {
+            domains.add(t.domain);
+        } else {
+            domains.add("Frontend"); // default fallback
+        }
+    });
+    
+    const detectedDomains = Array.from(domains);
+    const domainCount = detectedDomains.length;
+    const contextSwitchPenalty = Math.max(0, (domainCount - 1) * 10);
+    deliveryProbability -= contextSwitchPenalty;
+    
+    if (contextSwitchPenalty > 0) {
+        warnings.push(`Context-switching penalty applied for working across ${domainCount} domains.`);
+    }
+
+    // 2. Analyze tasks, priorities, and complexity
+    activeTasks.forEach(task => {
+        let taskPenalty = 0;
+        const complexity = task.taskDna?.estimatedComplexityScore || 5;
+        
+        // Base load contribution from complexity
+        cognitiveLoadScore += complexity * 6; // max 60
+        
+        // Priority weight
+        if (task.priority === 'High') {
+            cognitiveLoadScore += 15;
+            taskPenalty += 12;
+        } else if (task.priority === 'Medium') {
+            cognitiveLoadScore += 8;
+            taskPenalty += 6;
+        } else {
+            cognitiveLoadScore += 3;
+            taskPenalty += 2;
+        }
+        
+        // Check if overdue
+        if (task.dueDate && new Date(task.dueDate) < now) {
+            taskPenalty += 15;
+            warnings.push(`Task "${task.title}" is overdue.`);
+        }
+        
+        deliveryProbability -= taskPenalty;
+    });
+
+    // 3. Analyze scheduling overlaps (deadlines within 48 hours of each other)
+    for (let i = 0; i < deadlinesTimeline.length; i++) {
+        for (let j = i + 1; j < deadlinesTimeline.length; j++) {
+            if (!deadlinesTimeline[i].dueDate || !deadlinesTimeline[j].dueDate) continue;
+            const date1 = new Date(deadlinesTimeline[i].dueDate);
+            const date2 = new Date(deadlinesTimeline[j].dueDate);
+            const diffTime = Math.abs(date2 - date1);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays <= 2) {
+                const overlapDesc = `Deadline collision: "${deadlinesTimeline[i].title}" and "${deadlinesTimeline[j].title}" are due within ${diffDays} day(s) of each other.`;
+                schedulingOverlaps.push({ description: overlapDesc });
+                deliveryProbability -= 10;
+                cognitiveLoadScore += 8;
+                warnings.push(`Timeline collision on tasks due near ${new Date(deadlinesTimeline[i].dueDate).toLocaleDateString()}.`);
+            }
+        }
+    }
+
+    // 4. Integrate user metrics
+    const lateRate = user.behavioralProfile?.performanceMetrics?.lateSubmissionRate || 0;
+    deliveryProbability -= Math.round(lateRate * 0.4);
+
+    // 5. Clamping
+    deliveryProbability = Math.max(10, Math.min(98, deliveryProbability));
+    cognitiveLoadScore = Math.max(5, Math.min(95, cognitiveLoadScore));
+
+    // Compile assessment
+    let assessment = "";
+    if (cognitiveLoadScore > 75) {
+        assessment = `Critical cognitive load with high risk of delivery delays. Needs workload rebalancing immediately.`;
+    } else if (cognitiveLoadScore > 40) {
+        assessment = `Moderate load. Multi-tasking across ${domainCount} domains requires careful deadline monitoring.`;
+    } else {
+        assessment = `Optimal capacity. Workload is well-distributed and deadlines are clear.`;
+    }
+
+    return {
+        deliveryProbability,
+        cognitiveLoadScore,
+        detectedDomains,
+        contextSwitchPenalty,
+        deadlinesTimeline,
+        schedulingOverlaps,
+        warnings,
+        assessment
+    };
+};
+
+/**
  * Evaluates and analyzes a team member's cognitive load and delivery probability
  * Endpoint: GET /api/ai/cognitive-load/:userId
  */
@@ -357,20 +469,148 @@ exports.getCognitiveLoadAnalysis = async (req, res) => {
             return res.status(400).json({ success: false, message: "User is not associated with a company." });
         }
 
-        // Stub response for Commit 1 architecture verification
+        const user = await User.findOne({ _id: userId, companyId }).select("name title skills behavioralProfile");
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found or access denied." });
+        }
+
+        const activeTasks = await Task.find({
+            assignedTo: userId,
+            companyId,
+            status: { $in: ["Pending", "In-progress", "In Progress"] }
+        }).select("title description priority dueDate domain taskDna");
+
+        const deadlinesTimeline = activeTasks.map(t => ({
+            taskId: t._id.toString(),
+            title: t.title,
+            dueDate: t.dueDate,
+            priority: t.priority,
+            domain: t.domain || "Frontend",
+            complexity: t.taskDna?.estimatedComplexityScore || 5
+        })).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        // Let's call AI if keys are present, otherwise fallback to local calculation
+        let resultData = null;
+        let success = false;
+        let lastError = null;
+
+        if (process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY) {
+            const prompt = `You are an AI Resource Planner and Cognitive Load Analyst. Analyze the workload of team member ${user.name} (${user.title || 'Developer'}) to determine their On-Time Delivery Probability and Cognitive Load.
+
+Developer Behavioral Traits: ${JSON.stringify(user.behavioralProfile?.traits || ['Deep-Focus'])}
+Performance Telemetry:
+- Late Submission Rate: ${user.behavioralProfile?.performanceMetrics?.lateSubmissionRate || 0}%
+- Avg Checklist Completion Time: ${user.behavioralProfile?.performanceMetrics?.avgChecklistCompletionTime || 0} hours
+- Review Accuracy: ${user.behavioralProfile?.performanceMetrics?.reviewAccuracyRate || 100}%
+
+Developer Skills: ${JSON.stringify(user.skills || [])}
+
+Current Date: ${new Date().toISOString()}
+
+Active Tasks Checklist & Deadlines Timeline:
+${JSON.stringify(deadlinesTimeline, null, 2)}
+
+Evaluation Criteria:
+1. Delivery Probability (0-100%):
+   - Start with base 100%.
+   - Deduct for overdue tasks (current date > due date).
+   - Deduct for scheduling overlaps (deadlines within 2 days of each other).
+   - Deduct based on behavioral lateSubmissionRate.
+   - Deduct 10 points for every additional technical domain beyond the first (context switching overhead).
+2. Cognitive Load Score (0-100):
+   - Increase based on task complexity scores, priority levels (High = +20, Medium = +10, Low = +5).
+   - Increase for each domain shift required.
+3. Scheduling Overlaps:
+   - Identify specific dates where multiple tasks are due close to each other.
+4. Warnings:
+   - Provide concrete alerts for the manager if efficiency drops or deadlines are at risk.
+5. Assessment:
+   - Concise evaluation of developer's load in under 25 words.
+
+You MUST respond strictly in a valid JSON object matching this schema:
+{
+  "deliveryProbability": <Integer between 0 and 100>,
+  "cognitiveLoadScore": <Integer between 0 and 100>,
+  "detectedDomains": ["<domain names matching active tasks>"],
+  "contextSwitchPenalty": <Integer representing the penalty subtracted>,
+  "schedulingOverlaps": [
+    {
+      "description": "<string describing overlap>"
+    }
+  ],
+  "warnings": ["<string warning 1>", "<string warning 2>"],
+  "assessment": "<string narrative assessment, strictly under 30 words, no emojis>"
+}
+
+Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
+
+            let responseText = "";
+
+            if (process.env.GROQ_API_KEY) {
+                try {
+                    responseText = await queryGroq(prompt);
+                    success = true;
+                } catch (err) {
+                    console.warn("Groq failed for cognitive load, trying Gemini...", err.message);
+                    lastError = err;
+                }
+            }
+
+            if (!success && process.env.GEMINI_API_KEY) {
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+                for (const modelName of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]) {
+                    try {
+                        const model = genAI.getGenerativeModel({ model: modelName });
+                        const result = await model.generateContent(prompt);
+                        responseText = result.response.text().trim();
+                        success = true;
+                        break;
+                    } catch (err) {
+                        console.warn(`Gemini model ${modelName} failed for cognitive load:`, err.message);
+                        lastError = err;
+                    }
+                }
+            }
+
+            if (success) {
+                responseText = responseText.trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+                try {
+                    const parsed = JSON.parse(responseText);
+                    resultData = {
+                        deliveryProbability: typeof parsed.deliveryProbability === 'number' ? parsed.deliveryProbability : 100,
+                        cognitiveLoadScore: typeof parsed.cognitiveLoadScore === 'number' ? parsed.cognitiveLoadScore : 0,
+                        detectedDomains: Array.isArray(parsed.detectedDomains) ? parsed.detectedDomains : [],
+                        contextSwitchPenalty: typeof parsed.contextSwitchPenalty === 'number' ? parsed.contextSwitchPenalty : 0,
+                        deadlinesTimeline,
+                        schedulingOverlaps: Array.isArray(parsed.schedulingOverlaps) ? parsed.schedulingOverlaps : [],
+                        warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
+                        assessment: parsed.assessment || "Analysis computed."
+                    };
+                } catch (parseError) {
+                    console.error("Failed to parse cognitive load AI response, falling back. Raw:", responseText);
+                    resultData = calculateLocalCognitiveLoad(user, activeTasks, deadlinesTimeline);
+                }
+            }
+        }
+
+        if (!resultData) {
+            resultData = calculateLocalCognitiveLoad(user, activeTasks, deadlinesTimeline);
+        }
+
+        // Cache the results on the User document
+        user.cognitiveProfile = {
+            cognitiveLoadScore: resultData.cognitiveLoadScore,
+            deliveryProbability: resultData.deliveryProbability,
+            lastUpdated: new Date()
+        };
+        await user.save();
+
         return res.json({
             success: true,
             data: {
                 developerId: userId,
-                deliveryProbability: 100,
-                cognitiveLoadScore: 0,
-                activeTasksCount: 0,
-                detectedDomains: [],
-                contextSwitchPenalty: 0,
-                deadlinesTimeline: [],
-                schedulingOverlaps: [],
-                warnings: [],
-                assessment: "Initial architectural setup. Analysis stub."
+                ...resultData,
+                activeTasksCount: activeTasks.length
             }
         });
     } catch (error) {

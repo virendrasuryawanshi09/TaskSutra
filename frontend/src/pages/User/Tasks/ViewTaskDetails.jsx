@@ -4,6 +4,7 @@ import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
+import { Helmet } from "react-helmet-async";
 import AvatarGroup from "../../../components/AvatarGroup";
 import SelectDropdown from "../../../components/input/SelectDropdown";
 import TaskDiscussionPanel from "./TaskDiscussionPanel";
@@ -548,7 +549,12 @@ const ViewTaskDetails = () => {
   const hasPendingChanges = hasChecklistChanges || hasStatusChanges;
 
   return (
-    <DashboardLayout>
+    <>
+      <Helmet>
+        <title>Task Details | TaskSutra</title>
+        <meta name="description" content="View task information, checklist progress, attachments, and team discussion comments." />
+      </Helmet>
+      <DashboardLayout>
       <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
         <div
           className="
@@ -895,6 +901,7 @@ const ViewTaskDetails = () => {
         currentUser={user}
       />
     </DashboardLayout>
+    </>
   );
 };
 

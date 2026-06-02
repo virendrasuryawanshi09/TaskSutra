@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { API_PATHS } from "../../../utils/apiPaths";
 import axiosInstance from "../../../utils/axiosInstance";
+import { Helmet } from "react-helmet-async";
 
 const UserTeamMembers = () => {
   const [members, setMembers] = useState([]);
@@ -100,124 +101,130 @@ const UserTeamMembers = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-[20px] font-semibold text-[var(--text)]">
-              Team Members
-            </h1>
-            <p className="text-[13px] text-[var(--text-muted)] mt-1">
-              Overview of team activity
-            </p>
+    <>
+      <Helmet>
+        <title>Team Members | TaskSutra</title>
+        <meta name="description" content="View and track team member activity, roles, and task progress." />
+      </Helmet>
+      <DashboardLayout>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+            <div>
+              <h1 className="text-[20px] font-semibold text-[var(--text)]">
+                Team Members
+              </h1>
+              <p className="text-[13px] text-[var(--text-muted)] mt-1">
+                Overview of team activity
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-col gap-3">
-          {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[76px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--surface)]"
-              />
-            ))
-          ) : error ? (
-            <div className="p-6 text-center text-sm text-red-500 bg-red-50/10 rounded-lg border border-red-500/20">
-              {error}
-            </div>
-          ) : members.length === 0 ? (
-            <div className="p-6 text-center text-sm text-[var(--text-muted)]">
-              No team members found
-            </div>
-          ) : (
-            members.map((member, index) => {
-              const stats = getTaskStats(member);
+          <div className="flex flex-col gap-3">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[76px] animate-pulse rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+                />
+              ))
+            ) : error ? (
+              <div className="p-6 text-center text-sm text-red-500 bg-red-50/10 rounded-lg border border-red-500/20">
+                {error}
+              </div>
+            ) : members.length === 0 ? (
+              <div className="p-6 text-center text-sm text-[var(--text-muted)]">
+                No team members found
+              </div>
+            ) : (
+              members.map((member, index) => {
+                const stats = getTaskStats(member);
 
-              return (
-                <motion.div
-                  key={member._id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="
-                    flex flex-col sm:flex-row sm:items-center sm:justify-between
-                    gap-4
-                    px-4 py-4 rounded-lg
-                    bg-[var(--surface)]
-                    border border-[var(--border)]
-                    shadow-sm
-                    hover:-translate-y-0.5
-                    hover:border-[var(--accent)]
-                    hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]
-                    transition-all duration-200
-                    cursor-pointer
-                  "
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="
-                        w-9 h-9 rounded-full
-                        bg-[var(--bg-soft)]
-                        flex items-center justify-center
-                        text-[12px] font-medium text-[var(--text)]
-                        overflow-hidden shrink-0
-                      "
-                    >
-                      {member.profileImageUrl ? (
-                        <img
-                          src={member.profileImageUrl}
-                          alt={member.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        getInitials(member.name || "U")
-                      )}
-                    </div>
-
-                    <div className="flex flex-col min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[13px] font-medium text-[var(--text)] truncate">
-                          {member.name || "Unnamed"}
-                        </span>
-                        {member.role === "ceo" && (
-                          <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
-                            CEO
-                          </span>
-                        )}
-                        {member.role === "admin" && (
-                          <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-purple-500/10 text-purple-600 border border-purple-500/20">
-                            Admin
-                          </span>
+                return (
+                  <motion.div
+                    key={member._id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="
+                      flex flex-col sm:flex-row sm:items-center sm:justify-between
+                      gap-4
+                      px-4 py-4 rounded-lg
+                      bg-[var(--surface)]
+                      border border-[var(--border)]
+                      shadow-sm
+                      hover:-translate-y-0.5
+                      hover:border-[var(--accent)]
+                      hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]
+                      transition-all duration-200
+                      cursor-pointer
+                    "
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="
+                          w-9 h-9 rounded-full
+                          bg-[var(--bg-soft)]
+                          flex items-center justify-center
+                          text-[12px] font-medium text-[var(--text)]
+                          overflow-hidden shrink-0
+                        "
+                      >
+                        {member.profileImageUrl ? (
+                          <img
+                            src={member.profileImageUrl}
+                            alt={member.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          getInitials(member.name || "U")
                         )}
                       </div>
 
-                      <span className="text-[12px] text-[var(--text-muted)] truncate">
-                        {member.email}
-                      </span>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[13px] font-medium text-[var(--text)] truncate">
+                            {member.name || "Unnamed"}
+                          </span>
+                          {member.role === "ceo" && (
+                            <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+                              CEO
+                            </span>
+                          )}
+                          {member.role === "admin" && (
+                            <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-[12px] text-[var(--text-muted)] truncate">
+                          {member.email}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-[12px]">
-                    <span className="text-[var(--text-muted)]">
-                      Total: {stats.total}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-4 text-[12px]">
+                      <span className="text-[var(--text-muted)]">
+                        Total: {stats.total}
+                      </span>
 
-                    <span className="text-green-500">✓ {stats.completed}</span>
+                      <span className="text-green-500">✓ {stats.completed}</span>
 
-                    <span className="text-cyan-500">↻ {stats.inProgress}</span>
+                      <span className="text-cyan-500">↻ {stats.inProgress}</span>
 
-                    <span className="text-yellow-500">• {stats.pending}</span>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
+                      <span className="text-yellow-500">• {stats.pending}</span>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </>
   );
 };
 

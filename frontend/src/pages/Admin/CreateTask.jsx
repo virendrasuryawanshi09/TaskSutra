@@ -16,6 +16,7 @@ import AddAttachmentsInput from "../../components/input/AddAttachmentsInput";
 import DeleteAlert from "../../components/DeleteAlert";
 import { useSocket } from "../../context/SocketContext";
 import TaskDiscussionPanel from "../User/Tasks/TaskDiscussionPanel";
+import { Helmet } from "react-helmet-async";
 
 const CreateTask = () => {
   const location = useLocation();
@@ -404,8 +405,13 @@ const CreateTask = () => {
   }, [taskId]);
 
   return (
-    <DashboardLayout activeMenu="Create Task">
-      <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
+    <>
+      <Helmet>
+        <title>{taskId ? "Edit Task" : "Create Task"} | TaskSutra</title>
+        <meta name="description" content={taskId ? "Modify details, checklists, priorities, assignees, and attachments for an existing task." : "Define title, description, checklist items, attachments, priority, and assignees to create a new task."} />
+      </Helmet>
+      <DashboardLayout activeMenu="Create Task">
+        <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">
         <div
           className="
           bg-[var(--surface)]
@@ -661,6 +667,7 @@ const CreateTask = () => {
         onSend={handleSendMessage}
       />
     </DashboardLayout>
+    </>
   );
 };
 

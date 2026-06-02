@@ -10,7 +10,6 @@ import {
   LuHistory,
   LuCopy,
   LuDownload,
-  LuAlertCircle,
   LuCheck,
   LuClock,
   LuLayers
@@ -19,7 +18,7 @@ import {
 
 const EmptyState = ({ message = "No results found for this query" }) => (
   <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-[var(--border)] rounded-2xl bg-[var(--surface)] text-center">
-    <LuAlertCircle className="text-3xl text-[var(--text-muted)] mb-3" />
+    <LuLayers className="text-3xl text-[var(--text-muted)] mb-3" />
     <p className="text-sm font-medium text-[var(--text)]">{message}</p>
     <p className="text-xs text-[var(--text-muted)] mt-1">Try rephrasing your search or click on one of the quick suggestions.</p>
   </div>

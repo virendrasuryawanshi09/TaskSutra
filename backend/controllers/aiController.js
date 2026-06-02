@@ -673,11 +673,146 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
 };
 
 /**
- * Execute Natural Language Query (Phase 1 Stub)
+ * Helper to query Groq Completions API using the Engine Key
+ */
+const queryGroqEngine = async (prompt, jsonMode = true) => {
+    if (!process.env.GROQ_API_KEY_ENGINE) {
+        throw new Error("GROQ_API_KEY_ENGINE is not configured.");
+    }
+
+    const body = {
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1
+    };
+
+    if (jsonMode) {
+        body.response_format = { type: "json_object" };
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.GROQ_API_KEY_ENGINE}`
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Groq API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+};
+
+/**
+ * Builds schema injection prompt for translation into MongoDB aggregation pipeline
+ */
+const buildNLQueryPrompt = (question, companyId) => {
+    return `You are a MongoDB database aggregation pipeline generator.
+Translate the user's natural language question into a valid MongoDB aggregation pipeline JSON object for the "tasks" collection.
+
+Your output must be a single JSON object with a "pipeline" key containing the array of aggregation stages.
+Example:
+{
+  "pipeline": [
+    { "$match": { "priority": "High" } }
+  ]
+}
+
+Database Schema Context:
+1. "tasks" collection schema fields:
+   - _id: ObjectId
+   - title: String
+   - description: String
+   - priority: String (enum: ['Low', 'Medium', 'High'])
+   - status: String (enum: ['Pending', 'In-progress', 'Completed'])
+   - dueDate: Date (ISO Date string)
+   - assignedTo: Array of ObjectIds referencing "users" collection
+   - createdBy: ObjectId referencing "users" collection
+   - companyId: ObjectId referencing the company
+   - todoChecklist: Array of objects { text: String, completed: Boolean }
+   - progress: Number (0 to 100)
+   - domain: String (enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'QA', 'Design', 'Management', 'Other'])
+   - taskDna: Object { attributes: [String], estimatedComplexityScore: Number }
+   - createdAt: Date
+   - updatedAt: Date
+
+2. "users" collection schema fields (for joins/lookups on assignedTo or createdBy):
+   - _id: ObjectId
+   - name: String
+   - email: String
+   - role: String (enum: ['ceo', 'admin', 'member'])
+   - skills: Array of Strings
+   - title: String
+   - behavioralProfile: Object { traits: [String], performanceMetrics: Object }
+   - cognitiveProfile: Object { cognitiveLoadScore: Number, deliveryProbability: Number }
+
+Rules:
+- The aggregation runs on the "tasks" collection.
+- Always perform a $lookup to join with the "users" collection (localField: "assignedTo", foreignField: "_id", as: "assigneeDetails") if the question involves user names, titles, skills, or workloads.
+- The pipeline MUST filter by companyId: "${companyId}".
+- Output ONLY the raw aggregation pipeline JSON. Do not include explanation or markdown formatting outside of JSON.
+- Reject questions that are unrelated to tasks, users, or workloads.
+- Return read-only query pipeline stages. Only match, group, lookup, sort, limit, project, unwind, count are allowed. No writing.
+
+User Question: "${question}"`;
+};
+
+/**
+ * Execute Natural Language Query (Phase 1 Foundation)
  * Endpoint: POST /api/ai/ceo/nl-query
  */
 exports.executeNLQuery = async (req, res) => {
-    return res.status(501).json({ success: false, message: "Not Implemented" });
+    try {
+        const { question } = req.body;
+        if (!question || typeof question !== 'string' || !question.trim()) {
+            return res.status(400).json({ success: false, message: "A search query is required." });
+        }
+
+        if (question.length > 200) {
+            return res.status(400).json({ success: false, message: "Query length exceeds maximum limit of 200 characters." });
+        }
+
+        const companyId = req.user?.companyId;
+        if (!companyId) {
+            return res.status(400).json({ success: false, message: "User is not associated with a company." });
+        }
+
+        const prompt = buildNLQueryPrompt(question, companyId.toString());
+        const groqResponse = await queryGroqEngine(prompt, true);
+
+        let parsed;
+        try {
+            parsed = JSON.parse(groqResponse);
+        } catch (e) {
+            // Retry once if parsing fails
+            const retryPrompt = `Your previous output was not valid JSON. Please return valid JSON matching this schema: {"pipeline": [...]}. Output only JSON. Previous output: ${groqResponse}`;
+            const retryResponse = await queryGroqEngine(retryPrompt, true);
+            parsed = JSON.parse(retryResponse);
+        }
+
+        if (!parsed || !Array.isArray(parsed.pipeline)) {
+            return res.status(422).json({ success: false, message: "AI failed to generate a valid database query pipeline." });
+        }
+
+        return res.json({
+            success: true,
+            message: "Pipeline generated successfully (execution stubbed)",
+            pipeline: parsed.pipeline,
+            question
+        });
+
+    } catch (error) {
+        console.error("NL Query Controller Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: `AI Query Error: ${error.message}`
+        });
+    }
 };
 
 /**

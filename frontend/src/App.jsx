@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 import {
   BrowserRouter as Router,
@@ -7,13 +7,9 @@ import {
   Navigate,
 } from "react-router-dom";
 
-import Dashboard from "./pages/Admin/Dashboard";
-import ManageTasks from "./pages/Admin/ManageTasks";
-import CreateTask from "./pages/Admin/CreateTask";
 import SignUp from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
 import PrivateRoute from "./routes/PrivateRoute";
-import ManageUsers from "./pages/Admin/ManageUsers";
 import MyTasks from "./pages/User/MyTasks";
 import UserDashboard from "./pages/User/Dashboard/UserDashboard";
 import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
@@ -21,6 +17,21 @@ import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
 import DirectChat from "./pages/Chat/DirectChat";
 import useUserAuth from "./hooks/useUserAuth";
 import EditProfile from "./pages/User/Profile/EditProfile";
+
+// Lazy-loaded Admin pages
+const Dashboard = React.lazy(() => import("./pages/Admin/Dashboard"));
+const ManageTasks = React.lazy(() => import("./pages/Admin/ManageTasks"));
+const CreateTask = React.lazy(() => import("./pages/Admin/CreateTask"));
+const ManageUsers = React.lazy(() => import("./pages/Admin/ManageUsers"));
+
+const LoadingScreen = () => (
+  <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg)] text-[var(--text-muted)] text-sm">
+    <div className="flex flex-col items-center gap-3">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+      <span>Loading dashboard...</span>
+    </div>
+  </div>
+);
 
 const RootRedirect = () => {
   const { isAuthenticated, role, user } = useUserAuth();
@@ -123,11 +134,11 @@ const App = () => {
 
           {/* Admin */}
           <Route element={<PrivateRoute allowedRoles={["admin", "ceo"]} />}>
-            <Route path="/admin/dashboard" element={<Dashboard />} />
-            <Route path="/admin/tasks" element={<ManageTasks />} />
-            <Route path="/admin/create-task" element={<CreateTask />} />
-            <Route path="/admin/tasks/:id" element={<CreateTask />} />
-            <Route path="/admin/users" element={<ManageUsers />} />
+            <Route path="/admin/dashboard" element={<Suspense fallback={<LoadingScreen />}><Dashboard /></Suspense>} />
+            <Route path="/admin/tasks" element={<Suspense fallback={<LoadingScreen />}><ManageTasks /></Suspense>} />
+            <Route path="/admin/create-task" element={<Suspense fallback={<LoadingScreen />}><CreateTask /></Suspense>} />
+            <Route path="/admin/tasks/:id" element={<Suspense fallback={<LoadingScreen />}><CreateTask /></Suspense>} />
+            <Route path="/admin/users" element={<Suspense fallback={<LoadingScreen />}><ManageUsers /></Suspense>} />
             <Route path="/admin/chat" element={<DirectChat defaultCommunity={true} />} />
             <Route path="/admin/direct-chat" element={<DirectChat />} />
           </Route>

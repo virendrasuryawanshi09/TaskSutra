@@ -8,7 +8,7 @@ import moment from 'moment';
 import { addThousandSeparator } from '../../utils/helper';
 import InfoCard from '../../components/Cards/InfoCard';
 import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
-import { LuArrowRight, LuSparkles, LuSend, LuCheck, LuCopy, LuDownload, LuClock, LuLayers, LuX } from 'react-icons/lu';
+import { LuArrowRight, LuSparkles, LuSend, LuCheck, LuCopy, LuDownload, LuClock, LuLayers, LuX, LuSearch } from 'react-icons/lu';
 import TaskListTable from '../../components/TaskListTable';
 import CustomPieChart from '../../components/Charts/CustomPieChart';
 import CustomBarChart from '../../components/Charts/CustomBarChart';
@@ -320,6 +320,7 @@ const Dashboard = () => {
   const [resultCount, setResultCount] = useState(null);
   const [copied, setCopied] = useState(false);
   const activeStreamRef = useRef(null);
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Esc key listener to close overlay
   useEffect(() => {
@@ -342,6 +343,7 @@ const Dashboard = () => {
     setAnswer("");
     setExecutionTime(null);
     setResultCount(null);
+    setActiveTab("overview");
 
     if (activeStreamRef.current) {
       try { activeStreamRef.current.cancel(); } catch (_) {}
@@ -574,7 +576,7 @@ const Dashboard = () => {
       <DashboardLayout activeMenu="Dashboard">
         {/* CEO Global Search bar */}
         {user?.role === 'ceo' && (
-          <form onSubmit={handleQuerySubmit} className="my-4 sm:my-6">
+          <form onSubmit={handleQuerySubmit} className="my-4 sm:my-6 max-w-4xl mx-auto w-full">
             <div className="relative group">
               <div className={`absolute -inset-0.5 rounded-[999px] bg-gradient-to-r from-[var(--accent)] to-[#4ECDC4] opacity-30 blur transition duration-300 group-hover:opacity-60 ${isQueryLoading || isStreaming ? "animate-pulse opacity-100" : "opacity-0"}`} />
 
@@ -593,9 +595,9 @@ const Dashboard = () => {
                 <button
                   type="submit"
                   disabled={isQueryLoading || isStreaming || !query.trim()}
-                  className="h-10 w-10 flex items-center justify-center rounded-full bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all duration-200 active:scale-[0.95] disabled:bg-[var(--border)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:scale-100 cursor-pointer flex-shrink-0"
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-all duration-300 ease-in-out active:scale-[0.95] hover:scale-105 disabled:bg-[var(--border)]/40 disabled:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:scale-100 cursor-pointer flex-shrink-0"
                 >
-                  <LuSend className="text-sm" />
+                  <LuSearch size={17} className="transition-colors duration-300" />
                 </button>
               </div>
             </div>
@@ -881,11 +883,39 @@ const Dashboard = () => {
                   </button>
                 </div>
 
+                {/* Mobile Tab Switcher */}
+                <div className="flex md:hidden border-b border-[var(--border)] bg-[var(--bg-soft)]/30">
+                  <button
+                    onClick={() => setActiveTab("overview")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold border-b-2 transition-all duration-150 cursor-pointer ${
+                      activeTab === "overview"
+                        ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface)]"
+                        : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                    }`}
+                  >
+                    <LuSparkles size={14} className={activeTab === "overview" ? "animate-pulse" : ""} />
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("results")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold border-b-2 transition-all duration-150 cursor-pointer ${
+                      activeTab === "results"
+                        ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface)]"
+                        : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+                    }`}
+                  >
+                    <LuLayers size={14} />
+                    Results & Charts
+                  </button>
+                </div>
+
                 {/* Body (Split Screen Layout) */}
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                   
                   {/* Left Column - AI text overview (40%) */}
-                  <div className="w-full md:w-[40%] border-b md:border-b-0 md:border-r border-[var(--border)] p-6 overflow-y-auto bg-[var(--bg-soft)]/20 flex flex-col gap-4">
+                  <div className={`w-full md:w-[40%] border-b md:border-b-0 md:border-r border-[var(--border)] p-5 sm:p-6 overflow-y-auto bg-[var(--bg-soft)]/20 flex-col gap-4 ${
+                    activeTab === 'overview' ? 'flex' : 'hidden md:flex'
+                  }`}>
                     {/* Question Display */}
                     <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
                       <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Search Query</span>
@@ -915,7 +945,9 @@ const Dashboard = () => {
                   </div>
 
                   {/* Right Column - Tasks / Users visual view (60%) */}
-                  <div className="w-full md:w-[60%] p-6 overflow-y-auto flex flex-col gap-4 bg-[var(--surface)]">
+                  <div className={`w-full md:w-[60%] p-5 sm:p-6 overflow-y-auto flex-col gap-4 bg-[var(--surface)] ${
+                    activeTab === 'results' ? 'flex' : 'hidden md:flex'
+                  }`}>
                     
                     {/* Metadata Header */}
                     {!isQueryLoading && rawData && (

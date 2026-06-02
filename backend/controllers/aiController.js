@@ -781,6 +781,10 @@ Rules:
 - When querying "users" for developers/staff/team, include both "member" and "admin" roles (do not restrict only to "member" unless specifically asked).
 - DO NOT unwind simple arrays of strings like "skills" or "attributes". Match them natively (e.g. {"skills": "React"}). Unwinding simple arrays or performing lookup/unwind on tasks for user queries causes duplicates and is strictly forbidden.
 - When the user asks for "my tasks", "tasks assigned to me", or "tasks I created", filter by assignedTo containing "${userContext.id}" or createdBy equal to "${userContext.id}". Use the 24-character hexadecimal string format for user IDs.
+- If you use a $project stage, you MUST include/preserve the following display fields so the UI can render cards properly:
+  - For "users": "name", "role", "title", "skills"
+  - For "tasks": "title", "description", "status", "priority", "dueDate", "progress", "assignedTo"
+  - Ensure any lookup or computed field is added/retained along with these display fields.
 
 User question: "${question}"`;
 };

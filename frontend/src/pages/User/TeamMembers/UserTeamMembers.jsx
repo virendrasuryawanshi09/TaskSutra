@@ -105,6 +105,7 @@ const UserTeamMembers = () => {
       <Helmet>
         <title>Team Members | TaskSutra</title>
         <meta name="description" content="View and track team member activity, roles, and task progress." />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">

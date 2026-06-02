@@ -553,6 +553,7 @@ const ViewTaskDetails = () => {
       <Helmet>
         <title>Task Details | TaskSutra</title>
         <meta name="description" content="View task information, checklist progress, attachments, and team discussion comments." />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout>
       <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">

@@ -409,6 +409,7 @@ const CreateTask = () => {
       <Helmet>
         <title>{taskId ? "Edit Task" : "Create Task"} | TaskSutra</title>
         <meta name="description" content={taskId ? "Modify details, checklists, priorities, assignees, and attachments for an existing task." : "Define title, description, checklist items, attachments, priority, and assignees to create a new task."} />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout activeMenu="Create Task">
         <div className="max-w-3xl mx-auto my-6 px-1 md:my-10">

@@ -75,6 +75,113 @@ const calculateLocalRecommendations = (teamWorkloads, title, description) => {
 };
 
 /**
+ * Mathematical rule-based local fallback cognitive load calculator
+ */
+const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
+    const now = new Date();
+    let deliveryProbability = 100;
+    let cognitiveLoadScore = 0;
+    const warnings = [];
+    const schedulingOverlaps = [];
+    
+    // 1. Analyze domains for context-switching
+    const domains = new Set();
+    activeTasks.forEach(t => {
+        if (t.domain) {
+            domains.add(t.domain);
+        } else {
+            domains.add("Frontend"); // default fallback
+        }
+    });
+    
+    const detectedDomains = Array.from(domains);
+    const domainCount = detectedDomains.length;
+    const contextSwitchPenalty = Math.max(0, (domainCount - 1) * 10);
+    deliveryProbability -= contextSwitchPenalty;
+    
+    if (contextSwitchPenalty > 0) {
+        warnings.push(`Context-switching penalty applied for working across ${domainCount} domains.`);
+    }
+
+    // 2. Analyze tasks, priorities, and complexity
+    activeTasks.forEach(task => {
+        let taskPenalty = 0;
+        const complexity = task.taskDna?.estimatedComplexityScore || 5;
+        
+        // Base load contribution from complexity
+        cognitiveLoadScore += complexity * 6; // max 60
+        
+        // Priority weight
+        if (task.priority === 'High') {
+            cognitiveLoadScore += 15;
+            taskPenalty += 12;
+        } else if (task.priority === 'Medium') {
+            cognitiveLoadScore += 8;
+            taskPenalty += 6;
+        } else {
+            cognitiveLoadScore += 3;
+            taskPenalty += 2;
+        }
+        
+        // Check if overdue
+        if (task.dueDate && new Date(task.dueDate) < now) {
+            taskPenalty += 15;
+            warnings.push(`Task "${task.title}" is overdue.`);
+        }
+        
+        deliveryProbability -= taskPenalty;
+    });
+
+    // 3. Analyze scheduling overlaps (deadlines within 48 hours of each other)
+    for (let i = 0; i < deadlinesTimeline.length; i++) {
+        for (let j = i + 1; j < deadlinesTimeline.length; j++) {
+            if (!deadlinesTimeline[i].dueDate || !deadlinesTimeline[j].dueDate) continue;
+            const date1 = new Date(deadlinesTimeline[i].dueDate);
+            const date2 = new Date(deadlinesTimeline[j].dueDate);
+            const diffTime = Math.abs(date2 - date1);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays <= 2) {
+                const overlapDesc = `Deadline collision: "${deadlinesTimeline[i].title}" and "${deadlinesTimeline[j].title}" are due within ${diffDays} day(s) of each other.`;
+                schedulingOverlaps.push({ description: overlapDesc });
+                deliveryProbability -= 10;
+                cognitiveLoadScore += 8;
+                warnings.push(`Timeline collision on tasks due near ${new Date(deadlinesTimeline[i].dueDate).toLocaleDateString()}.`);
+            }
+        }
+    }
+
+    // 4. Integrate user metrics
+    const lateRate = user.behavioralProfile?.performanceMetrics?.lateSubmissionRate || 0;
+    deliveryProbability -= Math.round(lateRate * 0.4);
+
+    // 5. Clamping
+    deliveryProbability = Math.max(10, Math.min(98, deliveryProbability));
+    cognitiveLoadScore = Math.max(5, Math.min(95, cognitiveLoadScore));
+
+    // Compile assessment
+    let assessment = "";
+    if (cognitiveLoadScore > 75) {
+        assessment = `Critical cognitive load with high risk of delivery delays. Needs workload rebalancing immediately.`;
+    } else if (cognitiveLoadScore > 40) {
+        assessment = `Moderate load. Multi-tasking across ${domainCount} domains requires careful deadline monitoring.`;
+    } else {
+        assessment = `Optimal capacity. Workload is well-distributed and deadlines are clear.`;
+    }
+
+    return {
+        deliveryProbability,
+        cognitiveLoadScore,
+        detectedDomains,
+        contextSwitchPenalty,
+        deadlinesTimeline,
+        schedulingOverlaps,
+        warnings,
+        assessment
+    };
+};
+
+/**
  * Generates an Organizational Health Diagnostic report for the CEO
  * Endpoint: GET /api/ai/org-health
  */
@@ -318,21 +425,68 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
             }
         }
 
-        // 4. Enrich with user details
-        const enrichedRecommendations = recommendations.map(rec => {
+        // 4. Enrich with user details & calculate local cognitive load on-the-fly if cache is empty
+        const enrichedRecommendations = await Promise.all(recommendations.map(async (rec) => {
             const devInfo = teamWorkloads.find(w => w._id.toString() === rec.developerId.toString());
+            if (!devInfo) {
+                return {
+                    ...rec,
+                    name: "Unknown",
+                    title: "Team Member",
+                    activeTasks: 0,
+                    cognitiveProfile: {
+                        cognitiveLoadScore: 0,
+                        deliveryProbability: 100,
+                        lastUpdated: null
+                    }
+                };
+            }
+
+            let cogProfile = devInfo.cognitiveProfile;
+
+            // If cache is empty or has default 100% with active tasks, pre-calculate using local math engine
+            if ((!cogProfile || !cogProfile.lastUpdated || (cogProfile.deliveryProbability === 100 && devInfo.activeTasks > 0)) && devInfo.activeTasks > 0) {
+                try {
+                    const activeTasks = await Task.find({
+                        assignedTo: devInfo._id,
+                        companyId,
+                        status: { $in: ["Pending", "In-progress", "In Progress"] }
+                    }).select("title description priority dueDate domain taskDna");
+
+                    const deadlinesTimeline = activeTasks.map(t => ({
+                        taskId: t._id.toString(),
+                        title: t.title,
+                        dueDate: t.dueDate,
+                        priority: t.priority,
+                        domain: t.domain || "Frontend",
+                        complexity: t.taskDna?.estimatedComplexityScore || 5
+                    })).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+                    const localAnalysis = calculateLocalCognitiveLoad(devInfo, activeTasks, deadlinesTimeline);
+                    
+                    cogProfile = {
+                        cognitiveLoadScore: localAnalysis.cognitiveLoadScore,
+                        deliveryProbability: localAnalysis.deliveryProbability,
+                        lastUpdated: new Date()
+                    };
+
+                    // Save cache in database in background
+                    await User.updateOne({ _id: devInfo._id }, {
+                        $set: { cognitiveProfile: cogProfile }
+                    });
+                } catch (err) {
+                    console.warn(`Failed to pre-calculate cognitive load for ${devInfo.name}:`, err.message);
+                }
+            }
+
             return {
                 ...rec,
-                name: devInfo ? devInfo.name : "Unknown",
-                title: devInfo ? devInfo.title : "Team Member",
-                activeTasks: devInfo ? devInfo.activeTasks : 0,
-                cognitiveProfile: devInfo ? devInfo.cognitiveProfile : {
-                    cognitiveLoadScore: 0,
-                    deliveryProbability: 100,
-                    lastUpdated: null
-                }
+                name: devInfo.name,
+                title: devInfo.title,
+                activeTasks: devInfo.activeTasks,
+                cognitiveProfile: cogProfile
             };
-        });
+        }));
 
         // 5. Sort by score descending
         const sortedRecommendations = enrichedRecommendations.sort((a, b) => b.score - a.score);
@@ -349,112 +503,7 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
     }
 };
 
-/**
- * Mathematical rule-based local fallback cognitive load calculator
- */
-const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
-    const now = new Date();
-    let deliveryProbability = 100;
-    let cognitiveLoadScore = 0;
-    const warnings = [];
-    const schedulingOverlaps = [];
-    
-    // 1. Analyze domains for context-switching
-    const domains = new Set();
-    activeTasks.forEach(t => {
-        if (t.domain) {
-            domains.add(t.domain);
-        } else {
-            domains.add("Frontend"); // default fallback
-        }
-    });
-    
-    const detectedDomains = Array.from(domains);
-    const domainCount = detectedDomains.length;
-    const contextSwitchPenalty = Math.max(0, (domainCount - 1) * 10);
-    deliveryProbability -= contextSwitchPenalty;
-    
-    if (contextSwitchPenalty > 0) {
-        warnings.push(`Context-switching penalty applied for working across ${domainCount} domains.`);
-    }
-
-    // 2. Analyze tasks, priorities, and complexity
-    activeTasks.forEach(task => {
-        let taskPenalty = 0;
-        const complexity = task.taskDna?.estimatedComplexityScore || 5;
-        
-        // Base load contribution from complexity
-        cognitiveLoadScore += complexity * 6; // max 60
-        
-        // Priority weight
-        if (task.priority === 'High') {
-            cognitiveLoadScore += 15;
-            taskPenalty += 12;
-        } else if (task.priority === 'Medium') {
-            cognitiveLoadScore += 8;
-            taskPenalty += 6;
-        } else {
-            cognitiveLoadScore += 3;
-            taskPenalty += 2;
-        }
-        
-        // Check if overdue
-        if (task.dueDate && new Date(task.dueDate) < now) {
-            taskPenalty += 15;
-            warnings.push(`Task "${task.title}" is overdue.`);
-        }
-        
-        deliveryProbability -= taskPenalty;
-    });
-
-    // 3. Analyze scheduling overlaps (deadlines within 48 hours of each other)
-    for (let i = 0; i < deadlinesTimeline.length; i++) {
-        for (let j = i + 1; j < deadlinesTimeline.length; j++) {
-            if (!deadlinesTimeline[i].dueDate || !deadlinesTimeline[j].dueDate) continue;
-            const date1 = new Date(deadlinesTimeline[i].dueDate);
-            const date2 = new Date(deadlinesTimeline[j].dueDate);
-            const diffTime = Math.abs(date2 - date1);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays <= 2) {
-                const overlapDesc = `Deadline collision: "${deadlinesTimeline[i].title}" and "${deadlinesTimeline[j].title}" are due within ${diffDays} day(s) of each other.`;
-                schedulingOverlaps.push({ description: overlapDesc });
-                deliveryProbability -= 10;
-                cognitiveLoadScore += 8;
-                warnings.push(`Timeline collision on tasks due near ${new Date(deadlinesTimeline[i].dueDate).toLocaleDateString()}.`);
-            }
-        }
-    }
-
-    // 4. Integrate user metrics
-    const lateRate = user.behavioralProfile?.performanceMetrics?.lateSubmissionRate || 0;
-    deliveryProbability -= Math.round(lateRate * 0.4);
-
-    // 5. Clamping
-    deliveryProbability = Math.max(10, Math.min(98, deliveryProbability));
-    cognitiveLoadScore = Math.max(5, Math.min(95, cognitiveLoadScore));
-
-    // Compile assessment
-    let assessment = "";
-    if (cognitiveLoadScore > 75) {
-        assessment = `Critical cognitive load with high risk of delivery delays. Needs workload rebalancing immediately.`;
-    } else if (cognitiveLoadScore > 40) {
-        assessment = `Moderate load. Multi-tasking across ${domainCount} domains requires careful deadline monitoring.`;
-    } else {
-        assessment = `Optimal capacity. Workload is well-distributed and deadlines are clear.`;
-    }
-
-    return {
-        deliveryProbability,
-        cognitiveLoadScore,
-        detectedDomains,
-        contextSwitchPenalty,
-        deadlinesTimeline,
-        schedulingOverlaps,
-        warnings,
-        assessment
-    };
-};
+// Moved to top of file
 
 /**
  * Evaluates and analyzes a team member's cognitive load and delivery probability

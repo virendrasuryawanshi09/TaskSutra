@@ -75,7 +75,7 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`${userName || "Developer"}'s Cognitive Diagnostic`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`${userName || "Developer"}'s Cognitive Diagnostic`} size="lg">
       <div className="flex flex-col min-h-[350px] text-[var(--text)] font-sans">
         {loading ? (
           <div className="flex flex-1 flex-col items-center justify-center py-20 gap-3">
@@ -135,8 +135,15 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-[var(--text-muted)]">
-                    AI
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {(() => {
+                      const color = analysisData.deliveryProbability >= 80 ? "text-emerald-500" : analysisData.deliveryProbability >= 50 ? "text-amber-500" : "text-rose-500";
+                      return (
+                        <svg className={`w-3.5 h-3.5 ${color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -177,8 +184,8 @@ const AIMatcher = ({ isOpen, onClose, userId, userName }) => {
             {/* AI BRIEF ASSESSMENT */}
             <div className="bg-[var(--bg-soft)] border-l-2 border-[var(--accent)] px-4 py-3 rounded-r-xl">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]">
-                <LuSparkles className="text-[var(--accent)] shrink-0 text-xs" />
-                <span>AI Operational Assessment</span>
+                <LuActivity className="text-[var(--accent)] shrink-0 text-xs" />
+                <span>Operational Assessment</span>
               </div>
               <p className="text-[11px] text-[var(--text-muted)] mt-1.5 leading-relaxed font-normal">
                 {analysisData.assessment}

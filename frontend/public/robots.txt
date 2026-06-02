@@ -1,8 +1,10 @@
 User-agent: *
+Allow: /
 Allow: /login
 Allow: /signup
 Disallow: /admin/
 Disallow: /user/
 Disallow: /ceo/
+Disallow: /api/
 
 Sitemap: https://tasksutra.app/sitemap.xml

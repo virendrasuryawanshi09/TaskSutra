@@ -18,6 +18,7 @@ const aiRoutes = require("./routes/aiRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
+
 const app = express();
 const server = http.createServer(app);
 
@@ -67,6 +68,54 @@ app.use(
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ─── Security Headers (Lighthouse Best Practices fixes) ──────────────────────
+app.use((req, res, next) => {
+  const frontendUrl = process.env.FRONTEND_URL || "https://tasksutra.app";
+
+  // Content-Security-Policy — whitelists Groq AI API so features keep working
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      `connect-src 'self' ${frontendUrl} https://api.groq.com wss: ws:`,
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ")
+  );
+
+  // Cross-Origin Opener Policy — fixes COOP Lighthouse warning
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+
+  // Cross-Origin Resource Policy
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+
+  // X-Frame-Options — prevents clickjacking (XFO header)
+  res.setHeader("X-Frame-Options", "DENY");
+
+  // X-Content-Type-Options — prevents MIME-type sniffing
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  // Referrer Policy
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Permissions Policy — restricts access to sensitive browser APIs
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=()"
+  );
+
+  next();
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 //Routes
 app.use("/api/auth", authRoutes);

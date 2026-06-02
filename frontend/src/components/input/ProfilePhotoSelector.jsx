@@ -99,7 +99,7 @@ const ProfilePhotoSelector = ({ image, setImage }) => {
         {displayImage && (
           <button
             type="button"
-
+            aria-label="Remove profile photo"
             onClick={(e) => {
               e.stopPropagation();
               handleRemoveImage();

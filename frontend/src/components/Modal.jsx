@@ -46,6 +46,7 @@ const Modal = ({ children, isOpen, onClose, title, size = "md" }) => {
 
               <button
                 onClick={onClose}
+                aria-label="Close modal"
                 className="
                   p-1.5 rounded-md
                   text-[var(--text-muted)]

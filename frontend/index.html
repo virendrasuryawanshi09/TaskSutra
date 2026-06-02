@@ -26,10 +26,15 @@
   <meta property="twitter:description" content="Optimize your organization's workflow with TaskSutra. Experience secure, AI-powered task management, workspace chat, and real-time team collaboration." />
   <meta property="twitter:image" content="https://tasksutra.app/og-image.png" />
 
-  <!-- Preconnect and Google Fonts -->
+  <!-- Preconnect and Google Fonts (non-render-blocking) -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
+  <!-- Load font non-render-blocking: starts as print, swaps to all after load -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" /></noscript>
+
 
   <!-- Structured Data JSON-LD SaaS Schema -->
   <script type="application/ld+json">

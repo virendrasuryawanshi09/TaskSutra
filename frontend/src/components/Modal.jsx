@@ -1,7 +1,21 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const Modal = ({ children, isOpen, onClose, title }) => {
+const Modal = ({ children, isOpen, onClose, title, size = "md" }) => {
+  const sizeClasses = {
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl"
+  }[size] || "max-w-lg";
+
+  const bodyHeightClasses = {
+    sm: "max-h-[350px]",
+    md: "max-h-[400px]",
+    lg: "max-h-[520px]",
+    xl: "max-h-[650px]"
+  }[size] || "max-h-[400px]";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -22,7 +36,7 @@ const Modal = ({ children, isOpen, onClose, title }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            className="relative z-10 w-full max-w-lg bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden"
+            className={`relative z-10 w-full ${sizeClasses} bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden`}
           >
             {/* HEADER */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
@@ -57,7 +71,7 @@ const Modal = ({ children, isOpen, onClose, title }) => {
             </div>
 
             {/* BODY */}
-            <div className="p-5 max-h-[400px] overflow-y-auto">
+            <div className={`p-5 ${bodyHeightClasses} overflow-y-auto`}>
               {children}
             </div>
           </motion.div>

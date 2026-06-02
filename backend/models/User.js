@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema(
                 reviewAccuracyRate: { type: Number, default: 100 }
             }
         },
+        // AI Feature 2: Cognitive Load & Delivery Probability Cache
+        cognitiveProfile: {
+            cognitiveLoadScore: { type: Number, default: 0 },
+            deliveryProbability: { type: Number, default: 100 },
+            lastUpdated: { type: Date, default: null }
+        },
         companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
         status: { type: String, enum: ['active', 'suspended'], default: 'active' },
         taskOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: [] }],

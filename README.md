@@ -92,6 +92,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | Feature | Technical Implementation | Business Value |
 |---------|--------------------------|-----------------|
 | **Smart Assignee Recommender** | Groq (LLaMA-3.3-70B) → Gemini fallback → Local rule engine | Zero-guesswork task allocation based on skills + workload |
+| **Cognitive Load Analyzer** | Queries timelines + overlaps + context switching domains → Gemini/Groq + local fallback | CEO/Admin views delivery probability % and cognitive load warnings to prevent developer burnout |
 | **Org Health Diagnostic** | AI analyzes overdue ratios, burnout metrics, team distribution | CEO gets actionable health score + 3 growth recommendations |
 | **Behavioral Work Profiles** | User schema `behavioralProfile.traits` with 5 personality types | Context-aware allocation beyond simple skill matching |
 | **AI Fallback Chain** | Groq → Gemini 2.0 Flash → Gemini 1.5 Flash → Local scoring | 100% uptime even when primary AI APIs are unavailable |

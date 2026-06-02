@@ -33,9 +33,9 @@ const AuthLayout = ({ children, title }) => {
         <div className="w-full flex justify-center md:justify-start">
           <div className="w-full max-w-[400px] md:max-w-[360px] mx-auto md:mx-0">
 
-            <h1 className="text-[20px] font-semibold mb-[25px]">
+            <div className="text-[20px] font-semibold mb-[25px]">
               {title}
-            </h1>
+            </div>
             <div className="auth-fade">
               {children}
             </div>

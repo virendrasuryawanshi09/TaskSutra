@@ -147,9 +147,9 @@ const SignUp = () => {
       </Helmet>
       <AuthLayout>
         <div>
-          <h1 className="text-[20px] font-semibold mb-4">
+          <h3 className="text-[20px] font-semibold mb-4">
             Create an account
-          </h1>
+          </h3>
 
           {invitationCompany && (
             <div className="mb-6 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">

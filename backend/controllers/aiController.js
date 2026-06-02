@@ -671,3 +671,19 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
         });
     }
 };
+
+/**
+ * Execute Natural Language Query (Phase 1 Stub)
+ * Endpoint: POST /api/ai/ceo/nl-query
+ */
+exports.executeNLQuery = async (req, res) => {
+    return res.status(501).json({ success: false, message: "Not Implemented" });
+};
+
+/**
+ * Stream Natural Language Query Answer (Phase 2 Stub)
+ * Endpoint: POST /api/ai/ceo/nl-query/stream
+ */
+exports.streamNLAnswer = async (req, res) => {
+    return res.status(501).json({ success: false, message: "Not Implemented" });
+};

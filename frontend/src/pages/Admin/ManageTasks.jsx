@@ -176,6 +176,7 @@ const ManageTasks = () => {
       <Helmet>
         <title>Manage Tasks | TaskSutra</title>
         <meta name="description" content="Track and organize tasks, filter by workflow status, and communicate on task discussions in real-time." />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout activeMenu="Manage Tasks">
         <div className="

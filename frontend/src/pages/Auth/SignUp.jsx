@@ -142,6 +142,7 @@ const SignUp = () => {
       <Helmet>
         <title>Sign Up | TaskSutra</title>
         <meta name="description" content="Create your TaskSutra account to start organizing your team, mapping tasks, and streamlining collaborative workflows." />
+        <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://tasksutra.app/signup" />
       </Helmet>
       <AuthLayout>

@@ -572,6 +572,7 @@ const Dashboard = () => {
       <Helmet>
         <title>Dashboard | TaskSutra</title>
         <meta name="description" content="Monitor workspace health, track recent task completions, analyze team distribution, and access management analytics." />
+        <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <DashboardLayout activeMenu="Dashboard">
         {/* CEO Global Search bar */}

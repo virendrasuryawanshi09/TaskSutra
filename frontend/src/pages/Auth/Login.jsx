@@ -89,6 +89,7 @@ const Login = () => {
       <Helmet>
         <title>Login | TaskSutra</title>
         <meta name="description" content="Log in to your TaskSutra account to manage your tasks, collaborate with your team, and access workspace analytics." />
+        <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://tasksutra.app/login" />
       </Helmet>
       <AuthLayout title="Sign in">

@@ -12,6 +12,7 @@ import { LuArrowRight } from 'react-icons/lu';
 import TaskListTable from '../../components/TaskListTable';
 import CustomPieChart from '../../components/Charts/CustomPieChart';
 import CustomBarChart from '../../components/Charts/CustomBarChart';
+import { Helmet } from 'react-helmet-async';
 
 
 const COLORS = [
@@ -122,117 +123,124 @@ const Dashboard = () => {
   );
 
   return (
-    <DashboardLayout activeMenu="Dashboard">
-      <div className="my-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:my-6 sm:p-5">
-        <div>
-          <div className="col-span-3">
-            <h2 className="text-2xl md:text-3xl font-semibold text-[var(--text)] tracking-tight">
-              {greeting}, {user?.name}
-            </h2>
+    <>
+      <Helmet>
+        <title>Dashboard | TaskSutra</title>
+        <meta name="description" content="Monitor workspace health, track recent task completions, analyze team distribution, and access management analytics." />
+      </Helmet>
+      <DashboardLayout activeMenu="Dashboard">
+        <div className="my-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:my-6 sm:p-5">
+          <div>
+            <div className="col-span-3">
+              <h2 className="text-2xl md:text-3xl font-semibold text-[var(--text)] tracking-tight">
+                {greeting}, {user?.name}
+              </h2>
 
-            <p className="text-sm text-[var(--accent)] mt-1">Let’s turn your goals into progress.</p>
-            <p className="text-sm text-[var(--text-muted)] mt-1">
-              {moment().format("dddd, MMMM Do YYYY")}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 md:grid-cols-4 md:gap-6">
-          <InfoCard
-            label="Total Tasks"
-            icon={<HiOutlineClipboardList />}
-            value={addThousandSeparator(totalTasks)}
-            color="#4F46E5"
-          />
-
-          <InfoCard
-            label="Pending Tasks"
-            icon={<HiOutlineClock />}
-            value={addThousandSeparator(pendingTasks)}
-            color="#D97706"
-          />
-
-          <InfoCard
-            label="In Progress Tasks"
-            icon={<HiOutlineRefresh />}
-            value={addThousandSeparator(inProgressCount)}
-            color="#059669"
-          />
-          <InfoCard
-            label="Completed Tasks"
-            icon={<HiOutlineCheckCircle />}
-            value={addThousandSeparator(completedTasks)}
-            color="#2563EB"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
-
-
-        <div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
-            <div className="flex items-center justify-between">
-              <h5 className="font-medium">Task Distribution</h5>
+              <p className="text-sm text-[var(--accent)] mt-1">Let’s turn your goals into progress.</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                {moment().format("dddd, MMMM Do YYYY")}
+              </p>
             </div>
+          </div>
 
-            <CustomPieChart
-              data={pieChartData}
-              colors={COLORS}
+          <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 md:grid-cols-4 md:gap-6">
+            <InfoCard
+              label="Total Tasks"
+              icon={<HiOutlineClipboardList />}
+              value={addThousandSeparator(totalTasks)}
+              color="#4F46E5"
+            />
+
+            <InfoCard
+              label="Pending Tasks"
+              icon={<HiOutlineClock />}
+              value={addThousandSeparator(pendingTasks)}
+              color="#D97706"
+            />
+
+            <InfoCard
+              label="In Progress Tasks"
+              icon={<HiOutlineRefresh />}
+              value={addThousandSeparator(inProgressCount)}
+              color="#059669"
+            />
+            <InfoCard
+              label="Completed Tasks"
+              icon={<HiOutlineCheckCircle />}
+              value={addThousandSeparator(completedTasks)}
+              color="#2563EB"
             />
           </div>
         </div>
 
-        <div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
-            <div className="flex items-center justify-between">
-              <h5 className="font-medium">Task Priority Levels</h5>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
 
-            <CustomBarChart
-              data={barChartData}
-            />
-          </div>
-        </div>
 
-        <div className="md:col-span-2">
-
-          <div className="relative group rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10">
-
-            <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all duration-300 p-5">
-
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-
-                <div>
-                  <h5 className="text-lg font-semibold text-[var(--text)]">
-                    Recent Tasks
-                  </h5>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    Track your latest activity
-                  </p>
-                </div>
-
-                <button
-                  className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition cursor-pointer"
-                  onClick={onSeeMore}
-                >
-                  View All
-                  <LuArrowRight className="text-base transition-transform duration-200 group-hover:translate-x-1" />
-                </button>
-
+          <div>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium">Task Distribution</h5>
               </div>
 
-              <div className="h-px bg-[var(--border)] mb-4"></div>
-
-              <TaskListTable tableData={dashboardData?.recentTasks || []} />
+              <CustomPieChart
+                data={pieChartData}
+                colors={COLORS}
+              />
 
             </div>
           </div>
 
+          <div>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium">Task Priority Levels</h5>
+              </div>
+
+              <CustomBarChart
+                data={barChartData}
+              />
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+
+            <div className="relative group rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10">
+
+              <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all duration-300 p-5">
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+
+                  <div>
+                    <h5 className="text-lg font-semibold text-[var(--text)]">
+                      Recent Tasks
+                    </h5>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                      Track your latest activity
+                    </p>
+                  </div>
+
+                  <button
+                    className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition cursor-pointer"
+                    onClick={onSeeMore}
+                  >
+                    View All
+                    <LuArrowRight className="text-base transition-transform duration-200 group-hover:translate-x-1" />
+                  </button>
+
+                </div>
+
+                <div className="h-px bg-[var(--border)] mb-4"></div>
+
+                <TaskListTable tableData={dashboardData?.recentTasks || []} />
+
+              </div>
+            </div>
+
+          </div>
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </>
   );
 };
 

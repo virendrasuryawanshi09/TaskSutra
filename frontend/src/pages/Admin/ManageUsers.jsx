@@ -9,6 +9,7 @@ import { downloadReport } from "../../utils/downloadReport";
 import { LuFileSpreadsheet, LuUserPlus } from "react-icons/lu";
 import toast from "react-hot-toast";
 import useUserAuth from "../../hooks/useUserAuth.jsx";
+import { Helmet } from "react-helmet-async";
 
 const ManageUsers = () => {
   const { user: currentUser, updateUser } = useUserAuth();
@@ -235,8 +236,13 @@ const ManageUsers = () => {
   };
 
   return (
-    <DashboardLayout activeMenu="manage-users">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+    <>
+      <Helmet>
+        <title>Manage Team | TaskSutra</title>
+        <meta name="description" content="View, invite, edit, or remove workspace members. Configure workspace domain permissions and track team tasks." />
+      </Helmet>
+      <DashboardLayout activeMenu="manage-users">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Tab Switcher */}
         {companyDetails && (
           <div className="flex border-b border-[var(--border)] mb-6 gap-2">
@@ -454,6 +460,7 @@ const ManageUsers = () => {
         </div>
       )}
     </DashboardLayout>
+    </>
   );
 };
 

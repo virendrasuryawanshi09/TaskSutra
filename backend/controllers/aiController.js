@@ -20,8 +20,8 @@ const queryGroq = async (prompt) => {
         body: JSON.stringify({
             model: "llama-3.3-70b-versatile",
             messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" },
             temperature: 0.1
+            // Note: response_format json_object removed — causes 501 on some Groq versions
         })
     });
 
@@ -31,7 +31,8 @@ const queryGroq = async (prompt) => {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const raw = data.choices[0].message.content || "";
+    return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
 };
 
 
@@ -651,7 +652,7 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
 };
 
 
-const queryGroqEngine = async (prompt, jsonMode = true) => {
+const queryGroqEngine = async (prompt) => {
     if (!process.env.GROQ_API_KEY_ENGINE) {
         throw new Error("GROQ_API_KEY_ENGINE is not configured.");
     }
@@ -660,11 +661,8 @@ const queryGroqEngine = async (prompt, jsonMode = true) => {
         model: "llama-3.3-70b-versatile",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.1
+        // Note: response_format json_object is NOT used as it causes 501 on some Groq model versions
     };
-
-    if (jsonMode) {
-        body.response_format = { type: "json_object" };
-    }
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -677,63 +675,114 @@ const queryGroqEngine = async (prompt, jsonMode = true) => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Groq API returned status ${response.status}`);
+        throw new Error(errorData.error?.message || `Groq Engine API returned status ${response.status}`);
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const raw = data.choices[0].message.content || "";
+    // Strip markdown code fences if model wrapped JSON in ```json ... ```
+    return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
 };
 
 
-const buildNLQueryPrompt = (question, companyId) => {
-    return `You are a MongoDB database aggregation pipeline generator.
-Translate the user's natural language question into a valid MongoDB aggregation pipeline JSON object for the "tasks" collection.
+// Extracts first valid JSON object from a string, handles markdown fences and preamble text
+const extractJSON = (text) => {
+    if (!text) return null;
+    // Strip markdown code fences
+    let cleaned = text.trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+    // Try direct parse first
+    try { return JSON.parse(cleaned); } catch (_) {}
+    // Try to find the first {...} block
+    const start = cleaned.indexOf('{');
+    if (start === -1) return null;
+    let depth = 0;
+    for (let i = start; i < cleaned.length; i++) {
+        if (cleaned[i] === '{') depth++;
+        else if (cleaned[i] === '}') {
+            depth--;
+            if (depth === 0) {
+                try { return JSON.parse(cleaned.slice(start, i + 1)); } catch (_) { return null; }
+            }
+        }
+    }
+    return null;
+};
 
-Your output must be a single JSON object with a "pipeline" key containing the array of aggregation stages.
-Example:
+const convertToObjectId = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => convertToObjectId(item));
+    }
+
+    const mongoose = require('mongoose');
+    const newObj = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const val = obj[key];
+            if (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)) {
+                newObj[key] = new mongoose.Types.ObjectId(val);
+            } else if (typeof val === 'object' && val !== null) {
+                newObj[key] = convertToObjectId(val);
+            } else {
+                newObj[key] = val;
+            }
+        }
+    }
+    return newObj;
+};
+
+const buildNLQueryPrompt = (question, userContext) => {
+    return `You are a MongoDB aggregation pipeline generator for a task management system.
+Your ONLY output must be a single JSON object with "collection" and "pipeline" keys. No explanation, no markdown, no extra text.
+
+Output format:
 {
-  "pipeline": [
-    { "$match": { "priority": "High" } }
-  ]
+  "collection": "tasks" or "users",
+  "pipeline": [ <stages here> ]
 }
 
-Database Schema Context:
-1. "tasks" collection schema fields:
-   - _id: ObjectId
-   - title: String
-   - description: String
-   - priority: String (enum: ['Low', 'Medium', 'High'])
-   - status: String (enum: ['Pending', 'In-progress', 'Completed'])
-   - dueDate: Date (ISO Date string)
-   - assignedTo: Array of ObjectIds referencing "users" collection
-   - createdBy: ObjectId referencing "users" collection
-   - companyId: ObjectId referencing the company
-   - todoChecklist: Array of objects { text: String, completed: Boolean }
-   - progress: Number (0 to 100)
-   - domain: String (enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'QA', 'Design', 'Management', 'Other'])
-   - taskDna: Object { attributes: [String], estimatedComplexityScore: Number }
-   - createdAt: Date
-   - updatedAt: Date
+Target Collection Rule:
+- Use "users" if the question asks about users, developers, team members, staff, assignees, or workspace people (e.g. counting users, listing skills of developers, finding roles).
+- Use "tasks" for all other queries (e.g. listing tasks, counting tasks, task status, due dates).
 
-2. "users" collection schema fields (for joins/lookups on assignedTo or createdBy):
-   - _id: ObjectId
-   - name: String
-   - email: String
-   - role: String (enum: ['ceo', 'admin', 'member'])
-   - skills: Array of Strings
-   - title: String
-   - behavioralProfile: Object { traits: [String], performanceMetrics: Object }
-   - cognitiveProfile: Object { cognitiveLoadScore: Number, deliveryProbability: Number }
+Task collection fields:
+- title: String
+- priority: String ("Low", "Medium", "High")
+- status: String ("Pending", "In-progress", "Completed")
+- dueDate: Date
+- assignedTo: Array of ObjectIds (ref: users)
+- createdBy: ObjectId (ref: users)
+- todoChecklist: [{text: String, completed: Boolean}]
+- progress: Number (0-100)
+- domain: String ("Frontend","Backend","Database","DevOps","QA","Design","Management","Other")
+- taskDna: {attributes:[String], estimatedComplexityScore: Number}
+- createdAt: Date
+
+Users collection fields:
+- name: String
+- role: String ("ceo","admin","member")
+- skills: [String] (e.g. ["React", "Node.js"])
+- title: String
+
+User Context:
+- The logged-in user who is asking the question:
+  - Name: "${userContext.name}"
+  - User ID: "${userContext.id}"
+  - Role: "${userContext.role}"
 
 Rules:
-- The aggregation runs on the "tasks" collection.
-- Always perform a $lookup to join with the "users" collection (localField: "assignedTo", foreignField: "_id", as: "assigneeDetails") if the question involves user names, titles, skills, or workloads.
-- The pipeline MUST filter by companyId: "${companyId}".
-- Output ONLY the raw aggregation pipeline JSON. Do not include explanation or markdown formatting outside of JSON.
-- Reject questions that are unrelated to tasks, users, or workloads.
-- Return read-only query pipeline stages. Only match, group, lookup, sort, limit, project, unwind, count are allowed. No writing.
+- DO NOT include companyId in your pipeline. It is injected automatically.
+- DO NOT use $out, $merge, $function, $accumulator.
+- Return read-only stages only.
+- When querying "users" for developers/staff/team, include both "member" and "admin" roles (do not restrict only to "member" unless specifically asked).
+- DO NOT unwind simple arrays of strings like "skills" or "attributes". Match them natively (e.g. {"skills": "React"}). Unwinding simple arrays or performing lookup/unwind on tasks for user queries causes duplicates and is strictly forbidden.
+- When the user asks for "my tasks", "tasks assigned to me", or "tasks I created", filter by assignedTo containing "${userContext.id}" or createdBy equal to "${userContext.id}". Use the 24-character hexadecimal string format for user IDs.
 
-User Question: "${question}"`;
+User question: "${question}"`;
 };
 
 
@@ -753,25 +802,32 @@ exports.executeNLQuery = async (req, res) => {
             return res.status(400).json({ success: false, message: "User is not associated with a company." });
         }
 
-        const prompt = buildNLQueryPrompt(question, companyId.toString());
-        const groqResponse = await queryGroqEngine(prompt, true);
+        const userContext = {
+            name: req.user?.name || "Virendra",
+            id: req.user?._id ? req.user._id.toString() : "",
+            role: req.user?.role || "ceo"
+        };
 
-        let parsed;
-        try {
-            parsed = JSON.parse(groqResponse);
-        } catch (e) {
-            // Retry once if parsing fails
-            const retryPrompt = `Your previous output was not valid JSON. Please return valid JSON matching this schema: {"pipeline": [...]}. Output only JSON. Previous output: ${groqResponse}`;
-            const retryResponse = await queryGroqEngine(retryPrompt, true);
-            parsed = JSON.parse(retryResponse);
+        const prompt = buildNLQueryPrompt(question, userContext);
+        const groqResponse = await queryGroqEngine(prompt);
+
+        let parsed = extractJSON(groqResponse);
+        if (!parsed) {
+            // Retry once with a stricter prompt
+            const retryPrompt = `Return ONLY this JSON object with no explanation: {"collection": "tasks" or "users", "pipeline": [ <your MongoDB aggregation stages here> ]}. The question is: "${question}"`;
+            const retryResponse = await queryGroqEngine(retryPrompt);
+            parsed = extractJSON(retryResponse);
         }
 
         if (!parsed || !Array.isArray(parsed.pipeline)) {
             return res.status(422).json({ success: false, message: "AI failed to generate a valid database query pipeline." });
         }
 
+        // Convert any 24-character hex strings (IDs) to real mongoose.Types.ObjectId
+        const convertedPipeline = convertToObjectId(parsed.pipeline);
+
         // Validate the pipeline for security and read-only constraints
-        const validation = validatePipeline(parsed.pipeline);
+        const validation = validatePipeline(convertedPipeline);
         if (!validation.valid) {
             return res.status(400).json({
                 success: false,
@@ -788,11 +844,15 @@ exports.executeNLQuery = async (req, res) => {
         };
         
         // Inject company matching stage at the very beginning of the pipeline
-        const safePipeline = [companyMatch, ...parsed.pipeline];
+        const safePipeline = [companyMatch, ...convertedPipeline];
+
+        // Choose the model to query based on parsed collection
+        const targetCollection = parsed.collection || "tasks";
+        const Model = targetCollection === "users" ? User : Task;
 
         // Execute validated pipeline with a 5-second timeout safeguard
         const startTime = process.hrtime();
-        const rawData = await Task.aggregate(safePipeline).maxTimeMS(5000);
+        const rawData = await Model.aggregate(safePipeline, { maxTimeMS: 5000 });
         const diff = process.hrtime(startTime);
         const executionTimeMs = Math.round((diff[0] * 1000) + (diff[1] / 1000000));
 

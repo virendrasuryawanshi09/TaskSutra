@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { UserContext } from '../../context/UserContextState';
 import { useNavigate } from 'react-router-dom';
@@ -8,11 +8,12 @@ import moment from 'moment';
 import { addThousandSeparator } from '../../utils/helper';
 import InfoCard from '../../components/Cards/InfoCard';
 import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
-import { LuArrowRight, LuSparkles } from 'react-icons/lu';
+import { LuArrowRight, LuSparkles, LuSend, LuCheck, LuCopy, LuDownload, LuClock, LuLayers, LuX } from 'react-icons/lu';
 import TaskListTable from '../../components/TaskListTable';
 import CustomPieChart from '../../components/Charts/CustomPieChart';
 import CustomBarChart from '../../components/Charts/CustomBarChart';
 import { Helmet } from 'react-helmet-async';
+import toast from 'react-hot-toast';
 
 
 const COLORS = [
@@ -20,6 +21,163 @@ const COLORS = [
   "#2F7A84", // In Progress
   "#4C7F6A", // Completed
 ];
+
+const parseInlineStyles = (text) => {
+  if (typeof text !== 'string') return text;
+  const parts = [];
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  let match;
+  let lastIndex = 0;
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    const textBefore = text.substring(lastIndex, match.index);
+    if (textBefore) {
+      parts.push(textBefore);
+    }
+    parts.push(<strong key={match.index} className="font-semibold text-[var(--text)]">{match[1]}</strong>);
+    lastIndex = boldRegex.lastIndex;
+  }
+
+  const textAfter = text.substring(lastIndex);
+  if (textAfter) {
+    parts.push(textAfter);
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
+const renderMarkdown = (text) => {
+  if (!text) return null;
+  const lines = text.split("\n");
+  return lines.map((line, index) => {
+    let content = line.trim();
+    if (content === "") return <div key={index} className="h-2" />;
+
+    // Headers
+    const headerMatch = content.match(/^(#{1,6})\s+(.*)$/);
+    if (headerMatch) {
+      const level = headerMatch[1].length;
+      const title = headerMatch[2];
+      const parsed = parseInlineStyles(title);
+      if (level === 1) return <h1 key={index} className="text-xl font-bold mt-3 mb-1 text-[var(--text)]">{parsed}</h1>;
+      if (level === 2) return <h2 key={index} className="text-lg font-bold mt-2.5 mb-1 text-[var(--text)]">{parsed}</h2>;
+      return <h3 key={index} className="text-base font-bold mt-2 mb-1 text-[var(--text)]">{parsed}</h3>;
+    }
+
+    // Bullet list
+    const bulletMatch = content.match(/^[\*\-]\s+(.*)$/);
+    if (bulletMatch) {
+      const itemText = bulletMatch[1];
+      return (
+        <ul key={index} className="list-disc pl-5 my-0.5 text-sm text-[var(--text)]">
+          <li>{parseInlineStyles(itemText)}</li>
+        </ul>
+      );
+    }
+
+    return <p key={index} className="my-1 text-sm text-[var(--text)] leading-relaxed">{parseInlineStyles(content)}</p>;
+  });
+};
+
+const ResultTable = ({ rawData }) => {
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  if (!Array.isArray(rawData) || rawData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-[var(--border)] rounded-2xl bg-[var(--surface)] text-center">
+        <LuLayers className="text-3xl text-[var(--text-muted)] mb-3" />
+        <p className="text-sm font-medium text-[var(--text)]">No results found for this query</p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">Try rephrasing your search query.</p>
+      </div>
+    );
+  }
+
+  const firstItem = rawData[0];
+  const columns = Object.keys(firstItem).filter(key => key !== '__v' && key !== 'companyId');
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedData = [...rawData].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    const aVal = a[sortConfig.key];
+    const bVal = b[sortConfig.key];
+
+    if (aVal === bVal) return 0;
+    if (aVal === null || aVal === undefined) return 1;
+    if (bVal === null || bVal === undefined) return -1;
+
+    const aStr = typeof aVal === 'object' ? JSON.stringify(aVal) : aVal;
+    const bStr = typeof bVal === 'object' ? JSON.stringify(bVal) : bVal;
+
+    if (sortConfig.direction === 'asc') {
+      return aStr > bStr ? 1 : -1;
+    } else {
+      return aStr < bStr ? 1 : -1;
+    }
+  });
+
+  const formatCellValue = (val) => {
+    if (val === null || val === undefined) return "-";
+    if (typeof val === 'boolean') return val ? "Yes" : "No";
+    if (Array.isArray(val)) {
+      if (val.length === 0) return "-";
+      return val.map(item => typeof item === 'object' ? (item.name || item.text || JSON.stringify(item)) : String(item)).join(", ");
+    }
+    if (typeof val === 'object') {
+      return val.name || val.title || JSON.stringify(val);
+    }
+    if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+      return new Date(val).toLocaleDateString();
+    }
+    return String(val);
+  };
+
+  return (
+    <div className="w-full border border-[var(--border)] rounded-2xl bg-[var(--surface)] overflow-hidden shadow-sm">
+      <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr className="bg-[var(--bg-soft)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold uppercase tracking-wider sticky top-0 z-10">
+              {columns.map((col, idx) => (
+                <th
+                  key={idx}
+                  onClick={() => handleSort(col)}
+                  className="px-5 py-4 cursor-pointer hover:bg-[var(--border)] transition duration-150 select-none"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {col}
+                    {sortConfig.key === col && (
+                      <span className="text-[10px]">
+                        {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
+            {sortedData.map((row, rowIdx) => (
+              <tr key={rowIdx} className="hover:bg-[var(--bg-soft)]/50 transition duration-150">
+                {columns.map((col, colIdx) => (
+                  <td key={colIdx} className="px-5 py-4 whitespace-nowrap max-w-xs overflow-hidden text-ellipsis">
+                    {formatCellValue(row[col])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 
 const Dashboard = () => {
@@ -30,6 +188,171 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [pieChartData, setPieChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
+
+  // CEO Search states
+  const [query, setQuery] = useState("");
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [isQueryLoading, setIsQueryLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [rawData, setRawData] = useState(null);
+  const [answer, setAnswer] = useState("");
+  const [executionTime, setExecutionTime] = useState(null);
+  const [resultCount, setResultCount] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const activeStreamRef = useRef(null);
+
+  // Esc key listener to close overlay
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsOverlayOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleQuerySubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!query.trim() || isQueryLoading || isStreaming) return;
+
+    setIsOverlayOpen(true);
+    setIsQueryLoading(true);
+    setRawData(null);
+    setAnswer("");
+    setExecutionTime(null);
+    setResultCount(null);
+
+    if (activeStreamRef.current) {
+      try { activeStreamRef.current.cancel(); } catch (_) {}
+    }
+
+    try {
+      const res = await axiosInstance.post(API_PATHS.AI.CEO_NL_QUERY, {
+        question: query
+      });
+
+      if (!res.data || !res.data.success) {
+        throw new Error(res.data?.message || "Search execution failed");
+      }
+
+      const { rawData: fetchedData, executionTimeMs, resultCount: count } = res.data;
+      setRawData(fetchedData);
+      setExecutionTime(executionTimeMs);
+      setResultCount(count);
+      setIsQueryLoading(false);
+
+      if (!fetchedData || fetchedData.length === 0) {
+        return;
+      }
+
+      setIsStreaming(true);
+
+      const token = localStorage.getItem("token");
+      const streamResponse = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}${API_PATHS.AI.CEO_NL_STREAM}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          question: query,
+          rawData: fetchedData
+        })
+      });
+
+      if (!streamResponse.ok) {
+        throw new Error("Summarization stream connection failed");
+      }
+
+      const reader = streamResponse.body.getReader();
+      activeStreamRef.current = reader;
+      const decoder = new TextDecoder();
+      let streamDone = false;
+      let buffer = "";
+
+      while (!streamDone) {
+        const { done: doneReading, value } = await reader.read();
+        streamDone = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: !streamDone });
+          buffer += chunk;
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const cleaned = line.trim();
+            if (cleaned.startsWith("data: [DONE]")) {
+              streamDone = true;
+              break;
+            }
+            if (cleaned.startsWith("data: ")) {
+              try {
+                const parsed = JSON.parse(cleaned.slice(6));
+                if (parsed.token) {
+                  setAnswer(prev => prev + parsed.token);
+                }
+              } catch (err) {}
+            }
+          }
+        }
+      }
+
+      setIsStreaming(false);
+
+    } catch (error) {
+      console.error(error);
+      const errMsg = error.response?.data?.message || error.message || "An error occurred during execution.";
+      toast.error(errMsg);
+      setIsQueryLoading(false);
+      setIsStreaming(false);
+    }
+  };
+
+  const handleCopyResults = () => {
+    if (!rawData) return;
+    navigator.clipboard.writeText(JSON.stringify(rawData, null, 2))
+      .then(() => {
+        setCopied(true);
+        toast.success("JSON results copied to clipboard");
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => toast.error("Failed to copy results"));
+  };
+
+  const handleExportCSV = () => {
+    if (!rawData || rawData.length === 0) return;
+
+    try {
+      const headers = Object.keys(rawData[0]).filter(k => k !== '__v' && k !== 'companyId');
+      const csvRows = [
+        headers.join(','),
+        ...rawData.map(row =>
+          headers.map(fieldName => {
+            const val = row[fieldName];
+            const cleanVal = val === null || val === undefined
+              ? ''
+              : typeof val === 'object'
+                ? JSON.stringify(val).replace(/"/g, '""')
+                : String(val).replace(/"/g, '""');
+            return `"${cleanVal}"`;
+          }).join(',')
+        )
+      ];
+
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `ceo_query_results_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("CSV report downloaded successfully");
+    } catch (e) {
+      toast.error("Failed to export CSV");
+    }
+  };
 
   const currentHour = moment().hour();
   const greeting =
@@ -129,6 +452,36 @@ const Dashboard = () => {
         <meta name="description" content="Monitor workspace health, track recent task completions, analyze team distribution, and access management analytics." />
       </Helmet>
       <DashboardLayout activeMenu="Dashboard">
+        {/* CEO Global Search bar */}
+        {user?.role === 'ceo' && (
+          <form onSubmit={handleQuerySubmit} className="my-4 sm:my-6">
+            <div className="relative group">
+              <div className={`absolute -inset-0.5 rounded-[999px] bg-gradient-to-r from-[var(--accent)] to-[#4ECDC4] opacity-30 blur transition duration-300 group-hover:opacity-60 ${isQueryLoading || isStreaming ? "animate-pulse opacity-100" : "opacity-0"}`} />
+
+              <div className="relative flex items-center h-16 w-full rounded-[999px] bg-[var(--surface)] border-2 border-[var(--border)] focus-within:border-[var(--accent)] px-5 shadow-sm transition duration-200">
+                <LuSparkles className="text-xl text-[var(--accent)] mr-3 flex-shrink-0 animate-pulse" />
+
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ask anything about tasks, developers, or workspace details..."
+                  disabled={isQueryLoading || isStreaming}
+                  className="flex-1 h-full bg-transparent text-sm text-[var(--text)] placeholder-[var(--text-muted)] outline-none border-none pr-4 w-full"
+                />
+
+                <button
+                  type="submit"
+                  disabled={isQueryLoading || isStreaming || !query.trim()}
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all duration-200 active:scale-[0.95] disabled:bg-[var(--border)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:scale-100 cursor-pointer flex-shrink-0"
+                >
+                  <LuSend className="text-sm" />
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
         <div className="my-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:my-6 sm:p-5">
           <div>
             <div className="col-span-3">
@@ -172,35 +525,6 @@ const Dashboard = () => {
             />
           </div>
         </div>
-
-        {/* CEO AI Intelligence Card */}
-        {user?.role === 'ceo' && (
-          <div className="my-4 sm:my-6 relative group overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-r from-[var(--surface)] to-[var(--bg-soft)] p-6 shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 rounded-full bg-[var(--accent)]/5 blur-3xl pointer-events-none" />
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)] flex-shrink-0 shadow-sm border border-[var(--accent)]/10">
-                  <LuSparkles className="text-xl animate-pulse" />
-                </div>
-                <div>
-                  <h4 className="text-base font-semibold text-[var(--text)] flex items-center gap-2">
-                    CEO Query Intelligence <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">NL2DB</span>
-                  </h4>
-                  <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1 max-w-2xl leading-relaxed">
-                    Ask questions about tasks, priorities, team activity, and timelines using normal English queries. Get immediate overview summaries and sortable data tables.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate("/ceo/query-engine")}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-hover)] shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98] cursor-pointer sm:self-center w-full sm:w-auto"
-              >
-                Launch Engine
-                <LuArrowRight className="text-base" />
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
 
@@ -268,6 +592,95 @@ const Dashboard = () => {
 
           </div>
         </div>
+
+        {/* AI Query Overlay Modal */}
+        {isOverlayOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md transition-opacity duration-300">
+            <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-soft)]">
+                <div className="flex items-center gap-2">
+                  <LuSparkles className="text-lg text-[var(--accent)] animate-pulse" />
+                  <span className="text-sm font-semibold text-[var(--text)]">AI Query Insight</span>
+                </div>
+                <button
+                  onClick={() => setIsOverlayOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition cursor-pointer"
+                >
+                  <LuX className="text-lg" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                {/* Question Display */}
+                <div className="p-4 rounded-xl bg-[var(--bg-soft)] border border-[var(--border)]">
+                  <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Search Query</span>
+                  <p className="text-sm font-medium text-[var(--text)] mt-1">"{query}"</p>
+                </div>
+
+                {/* Loading State */}
+                {isQueryLoading && (
+                  <div className="space-y-4 py-8 flex flex-col items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent mb-2" />
+                    <p className="text-xs text-[var(--text-muted)]">Querying database & analyzing metrics...</p>
+                  </div>
+                )}
+
+                {/* Response / Streaming Content */}
+                {(answer || isStreaming) && (
+                  <div className="p-5 rounded-xl border border-[var(--accent)]/10 bg-[var(--accent-soft)]/5 shadow-sm">
+                    <div className="flex items-center gap-1.5 mb-2.5">
+                      <LuSparkles className="text-xs text-[var(--accent)] animate-pulse" />
+                      <span className="text-[10px] font-bold text-[var(--accent)] tracking-wider uppercase">✦ AI Overview</span>
+                    </div>
+                    <div className="text-sm leading-relaxed text-[var(--text)] whitespace-pre-line font-normal">
+                      {renderMarkdown(answer)}
+                      {isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-[var(--accent)] animate-pulse">▌</span>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Results Table & Metadata */}
+                {!isQueryLoading && rawData && (
+                  <div className="space-y-4">
+                    {/* Metadata Header */}
+                    <div className="flex flex-wrap gap-4 items-center justify-between text-xs text-[var(--text-muted)] border-b border-[var(--border)] pb-2.5">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <LuLayers size={13} className="text-[var(--accent)]" /> {resultCount} records matched
+                        </span>
+                        {executionTime && (
+                          <span className="flex items-center gap-1">
+                            <LuClock size={13} className="text-[var(--accent)]" /> Query finished in {executionTime}ms
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleCopyResults}
+                          className="flex items-center gap-1 hover:text-[var(--accent)] transition cursor-pointer"
+                        >
+                          {copied ? <LuCheck size={13} className="text-green-500" /> : <LuCopy size={13} />}
+                          Copy JSON
+                        </button>
+                        <button
+                          onClick={handleExportCSV}
+                          className="flex items-center gap-1 hover:text-[var(--accent)] transition cursor-pointer"
+                        >
+                          <LuDownload size={13} /> Export CSV
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <ResultTable rawData={rawData} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </DashboardLayout>
     </>
   );

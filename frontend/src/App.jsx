@@ -23,7 +23,7 @@ const Dashboard = React.lazy(() => import("./pages/Admin/Dashboard"));
 const ManageTasks = React.lazy(() => import("./pages/Admin/ManageTasks"));
 const CreateTask = React.lazy(() => import("./pages/Admin/CreateTask"));
 const ManageUsers = React.lazy(() => import("./pages/Admin/ManageUsers"));
-const QueryEngine = React.lazy(() => import("./pages/Admin/QueryEngine"));
+
 
 const LoadingScreen = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg)] text-[var(--text-muted)] text-sm">
@@ -144,10 +144,7 @@ const App = () => {
             <Route path="/admin/direct-chat" element={<DirectChat />} />
           </Route>
 
-          {/* CEO Only */}
-          <Route element={<PrivateRoute allowedRoles={["ceo"]} />}>
-            <Route path="/ceo/query-engine" element={<Suspense fallback={<LoadingScreen />}><QueryEngine /></Suspense>} />
-          </Route>
+
 
           {/* User */}
           <Route element={<PrivateRoute allowedRoles={["member"]} />}>

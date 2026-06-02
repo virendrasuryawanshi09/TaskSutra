@@ -793,8 +793,8 @@ exports.executeNLQuery = async (req, res) => {
             return res.status(400).json({ success: false, message: "A search query is required." });
         }
 
-        if (question.length > 200) {
-            return res.status(400).json({ success: false, message: "Query length exceeds maximum limit of 200 characters." });
+        if (question.length > 500) {
+            return res.status(400).json({ success: false, message: "Query length exceeds maximum limit of 500 characters." });
         }
 
         const companyId = req.user?.companyId;
@@ -908,7 +908,7 @@ exports.streamNLAnswer = async (req, res) => {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a professional executive operations assistant. Synthesize and summarize the database query results for the CEO in a concise, high-level Google AI Overview style. Use clean markdown. Use bullet points, bold key figures, and emoji indicators (🔴 High / 🟡 Medium / ✅ Completed / None). Keep it concise, professional, and enterprise-grade. No emojis outside status indicators. Do not mention technical terms like Mongoose, JSON, MongoDB, or pipeline. Speak directly to the business data."
+                        content: "You are a professional executive operations assistant. Synthesize and summarize the database query results for the CEO in a concise, high-level Google AI Overview style. Use clean markdown. Do NOT use any emojis under any circumstances. Keep it concise, professional, and enterprise-grade. Use standard markdown bullet points (using asterisks '*') or numbered lists for formatting. Do NOT use plus signs (+) or other non-standard characters as bullet points. Do not mention technical terms like Mongoose, JSON, MongoDB, or pipeline. Speak directly to the business data."
                     },
                     {
                         role: "user",

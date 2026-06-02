@@ -65,7 +65,7 @@ const renderMarkdown = (text) => {
     }
 
     // Bullet list
-    const bulletMatch = content.match(/^[\*\-]\s+(.*)$/);
+    const bulletMatch = content.match(/^[\*\-\+]\s+(.*)$/);
     if (bulletMatch) {
       const itemText = bulletMatch[1];
       return (
@@ -594,93 +594,285 @@ const Dashboard = () => {
         </div>
 
         {/* AI Query Overlay Modal */}
-        {isOverlayOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md transition-opacity duration-300">
-            <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] bg-[var(--bg-soft)]">
-                <div className="flex items-center gap-2">
-                  <LuSparkles className="text-lg text-[var(--accent)] animate-pulse" />
-                  <span className="text-sm font-semibold text-[var(--text)]">AI Query Insight</span>
+        {isOverlayOpen && (() => {
+          const firstItem = rawData && rawData[0];
+          const isTaskData = firstItem && ('title' in firstItem && ('status' in firstItem || 'priority' in firstItem));
+          const isUserData = firstItem && ('name' in firstItem && ('role' in firstItem || 'skills' in firstItem));
+
+          const renderTaskCard = (task) => {
+            const priorityColors = {
+              High: "bg-red-500/10 text-red-500 border-red-500/20",
+              Medium: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+              Low: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+            };
+
+            const statusColors = {
+              Pending: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+              "In-progress": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+              "In Progress": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+              Completed: "bg-green-500/10 text-green-500 border-green-500/20",
+            };
+
+            const formattedDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No due date";
+
+            return (
+              <div key={task._id} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-3 group">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${priorityColors[task.priority] || "bg-gray-500/10 text-gray-500 border-gray-500/20"}`}>
+                      {task.priority || "Low"}
+                    </span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusColors[task.status] || "bg-gray-500/10 text-gray-500 border-gray-500/20"}`}>
+                      {task.status || "Pending"}
+                    </span>
+                  </div>
+                  <h5 className="text-sm font-semibold text-[var(--text)] mt-2.5 line-clamp-2 group-hover:text-[var(--accent)] transition duration-200">
+                    {task.title}
+                  </h5>
+                  {task.description && (
+                    <p className="text-xs text-[var(--text-muted)] mt-1 line-clamp-2">
+                      {task.description}
+                    </p>
+                  )}
                 </div>
-                <button
-                  onClick={() => setIsOverlayOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition cursor-pointer"
-                >
-                  <LuX className="text-lg" />
-                </button>
+
+                <div className="space-y-2 mt-auto pt-2 border-t border-[var(--border)]/50">
+                  {/* Progress bar */}
+                  <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                    <span>Progress</span>
+                    <span className="font-semibold">{task.progress || 0}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-[var(--bg-soft)] overflow-hidden">
+                    <div className="h-full bg-[var(--accent)] transition-all duration-500" style={{ width: `${task.progress || 0}%` }} />
+                  </div>
+
+                  {/* Due Date & Assignees */}
+                  <div className="flex items-center justify-between gap-2 pt-1 text-[10px] text-[var(--text-muted)]">
+                    <span className="flex items-center gap-1">
+                      <LuClock size={11} className="text-[var(--accent)]" /> {formattedDate}
+                    </span>
+                    {/* Avatar bubbles */}
+                    {Array.isArray(task.assignedToUsers) && task.assignedToUsers.length > 0 ? (
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {task.assignedToUsers.slice(0, 3).map((name, i) => (
+                          <div key={i} className="w-5 h-5 rounded-full bg-[var(--accent)] text-white font-bold flex items-center justify-center border border-[var(--surface)] text-[9px] shadow-sm select-none" title={name}>
+                            {name.charAt(0).toUpperCase()}
+                          </div>
+                        ))}
+                        {task.assignedToUsers.length > 3 && (
+                          <div className="w-5 h-5 rounded-full bg-[var(--bg-soft)] text-[var(--text-muted)] font-semibold flex items-center justify-center border border-[var(--border)] text-[8px] shadow-sm select-none">
+                            +{task.assignedToUsers.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    ) : Array.isArray(task.assignedTo) && task.assignedTo.length > 0 ? (
+                      <div className="flex -space-x-1.5 overflow-hidden">
+                        {task.assignedTo.slice(0, 3).map((userObj, i) => {
+                          const name = typeof userObj === 'object' && userObj !== null ? userObj.name : (typeof userObj === 'string' ? userObj : "User");
+                          return (
+                            <div key={i} className="w-5 h-5 rounded-full bg-[var(--accent)] text-white font-bold flex items-center justify-center border border-[var(--surface)] text-[9px] shadow-sm select-none" title={name}>
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                          );
+                        })}
+                        {task.assignedTo.length > 3 && (
+                          <div className="w-5 h-5 rounded-full bg-[var(--bg-soft)] text-[var(--text-muted)] font-semibold flex items-center justify-center border border-[var(--border)] text-[8px] shadow-sm select-none">
+                            +{task.assignedTo.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
+            );
+          };
 
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                {/* Question Display */}
-                <div className="p-4 rounded-xl bg-[var(--bg-soft)] border border-[var(--border)]">
-                  <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Search Query</span>
-                  <p className="text-sm font-medium text-[var(--text)] mt-1">"{query}"</p>
+          const renderUserCard = (dev) => {
+            const roleColors = {
+              ceo: "text-yellow-500 bg-yellow-500/10 border-yellow-500/20",
+              admin: "text-[var(--accent)] bg-[var(--accent-soft)] border-[var(--accent)]/20",
+              member: "text-blue-500 bg-blue-500/10 border-blue-500/20",
+            };
+
+            return (
+              <div key={dev._id} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-3 group">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[var(--accent)] text-white font-bold flex items-center justify-center text-sm shadow-sm select-none">
+                      {dev.name ? dev.name.charAt(0).toUpperCase() : "U"}
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--accent)] transition duration-200">
+                        {dev.name}
+                      </h5>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${roleColors[dev.role] || "text-gray-500 bg-gray-500/10 border-gray-500/20"}`}>
+                        {dev.role}
+                      </span>
+                    </div>
+                  </div>
+                  {dev.title && (
+                    <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">
+                      {dev.title}
+                    </p>
+                  )}
                 </div>
 
-                {/* Loading State */}
-                {isQueryLoading && (
-                  <div className="space-y-4 py-8 flex flex-col items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent mb-2" />
-                    <p className="text-xs text-[var(--text-muted)]">Querying database & analyzing metrics...</p>
-                  </div>
-                )}
-
-                {/* Response / Streaming Content */}
-                {(answer || isStreaming) && (
-                  <div className="p-5 rounded-xl border border-[var(--accent)]/10 bg-[var(--accent-soft)]/5 shadow-sm">
-                    <div className="flex items-center gap-1.5 mb-2.5">
-                      <LuSparkles className="text-xs text-[var(--accent)] animate-pulse" />
-                      <span className="text-[10px] font-bold text-[var(--accent)] tracking-wider uppercase">✦ AI Overview</span>
-                    </div>
-                    <div className="text-sm leading-relaxed text-[var(--text)] whitespace-pre-line font-normal">
-                      {renderMarkdown(answer)}
-                      {isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-[var(--accent)] animate-pulse">▌</span>}
-                    </div>
-                  </div>
-                )}
-
-                {/* Results Table & Metadata */}
-                {!isQueryLoading && rawData && (
-                  <div className="space-y-4">
-                    {/* Metadata Header */}
-                    <div className="flex flex-wrap gap-4 items-center justify-between text-xs text-[var(--text-muted)] border-b border-[var(--border)] pb-2.5">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1">
-                          <LuLayers size={13} className="text-[var(--accent)]" /> {resultCount} records matched
-                        </span>
-                        {executionTime && (
-                          <span className="flex items-center gap-1">
-                            <LuClock size={13} className="text-[var(--accent)]" /> Query finished in {executionTime}ms
+                <div className="space-y-2 mt-auto pt-2 border-t border-[var(--border)]/50">
+                  {/* Skills */}
+                  {Array.isArray(dev.skills) && dev.skills.length > 0 ? (
+                    <div>
+                      <span className="text-[9px] text-[var(--text-muted)] font-semibold uppercase tracking-wider block mb-1">Skills</span>
+                      <div className="flex flex-wrap gap-1">
+                        {dev.skills.slice(0, 4).map((skill, i) => (
+                          <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-soft)] text-[var(--text-muted)] border border-[var(--border)] font-medium">
+                            {skill}
+                          </span>
+                        ))}
+                        {dev.skills.length > 4 && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-soft)] text-[var(--text-muted)] border border-[var(--border)] font-medium">
+                            +{dev.skills.length - 4}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={handleCopyResults}
-                          className="flex items-center gap-1 hover:text-[var(--accent)] transition cursor-pointer"
-                        >
-                          {copied ? <LuCheck size={13} className="text-green-500" /> : <LuCopy size={13} />}
-                          Copy JSON
-                        </button>
-                        <button
-                          onClick={handleExportCSV}
-                          className="flex items-center gap-1 hover:text-[var(--accent)] transition cursor-pointer"
-                        >
-                          <LuDownload size={13} /> Export CSV
-                        </button>
-                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-[var(--text-muted)] italic">No skills listed</div>
+                  )}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity duration-300">
+              <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col rounded-3xl border border-white/20 dark:border-white/5 bg-[var(--surface)]/95 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4.5 border-b border-[var(--border)] bg-[var(--bg-soft)]/50">
+                  <div className="flex items-center gap-2">
+                    <LuSparkles className="text-lg text-[var(--accent)] animate-pulse" />
+                    <span className="text-sm font-semibold text-[var(--text)]">AI Assistant Insights</span>
+                  </div>
+                  <button
+                    onClick={() => setIsOverlayOpen(false)}
+                    className="p-1.5 rounded-lg hover:bg-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition cursor-pointer"
+                  >
+                    <LuX className="text-lg" />
+                  </button>
+                </div>
+
+                {/* Body (Split Screen Layout) */}
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                  
+                  {/* Left Column - AI text overview (40%) */}
+                  <div className="w-full md:w-[40%] border-b md:border-b-0 md:border-r border-[var(--border)] p-6 overflow-y-auto bg-[var(--bg-soft)]/20 flex flex-col gap-4">
+                    {/* Question Display */}
+                    <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
+                      <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Search Query</span>
+                      <p className="text-xs sm:text-sm font-medium text-[var(--text)] mt-1 leading-relaxed">"{query}"</p>
                     </div>
 
-                    {/* Table */}
-                    <ResultTable rawData={rawData} />
+                    {/* AI Overview summary */}
+                    {(answer || isStreaming || isQueryLoading) && (
+                      <div className="p-5 rounded-2xl border border-[var(--accent)]/10 bg-[var(--accent-soft)]/5 shadow-sm flex-1">
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <LuSparkles className="text-xs text-[var(--accent)] animate-pulse" />
+                          <span className="text-[10px] font-bold text-[var(--accent)] tracking-wider uppercase">✦ AI Overview</span>
+                        </div>
+                        {isQueryLoading ? (
+                          <div className="space-y-3 py-6 flex flex-col items-center justify-center text-center">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent mb-1" />
+                            <p className="text-[11px] text-[var(--text-muted)]">Querying database & analyzing metrics...</p>
+                          </div>
+                        ) : (
+                          <div className="text-xs leading-relaxed text-[var(--text)] whitespace-pre-line font-normal">
+                            {renderMarkdown(answer)}
+                            {isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-[var(--accent)] animate-pulse">▌</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Right Column - Tasks / Users visual view (60%) */}
+                  <div className="w-full md:w-[60%] p-6 overflow-y-auto flex flex-col gap-4 bg-[var(--surface)]">
+                    
+                    {/* Metadata Header */}
+                    {!isQueryLoading && rawData && (
+                      <div className="flex flex-wrap gap-4 items-center justify-between text-xs text-[var(--text-muted)] border-b border-[var(--border)] pb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <LuLayers size={13} className="text-[var(--accent)]" /> {resultCount} {isTaskData ? "tasks" : isUserData ? "members" : "records"} found
+                          </span>
+                          {executionTime && (
+                            <span className="flex items-center gap-1">
+                              <LuClock size={13} className="text-[var(--accent)]" /> {executionTime}ms
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={handleCopyResults}
+                            className="flex items-center gap-1 hover:text-[var(--accent)] transition cursor-pointer"
+                          >
+                            {copied ? <LuCheck size={13} className="text-green-500" /> : <LuCopy size={13} />}
+                            Copy JSON
+                          </button>
+                          <button
+                            onClick={handleExportCSV}
+                            className="flex items-center gap-1 hover:text-[var(--accent)] transition cursor-pointer"
+                          >
+                            <LuDownload size={13} /> Export CSV
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive Content View */}
+                    {isQueryLoading ? (
+                      <div className="flex-1 flex flex-col gap-4">
+                        <div className="h-6 bg-[var(--bg-soft)] rounded w-1/4 animate-pulse" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-soft)]/20 animate-pulse space-y-3">
+                              <div className="h-3 bg-[var(--bg-soft)] rounded w-1/2" />
+                              <div className="h-4 bg-[var(--bg-soft)] rounded w-3/4" />
+                              <div className="h-2 bg-[var(--bg-soft)] rounded w-full" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : rawData && rawData.length > 0 ? (
+                      isTaskData ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {rawData.map(task => renderTaskCard(task))}
+                        </div>
+                      ) : isUserData ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {rawData.map(dev => renderUserCard(dev))}
+                        </div>
+                      ) : (
+                        <ResultTable rawData={rawData} />
+                      )
+                    ) : (
+                      !isQueryLoading && (
+                        <div className="flex-1 flex flex-col items-center justify-center py-16 text-center border border-dashed border-[var(--border)] rounded-2xl bg-[var(--bg-soft)]/10">
+                          <LuLayers className="text-4xl text-[var(--text-muted)] mb-3" />
+                          <p className="text-sm font-semibold text-[var(--text)]">No records found</p>
+                          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-sm">
+                            The query finished successfully but did not match any document in this company workspace.
+                          </p>
+                        </div>
+                      )
+                    )}
+
+                  </div>
+                  
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </DashboardLayout>
     </>
   );

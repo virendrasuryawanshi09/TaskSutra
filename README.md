@@ -32,7 +32,8 @@
 
 ## Overview
 
-**TaskSutra** is a, multi-tenant team collaboration platform designed for enterprises that demand:
+**TaskSutra** is an enterprise-grade, multi-tenant team collaboration platform designed for teams that demand:
+- **CEO Natural Language Query Engine (NL2DB)** — Allows executives to query the database using plain English (e.g., *"who has the most overdue tasks?"*), converting queries to secure MongoDB aggregation pipelines with real-time SSE streaming.
 - **Zero-latency real-time synchronization** across distributed teams via Socket.io
 - **AI-powered team intelligence** — smart assignee recommendations and org health diagnostics
 - **Clear role-based execution models** (CEO → Admin → Member workflows)
@@ -96,6 +97,7 @@ Multi-tenant SaaS requires **data hermiticity**. TaskSutra implements:
 | **Org Health Diagnostic** | AI analyzes overdue ratios, burnout metrics, team distribution | CEO gets actionable health score + 3 growth recommendations |
 | **Behavioral Work Profiles** | User schema `behavioralProfile.traits` with 5 personality types | Context-aware allocation beyond simple skill matching |
 | **AI Fallback Chain** | Groq → Gemini 2.0 Flash → Gemini 1.5 Flash → Local scoring | 100% uptime even when primary AI APIs are unavailable |
+| **CEO NL2DB Query Engine** | Groq (LLaMA-3.3-70B) Aggregation Compiler + Sandbox Sanitizer + Server-Sent Events (SSE) | Plain English natural language query interface for CEOs to instantly retrieve and compile real-time database reports |
 
 ### **Workspace Intelligence**
 | Feature | Technical Implementation | Business Value |
@@ -594,6 +596,7 @@ TaskSutra/
 | **Notifications** | Real-time in-app notification system | Email only or none |
 | **Image Storage** | Cloudinary cloud storage | Local disk (fragile) |
 | **Deployment** | Docker Compose + Vercel-ready | Manual server setup |
+| **NL2DB Query Engine** | Natural language to MongoDB aggregation compiler with security sanitization sandbox and real-time SSE streaming | Standard database keyword searching |
 
 ---
 
@@ -620,6 +623,7 @@ TaskSutra/
 - **Protected file uploads** — authorized users only, stored in Cloudinary
 - **ObjectId validation middleware** — prevents injection via malformed IDs
 - **Global error handler** — sanitized error responses in production
+- **MongoDB Aggregation Pipeline Security Sandbox** — Whitelists safe read-only operators, blocks modification stages (`$out`/`$merge`), restricts `$lookup` targets to `users` and `tasks` collections, and prevents cross-tenant data leaks by auto-injecting `companyId` matching blocks
 
 ---
 

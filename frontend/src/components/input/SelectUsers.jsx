@@ -4,6 +4,7 @@ import { API_PATHS } from "../../utils/apiPaths";
 import { LuUsers, LuLoader } from "react-icons/lu";
 import Modal from "../Modal";
 import toast from "react-hot-toast";
+import AIMatcher from "./AIMatcher";
 
 const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescription }) => {
   const [allUsers, setAllUsers] = useState([]);
@@ -11,6 +12,11 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescripti
   const [tempSelectedUsers, setTempSelectedUsers] = useState([]);
   const [aiRecommendations, setAiRecommendations] = useState([]);
   const [loadingAI, setLoadingAI] = useState(false);
+
+  // AI Analyzer modal state
+  const [selectedDevId, setSelectedDevId] = useState(null);
+  const [selectedDevName, setSelectedDevName] = useState("");
+  const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
 
   const getUserInitial = (name = "") => name.trim().charAt(0).toUpperCase();
 
@@ -184,6 +190,14 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescripti
                   "text-rose-500 bg-rose-500/5 border-rose-500/10"
                 : "";
 
+              const cogProfile = recDetails?.cognitiveProfile || user.cognitiveProfile;
+              const prob = cogProfile?.deliveryProbability;
+              const probColor = prob !== undefined
+                ? prob >= 80 ? "text-emerald-500 bg-emerald-500/5 border-emerald-500/10" :
+                  prob >= 50 ? "text-amber-500 bg-amber-500/5 border-amber-500/10" :
+                  "text-rose-500 bg-rose-500/5 border-rose-500/10"
+                : "";
+
               return (
                 <div
                   key={user._id}
@@ -215,18 +229,39 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescripti
                       <p className="text-sm font-medium text-[var(--text)] truncate">
                         {user.name}
                       </p>
-                      {recDetails && (
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${scoreColor}`}>
-                          {recDetails.score}% Match
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {prob !== undefined && (
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded border font-medium ${probColor}`}>
+                            {prob}% Delivery
+                          </span>
+                        )}
+                        {recDetails && (
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded border font-medium ${scoreColor}`}>
+                            {recDetails.score}% Match
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     {recDetails ? (
                       <div className="mt-0.5">
-                        <p className="text-[10px] text-[var(--text-muted)] font-normal">
-                          {recDetails.title} &bull; {recDetails.activeTasks} Active Tasks
-                        </p>
+                        <div className="flex justify-between items-center">
+                          <p className="text-[10px] text-[var(--text-muted)] font-normal">
+                            {recDetails.title} &bull; {recDetails.activeTasks} Active Tasks
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDevId(user._id);
+                              setSelectedDevName(user.name);
+                              setIsAnalyzerOpen(true);
+                            }}
+                            className="text-[9px] text-[var(--accent)] hover:text-[var(--accent-hover)] bg-[var(--accent)]/5 hover:bg-[var(--accent)]/10 border border-[var(--accent)]/10 px-2 py-0.5 rounded font-semibold transition cursor-pointer"
+                          >
+                            Analyze Load
+                          </button>
+                        </div>
                         <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-relaxed">
                           {recDetails.reasoning}
                         </p>
@@ -244,9 +279,25 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescripti
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--text-muted)] truncate">
-                        {user.email}
-                      </p>
+                      <div className="mt-0.5">
+                        <div className="flex justify-between items-center">
+                          <p className="text-[10px] text-[var(--text-muted)] font-normal truncate max-w-[150px]">
+                            {user.title || "Team Member"} &bull; {user.email}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDevId(user._id);
+                              setSelectedDevName(user.name);
+                              setIsAnalyzerOpen(true);
+                            }}
+                            className="text-[9px] text-[var(--accent)] hover:text-[var(--accent-hover)] bg-[var(--accent)]/5 hover:bg-[var(--accent)]/10 border border-[var(--accent)]/10 px-2 py-0.5 rounded font-semibold transition cursor-pointer"
+                          >
+                            Analyze Load
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -290,6 +341,13 @@ const SelectUsers = ({ selectedUsers, setSelectedUsers, taskTitle, taskDescripti
           </div>
         </div>
       </Modal>
+
+      <AIMatcher
+        isOpen={isAnalyzerOpen}
+        onClose={() => setIsAnalyzerOpen(false)}
+        userId={selectedDevId}
+        userName={selectedDevName}
+      />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useSocket } from "../../context/SocketContext";
 import TaskDiscussionPanel from '../User/Tasks/TaskDiscussionPanel';
+import { Helmet } from 'react-helmet-async';
 
 const ManageTasks = () => {
   const [allTasks, setAllTasks] = useState([]);
@@ -171,130 +172,136 @@ const ManageTasks = () => {
   };
 
   return (
-    <DashboardLayout activeMenu="Manage Tasks">
-      <div className="
-        relative
-        w-full
-        sm:max-w-6xl sm:mx-auto
-        px-4 sm:px-6
-        py-8 sm:py-12
-      ">
+    <>
+      <Helmet>
+        <title>Manage Tasks | TaskSutra</title>
+        <meta name="description" content="Track and organize tasks, filter by workflow status, and communicate on task discussions in real-time." />
+      </Helmet>
+      <DashboardLayout activeMenu="Manage Tasks">
+        <div className="
+          relative
+          w-full
+          sm:max-w-6xl sm:mx-auto
+          px-4 sm:px-6
+          py-8 sm:py-12
+        ">
 
 
-        <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
+          <div className="absolute inset-0 -z-10 opacity-20 blur-3xl bg-[radial-gradient(circle_at_top,rgba(58,166,176,0.2),transparent_60%)]" />
 
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
 
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text)]">
-              Tasks
-            </h1>
-            <p className="text-sm text-[var(--text-muted)] mt-1">
-              Manage your workflow efficiently
-            </p>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text)]">
+                Tasks
+              </h1>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                Manage your workflow efficiently
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExportTasksReport}
+              disabled={isExporting}
+              className="
+                w-fit
+                flex items-center justify-center gap-2
+                px-4 py-2.5 text-sm font-medium
+                rounded-xl
+
+                bg-[var(--accent)]
+                text-white
+
+                shadow-sm
+                hover:bg-[var(--accent-hover)]
+                disabled:cursor-not-allowed
+                disabled:opacity-70
+                active:scale-[0.98]
+
+                transition-all duration-200
+              "
+            >
+              <LuFileSpreadsheet />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </button>
+
           </div>
 
-          <button
-            type="button"
-            onClick={handleExportTasksReport}
-            disabled={isExporting}
-            className="
-              w-fit
-              flex items-center justify-center gap-2
-              px-4 py-2.5 text-sm font-medium
-              rounded-xl
 
-              bg-[var(--accent)]
-              text-white
+          <div className="mb-6 -mx-2 px-2">
+            <TaskStatusTabs
+              tabs={tabs}
+              activeTab={filterStatus}
+              setActiveTab={setFilterStatus}
+            />
+          </div>
 
-              shadow-sm
-              hover:bg-[var(--accent-hover)]
-              disabled:cursor-not-allowed
-              disabled:opacity-70
-              active:scale-[0.98]
 
-              transition-all duration-200
-            "
-          >
-            <LuFileSpreadsheet />
-            {isExporting ? 'Exporting...' : 'Export'}
-          </button>
+          <div className="h-px bg-[var(--border)] mb-6 opacity-60" />
+
+
+          {allTasks.length === 0 ? (
+            <div className="
+              flex flex-col items-center justify-center
+              min-h-[260px]
+              text-center
+            ">
+              <p className="text-sm text-[var(--text-muted)]">
+                No tasks found
+              </p>
+            </div>
+          ) : (
+
+            <div className="
+              grid grid-cols-1
+              sm:grid-cols-2
+              lg:grid-cols-3
+              gap-4 sm:gap-5 lg:gap-6
+            ">
+
+              {allTasks.map((item) => (
+                <TaskCard
+                  key={item._id}
+                  title={item.title}
+                  description={item.description}
+                  priority={item.priority}
+                  status={item.status}
+                  progress={item.progress}
+                  createdAt={item.createdAt}
+                  dueDate={item.dueDate}
+
+
+                  assignedTo={item.assignedTo?.map((u) => ({
+                    image: u.profileImageUrl,
+                    name: u.name || u.email || "User"
+                  }))}
+
+                  attachmentCount={item.attachments?.length || 0}
+                  completedTodoCount={item.completedChecklistCount || 0}
+                  todoChecklist={item.todoChecklist || []}
+                  onClick={() => handleClick(item)}
+                  onDiscussionClick={() => setDiscussionTask(item)}
+                />
+              ))}
+
+            </div>
+          )}
 
         </div>
 
-
-        <div className="mb-6 -mx-2 px-2">
-          <TaskStatusTabs
-            tabs={tabs}
-            activeTab={filterStatus}
-            setActiveTab={setFilterStatus}
-          />
-        </div>
-
-
-        <div className="h-px bg-[var(--border)] mb-6 opacity-60" />
-
-
-        {allTasks.length === 0 ? (
-          <div className="
-            flex flex-col items-center justify-center
-            min-h-[260px]
-            text-center
-          ">
-            <p className="text-sm text-[var(--text-muted)]">
-              No tasks found
-            </p>
-          </div>
-        ) : (
-
-          <div className="
-            grid grid-cols-1
-            sm:grid-cols-2
-            lg:grid-cols-3
-            gap-4 sm:gap-5 lg:gap-6
-          ">
-
-            {allTasks.map((item) => (
-              <TaskCard
-                key={item._id}
-                title={item.title}
-                description={item.description}
-                priority={item.priority}
-                status={item.status}
-                progress={item.progress}
-                createdAt={item.createdAt}
-                dueDate={item.dueDate}
-
-
-                assignedTo={item.assignedTo?.map((u) => ({
-                  image: u.profileImageUrl,
-                  name: u.name || u.email || "User"
-                }))}
-
-                attachmentCount={item.attachments?.length || 0}
-                completedTodoCount={item.completedChecklistCount || 0}
-                todoChecklist={item.todoChecklist || []}
-                onClick={() => handleClick(item)}
-                onDiscussionClick={() => setDiscussionTask(item)}
-              />
-            ))}
-
-          </div>
-        )}
-
-      </div>
-
-      <TaskDiscussionPanel
-        task={discussionTask}
-        isOpen={Boolean(discussionTask)}
-        onClose={() => setDiscussionTask(null)}
-        messages={discussionMessages}
-        queryInput={discussionInput}
-        onQueryInputChange={(e) => setDiscussionInput(e.target.value)}
-        onSend={handleSendDiscussionMessage}
-      />
-    </DashboardLayout>
+        <TaskDiscussionPanel
+          task={discussionTask}
+          isOpen={Boolean(discussionTask)}
+          onClose={() => setDiscussionTask(null)}
+          messages={discussionMessages}
+          queryInput={discussionInput}
+          onQueryInputChange={(e) => setDiscussionInput(e.target.value)}
+          onSend={handleSendDiscussionMessage}
+        />
+      </DashboardLayout>
+    </>
   );
 };
 

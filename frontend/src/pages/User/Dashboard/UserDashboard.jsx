@@ -14,6 +14,7 @@ import {
   HiOutlineFlag,
   HiOutlineSparkles,
 } from "react-icons/hi";
+import { Helmet } from "react-helmet-async";
 
 const getValidDate = (value) => {
   if (!value) return null;
@@ -279,8 +280,13 @@ const UserDashboard = () => {
   }, []);
 
   return (
-    <DashboardLayout>
-      <div className="mx-auto w-full max-w-6xl space-y-6">
+    <>
+      <Helmet>
+        <title>Dashboard | TaskSutra</title>
+        <meta name="description" content="View your task workload, upcoming deadlines, and progress analytics on your TaskSutra dashboard." />
+      </Helmet>
+      <DashboardLayout>
+        <div className="mx-auto w-full max-w-6xl space-y-6">
         {!user?.companyId ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
             {/* Left Box: Info & Join Options */}
@@ -527,6 +533,7 @@ const UserDashboard = () => {
         )}
       </div>
     </DashboardLayout>
+    </>
   );
 };
 

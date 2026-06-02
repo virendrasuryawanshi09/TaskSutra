@@ -8,6 +8,7 @@ import moment from 'moment';
 import { LuSend, LuMessageSquare, LuPaperclip } from 'react-icons/lu';
 import toast from 'react-hot-toast';
 import { useNotification } from '../../context/NotificationContext';
+import { Helmet } from 'react-helmet-async';
 
 const parseMessageContent = (text, users = [], currentUser = null) => {
   if (!text) return "";
@@ -865,7 +866,12 @@ const DirectChat = ({ defaultCommunity = false }) => {
   );
 
   return (
-    <DashboardLayout activeMenu="Direct Messages">
+    <>
+      <Helmet>
+        <title>Workspace Chat | TaskSutra</title>
+        <meta name="description" content="Collaborate and message colleagues inside your company workspace." />
+      </Helmet>
+      <DashboardLayout activeMenu="Direct Messages">
       {/* Hyper-minimalist Elite Container */}
       <div className="flex h-[calc(100dvh-6rem)] w-full max-w-[1500px] mx-auto bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm mt-4 relative">
         
@@ -1394,6 +1400,7 @@ const DirectChat = ({ defaultCommunity = false }) => {
         </div>
       )}
     </DashboardLayout>
+    </>
   );
 };
 

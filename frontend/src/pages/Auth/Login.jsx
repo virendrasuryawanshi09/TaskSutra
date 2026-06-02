@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
 import useUserAuth from "../../hooks/useUserAuth.jsx";
+import { Helmet } from "react-helmet-async";
 import {
   getDashboardRoute,
   getErrorMessage,
@@ -84,53 +85,60 @@ const Login = () => {
   };
 
   return (
-    <AuthLayout title="Sign in">
-      <form onSubmit={handleLogin}>
+    <>
+      <Helmet>
+        <title>Login | TaskSutra</title>
+        <meta name="description" content="Log in to your TaskSutra account to manage your tasks, collaborate with your team, and access workspace analytics." />
+        <link rel="canonical" href="https://tasksutra.app/login" />
+      </Helmet>
+      <AuthLayout title="Sign in">
+        <form onSubmit={handleLogin}>
 
-        <Input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          label="Email"
-        />
+          <Input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            label="Email"
+          />
 
-        <Input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          label="Password"
-        />
+          <Input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            label="Password"
+          />
 
-        {error && (
-          <p className="text-sm text-red-500 mb-4">{error}</p>
-        )}
+          {error && (
+            <p className="text-sm text-red-500 mb-4">{error}</p>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="
-            w-full py-[15px] rounded-[12px] 
-            bg-[var(--accent)] text-white text-[15px] font-medium
-            transition-all duration-200
-            hover:bg-[var(--accent-hover)] hover:-translate-y-[1px]
-            active:scale-[0.97]
-            disabled:opacity-70 disabled:cursor-not-allowed
-          "
-        >
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
-
-        <div className="mt-5 text-[13px] text-[var(--text-muted)]">
-          Don’t have an account?{" "}
-          <Link
-            to="/signup"
-            className="font-medium text-[var(--accent)] hover:underline"
+          <button
+            type="submit"
+            disabled={loading}
+            className="
+              w-full py-[15px] rounded-[12px] 
+              bg-[var(--accent)] text-white text-[15px] font-medium
+              transition-all duration-200
+              hover:bg-[var(--accent-hover)] hover:-translate-y-[1px]
+              active:scale-[0.97]
+              disabled:opacity-70 disabled:cursor-not-allowed
+            "
           >
-            Sign up
-          </Link>
-        </div>
-    </form>
-    </AuthLayout >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+
+          <div className="mt-5 text-[13px] text-[var(--text-muted)]">
+            Don’t have an account?{" "}
+            <Link
+              to="/signup"
+              className="font-medium text-[var(--accent)] hover:underline"
+            >
+              Sign up
+            </Link>
+          </div>
+      </form>
+      </AuthLayout >
+    </>
   );
 };
 

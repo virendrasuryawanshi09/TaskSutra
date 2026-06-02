@@ -8,6 +8,7 @@ import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
 import useUserAuth from "../../hooks/useUserAuth.jsx";
 import uploadImage from "../../utils/uploadImage.js";
+import { Helmet } from "react-helmet-async";
 import {
   getDashboardRoute,
   getErrorMessage,
@@ -137,83 +138,90 @@ const SignUp = () => {
   };
 
   return (
-    <AuthLayout>
-      <div>
-        <h3 className="text-[20px] font-semibold mb-4">
-          Create an account
-        </h3>
+    <>
+      <Helmet>
+        <title>Sign Up | TaskSutra</title>
+        <meta name="description" content="Create your TaskSutra account to start organizing your team, mapping tasks, and streamlining collaborative workflows." />
+        <link rel="canonical" href="https://tasksutra.app/signup" />
+      </Helmet>
+      <AuthLayout>
+        <div>
+          <h3 className="text-[20px] font-semibold mb-4">
+            Create an account
+          </h3>
 
-        {invitationCompany && (
-          <div className="mb-6 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">
-            <p className="text-[13px] font-medium text-[var(--text)]">
-              You've been invited to join <span className="font-semibold text-[var(--accent)]">{invitationCompany}</span> on TaskSutra.
-            </p>
-          </div>
-        )}
-
-        <form onSubmit={handleSignUp}>
-          <div className="mb-6 flex justify-center">
-            <ProfilePhotoSelector
-              image={profilePic}
-              setImage={setProfilePic}
-            />
-          </div>
-
-          <Input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            type="text"
-            label="Full Name"
-          />
-
-          <Input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            label="Email"
-            disabled={isEmailLocked}
-          />
-
-          <Input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            label="Password"
-          />
-
-          {error && (
-            <p className="text-sm text-red-500 mt-2 mb-3">
-              {error}
-            </p>
+          {invitationCompany && (
+            <div className="mb-6 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">
+              <p className="text-[13px] font-medium text-[var(--text)]">
+                You've been invited to join <span className="font-semibold text-[var(--accent)]">{invitationCompany}</span> on TaskSutra.
+              </p>
+            </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="
-              w-full py-[15px] mt-3 rounded-[12px]
-              bg-[var(--accent)] text-white text-[15px] font-medium
-              transition-all duration-200
-              hover:bg-[var(--accent-hover)] hover:-translate-y-[1px]
-              active:scale-[0.97]
-              disabled:opacity-70 disabled:cursor-not-allowed
-            "
-          >
-            {loading ? "Creating account..." : "Create Account"}
-          </button>
+          <form onSubmit={handleSignUp}>
+            <div className="mb-6 flex justify-center">
+              <ProfilePhotoSelector
+                image={profilePic}
+                setImage={setProfilePic}
+              />
+            </div>
 
-          <div className="mt-5 text-[13px] text-[var(--text-muted)] text-center">
-            Already have an account?{" "}
-            <Link
-              to="/login"
-              className="font-medium text-[var(--accent)] hover:underline"
+            <Input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              type="text"
+              label="Full Name"
+            />
+
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              label="Email"
+              disabled={isEmailLocked}
+            />
+
+            <Input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              label="Password"
+            />
+
+            {error && (
+              <p className="text-sm text-red-500 mt-2 mb-3">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="
+                w-full py-[15px] mt-3 rounded-[12px]
+                bg-[var(--accent)] text-white text-[15px] font-medium
+                transition-all duration-200
+                hover:bg-[var(--accent-hover)] hover:-translate-y-[1px]
+                active:scale-[0.97]
+                disabled:opacity-70 disabled:cursor-not-allowed
+              "
             >
-              Sign in
-            </Link>
-          </div>
-        </form>
-      </div>
-    </AuthLayout>
+              {loading ? "Creating account..." : "Create Account"}
+            </button>
+
+            <div className="mt-5 text-[13px] text-[var(--text-muted)] text-center">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="font-medium text-[var(--accent)] hover:underline"
+              >
+                Sign in
+              </Link>
+            </div>
+          </form>
+        </div>
+      </AuthLayout>
+    </>
   );
 };
 

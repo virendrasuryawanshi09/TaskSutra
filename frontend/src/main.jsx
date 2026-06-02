@@ -5,15 +5,18 @@ import App from './App.jsx'
 import { UserProvider } from './context/UserContext.jsx'
 import { SocketProvider } from './context/SocketContext.jsx'
 import { NotificationProvider } from './context/NotificationContext.jsx'
+import { HelmetProvider } from 'react-helmet-async'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <UserProvider>
-      <SocketProvider>
-        <NotificationProvider>
-          <App />
-        </NotificationProvider>
-      </SocketProvider>
-    </UserProvider>
+    <HelmetProvider>
+      <UserProvider>
+        <SocketProvider>
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
+        </SocketProvider>
+      </UserProvider>
+    </HelmetProvider>
   </StrictMode>,
 )

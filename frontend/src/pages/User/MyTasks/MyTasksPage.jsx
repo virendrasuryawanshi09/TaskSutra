@@ -9,6 +9,7 @@ import MyTasksWorkspace from "./components/MyTasksWorkspace";
 import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
 import TaskDiscussionPanel from "../Tasks/TaskDiscussionPanel";
 import { useSocket } from "../../../context/SocketContext";
+import { Helmet } from "react-helmet-async";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -500,8 +501,13 @@ const MyTasksPage = () => {
   };
 
   return (
-    <DashboardLayout>
-      <MyTasksWorkspace
+    <>
+      <Helmet>
+        <title>My Tasks | TaskSutra</title>
+        <meta name="description" content="Manage and track your assigned tasks, organize checklist items, and communicate with your team." />
+      </Helmet>
+      <DashboardLayout>
+        <MyTasksWorkspace
         user={user}
         tasks={visibleTasks}
         loading={loading}
@@ -544,6 +550,7 @@ const MyTasksPage = () => {
         currentUser={user}
       />
     </DashboardLayout>
+    </>
   );
 };
 

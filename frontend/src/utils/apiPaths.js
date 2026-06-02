@@ -42,5 +42,7 @@ export const API_PATHS = {
     GET_ORG_HEALTH: "/api/ai/org-health",
     RECOMMEND_ASSIGNEES: "/api/ai/recommend-assignees",
     GET_COGNITIVE_LOAD: (userId) => `/api/ai/cognitive-load/${userId}`,
+    CEO_NL_QUERY: "/api/ai/ceo/nl-query",
+    CEO_NL_STREAM: "/api/ai/ceo/nl-query/stream",
   },
 };

@@ -10,11 +10,11 @@ import InfoCard from '../../components/Cards/InfoCard';
 import { HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
 import { LuArrowRight, LuSparkles, LuSend, LuCheck, LuCopy, LuDownload, LuClock, LuLayers, LuX, LuSearch } from 'react-icons/lu';
 import TaskListTable from '../../components/TaskListTable';
-import CustomPieChart from '../../components/Charts/CustomPieChart';
-import CustomBarChart from '../../components/Charts/CustomBarChart';
+const CustomPieChart = React.lazy(() => import('../../components/Charts/CustomPieChart'));
+const CustomBarChart = React.lazy(() => import('../../components/Charts/CustomBarChart'));
+const AutoChart = React.lazy(() => import('../../components/Charts/AutoChart'));
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell as RechartsCell } from 'recharts';
 
 
 const COLORS = [
@@ -23,48 +23,6 @@ const COLORS = [
   "#4C7F6A", // Completed
 ];
 
-const AutoChart = ({ data }) => {
-  if (!Array.isArray(data) || data.length < 2) return null;
-  const sample = data[0];
-  const keys = Object.keys(sample);
-  const valueKey = keys.find(k => typeof sample[k] === 'number' && k !== '__v' && k !== 'progress' && k !== 'estimatedComplexityScore');
-  const labelKey = keys.find(k => typeof sample[k] === 'string' && k !== '_id' && k !== 'companyId');
-
-  if (!valueKey || !labelKey) return null;
-
-  const chartData = data.map(item => ({
-    name: item[labelKey] || "Unknown",
-    value: item[valueKey]
-  }));
-
-  const chartColors = ["#4F46E5", "#D97706", "#059669", "#2563EB", "#7C3AED", "#EC4899", "#10B981"];
-
-  return (
-    <div className="p-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm space-y-3">
-      <span className="text-[10px] font-bold text-[var(--accent)] tracking-wider uppercase flex items-center gap-1.5">
-        <LuLayers size={13} className="text-[var(--accent)]" /> Data Visualization
-      </span>
-      <div className="h-[200px] w-full pt-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
-            <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-            <RechartsTooltip 
-              cursor={{ fill: 'var(--bg-soft)', opacity: 0.4 }}
-              contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: '11px', color: 'var(--text)' }}
-            />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
-              {chartData.map((entry, index) => (
-                <RechartsCell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
 
 const KeyMetricPills = ({ rawData, isTaskData, isUserData }) => {
   if (!Array.isArray(rawData) || rawData.length === 0) return null;
@@ -684,7 +642,9 @@ const Dashboard = () => {
                   <div className="w-40 h-40 rounded-full bg-[var(--bg-soft)]" />
                 </div>
               ) : (
-                <CustomPieChart data={pieChartData} colors={COLORS} />
+                <React.Suspense fallback={<div className="h-[260px] animate-pulse flex items-center justify-center"><div className="w-40 h-40 rounded-full bg-[var(--bg-soft)]" /></div>}>
+                  <CustomPieChart data={pieChartData} colors={COLORS} />
+                </React.Suspense>
               )}
             </div>
           </div>
@@ -701,7 +661,15 @@ const Dashboard = () => {
                   <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'40%'}} />
                 </div>
               ) : (
-                <CustomBarChart data={barChartData} />
+                <React.Suspense fallback={
+                  <div className="h-[300px] animate-pulse flex items-end gap-6 px-6 pb-4 pt-8">
+                    <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'60%'}} />
+                    <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'80%'}} />
+                    <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'40%'}} />
+                  </div>
+                }>
+                  <CustomBarChart data={barChartData} />
+                </React.Suspense>
               )}
             </div>
           </div>
@@ -1031,7 +999,9 @@ const Dashboard = () => {
                         <KeyMetricPills rawData={rawData} isTaskData={isTaskData} isUserData={isUserData} />
 
                         {/* Auto Chart (if applicable) */}
-                        <AutoChart data={rawData} />
+                        <React.Suspense fallback={<div className="h-[200px] animate-pulse bg-[var(--bg-soft)] rounded-2xl" />}>
+                          <AutoChart data={rawData} />
+                        </React.Suspense>
 
                         {/* Structured Data View (Cards or Table) */}
                         {isTaskData ? (

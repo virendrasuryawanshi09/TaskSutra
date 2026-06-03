@@ -424,9 +424,9 @@ const CreateTask = () => {
         >
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-[var(--text)] tracking-tight">
+              <h2 className="text-xl font-semibold text-[var(--text)] tracking-tight">
                 {taskId ? "Update Task" : "Create Task"}
-              </h1>
+              </h2>
               <p className="text-xs text-[var(--accent-hover)] mt-1">
                 Manage your tasks efficiently
               </p>

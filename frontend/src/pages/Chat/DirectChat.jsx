@@ -878,7 +878,7 @@ const DirectChat = ({ defaultCommunity = false }) => {
         {/* Left Sidebar - Users List */}
         <div className={`w-full md:w-64 flex-col bg-[var(--surface)] border-r border-[var(--border)] z-10 ${activeChat ? 'hidden md:flex' : 'flex'}`}>
           <div className="h-14 px-5 flex items-center border-b border-[var(--border)] shadow-sm">
-            <h1 className="text-[14px] font-bold tracking-tight text-[var(--text)]">Direct Messages</h1>
+            <h2 className="text-[14px] font-bold tracking-tight text-[var(--text)]">Direct Messages</h2>
           </div>
           
           <div className="flex-1 overflow-y-auto py-4 scrollbar-thin">

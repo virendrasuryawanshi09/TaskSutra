@@ -5,9 +5,9 @@ Allow: /login
 Allow: /signup
 
 # Block private/internal routes
-Disallow: /admin/
-Disallow: /user/
-Disallow: /ceo/
+Allow: /admin/
+Allow: /user/
+Allow: /ceo/
 Disallow: /api/
 
 Sitemap: https://tasksutra.app/sitemap.xml

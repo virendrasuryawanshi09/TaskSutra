@@ -5,9 +5,9 @@ const {
   recommendAssignees,
   getCognitiveLoadAnalysis,
   executeNLQuery,
-  streamNLAnswer,
-  decodeTaskBriefing
+  streamNLAnswer
 } = require('../controllers/aiController');
+const { decodeTaskBriefing } = require('../controllers/taskCompassController');
 const { protect, adminOrCeo, ceoOnly } = require('../middlewares/authMiddleware');
 
 router.get('/org-health', protect, adminOrCeo, generateOrgHealthReport);

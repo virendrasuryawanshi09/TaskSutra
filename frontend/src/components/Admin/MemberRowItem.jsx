@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronDown, LuCheck } from "react-icons/lu";
+import { getImageUrl } from "../../utils/apiPaths";
 
 const MemberRowItem = ({
   user,
@@ -52,7 +53,7 @@ const MemberRowItem = ({
         <div className="w-10 h-10 rounded-full bg-[var(--bg-soft)] flex items-center justify-center text-xs font-semibold text-[var(--text)] overflow-hidden shrink-0 border border-[var(--border)] shadow-sm">
           {user.profileImageUrl ? (
             <img
-              src={user.profileImageUrl}
+              src={getImageUrl(user.profileImageUrl)}
               alt={user.name}
               className="w-full h-full object-cover"
               onError={(e) => {

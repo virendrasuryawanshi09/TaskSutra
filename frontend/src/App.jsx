@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import { Toaster } from "react-hot-toast";
 import {
   BrowserRouter as Router,
@@ -6,23 +6,23 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-
-import SignUp from "./pages/Auth/SignUp";
-import Login from "./pages/Auth/Login";
-import PrivateRoute from "./routes/PrivateRoute";
-import MyTasks from "./pages/User/MyTasks";
-import UserDashboard from "./pages/User/Dashboard/UserDashboard";
-import ViewTaskDetails from "./pages/User/Tasks/ViewTaskDetails";
-import UserTeamMembers from "./pages/User/TeamMembers/UserTeamMembers";
-import DirectChat from "./pages/Chat/DirectChat";
 import useUserAuth from "./hooks/useUserAuth";
-import EditProfile from "./pages/User/Profile/EditProfile";
+import PrivateRoute from "./routes/PrivateRoute";
 
-// Lazy-loaded Admin pages
-const Dashboard = React.lazy(() => import("./pages/Admin/Dashboard"));
-const ManageTasks = React.lazy(() => import("./pages/Admin/ManageTasks"));
-const CreateTask = React.lazy(() => import("./pages/Admin/CreateTask"));
-const ManageUsers = React.lazy(() => import("./pages/Admin/ManageUsers"));
+// Lazy-load ALL page-level components — each becomes its own JS chunk
+// loaded only when the user first navigates to that route.
+const Login              = lazy(() => import("./pages/Auth/Login"));
+const SignUp             = lazy(() => import("./pages/Auth/SignUp"));
+const Dashboard          = lazy(() => import("./pages/Admin/Dashboard"));
+const ManageTasks        = lazy(() => import("./pages/Admin/ManageTasks"));
+const CreateTask         = lazy(() => import("./pages/Admin/CreateTask"));
+const ManageUsers        = lazy(() => import("./pages/Admin/ManageUsers"));
+const UserDashboard      = lazy(() => import("./pages/User/Dashboard/UserDashboard"));
+const MyTasks            = lazy(() => import("./pages/User/MyTasks"));
+const ViewTaskDetails    = lazy(() => import("./pages/User/Tasks/ViewTaskDetails"));
+const UserTeamMembers    = lazy(() => import("./pages/User/TeamMembers/UserTeamMembers"));
+const DirectChat         = lazy(() => import("./pages/Chat/DirectChat"));
+const EditProfile        = lazy(() => import("./pages/User/Profile/EditProfile"));
 
 
 const LoadingScreen = () => (
@@ -130,8 +130,8 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Suspense fallback={<LoadingScreen />}><Login /></Suspense></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Suspense fallback={<LoadingScreen />}><SignUp /></Suspense></PublicRoute>} />
 
           {/* Admin */}
           <Route element={<PrivateRoute allowedRoles={["admin", "ceo"]} />}>
@@ -140,21 +140,19 @@ const App = () => {
             <Route path="/admin/create-task" element={<Suspense fallback={<LoadingScreen />}><CreateTask /></Suspense>} />
             <Route path="/admin/tasks/:id" element={<Suspense fallback={<LoadingScreen />}><CreateTask /></Suspense>} />
             <Route path="/admin/users" element={<Suspense fallback={<LoadingScreen />}><ManageUsers /></Suspense>} />
-            <Route path="/admin/chat" element={<DirectChat defaultCommunity={true} />} />
-            <Route path="/admin/direct-chat" element={<DirectChat />} />
+            <Route path="/admin/chat" element={<Suspense fallback={<LoadingScreen />}><DirectChat defaultCommunity={true} /></Suspense>} />
+            <Route path="/admin/direct-chat" element={<Suspense fallback={<LoadingScreen />}><DirectChat /></Suspense>} />
           </Route>
-
-
 
           {/* User */}
           <Route element={<PrivateRoute allowedRoles={["member"]} />}>
-            <Route path="/user/dashboard" element={<UserDashboard />} />
-            <Route path="/user/my-tasks" element={<MyTasks />} />
-            <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
-            <Route path="/user/team-members" element={<UserTeamMembers />} />
-            <Route path="/user/profile" element={<EditProfile />} />
-            <Route path="/user/chat" element={<DirectChat defaultCommunity={true} />} />
-            <Route path="/user/direct-chat" element={<DirectChat />} />
+            <Route path="/user/dashboard" element={<Suspense fallback={<LoadingScreen />}><UserDashboard /></Suspense>} />
+            <Route path="/user/my-tasks" element={<Suspense fallback={<LoadingScreen />}><MyTasks /></Suspense>} />
+            <Route path="/user/task-details/:id" element={<Suspense fallback={<LoadingScreen />}><ViewTaskDetails /></Suspense>} />
+            <Route path="/user/team-members" element={<Suspense fallback={<LoadingScreen />}><UserTeamMembers /></Suspense>} />
+            <Route path="/user/profile" element={<Suspense fallback={<LoadingScreen />}><EditProfile /></Suspense>} />
+            <Route path="/user/chat" element={<Suspense fallback={<LoadingScreen />}><DirectChat defaultCommunity={true} /></Suspense>} />
+            <Route path="/user/direct-chat" element={<Suspense fallback={<LoadingScreen />}><DirectChat /></Suspense>} />
           </Route>
         </Routes>
       </Router>

@@ -542,16 +542,7 @@ const Dashboard = () => {
     getDashboardData();
   }, []);
 
-  if (!dashboardData) {
-    return (
-      <DashboardLayout activeMenu="Dashboard">
-        <div className="p-6 text-[var(--text-muted)]">
-          Loading dashboard...
-        </div>
-      </DashboardLayout>
-    );
-  }
-
+  // ─── Derive chart numbers (safe when dashboardData is still null) ───────────
   const taskDistribution = dashboardData?.charts?.taskDistribution || {};
   const totalTasks = Number(taskDistribution?.All || 0);
   const pendingTasks = Number(taskDistribution?.Pending || 0);
@@ -565,6 +556,17 @@ const Dashboard = () => {
   const inProgressCount = rawInProgressCount || Math.max(
     0,
     totalTasks - pendingTasks - completedTasks
+  );
+
+  // Skeleton pulse — shown for stat cards while loading
+  const StatSkeleton = () => (
+    <div className="animate-pulse flex min-h-[92px] items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 shadow-sm">
+      <div className="h-10 w-10 rounded-xl bg-[var(--bg-soft)]" />
+      <div className="flex flex-col gap-2">
+        <div className="h-2.5 w-16 rounded bg-[var(--bg-soft)]" />
+        <div className="h-5 w-10 rounded bg-[var(--bg-soft)]" />
+      </div>
+    </div>
   );
 
   return (
@@ -620,49 +622,56 @@ const Dashboard = () => {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 md:grid-cols-4 md:gap-6">
-            <InfoCard
-              label="Total Tasks"
-              icon={<HiOutlineClipboardList />}
-              value={addThousandSeparator(totalTasks)}
-              color="#4F46E5"
-            />
-
-            <InfoCard
-              label="Pending Tasks"
-              icon={<HiOutlineClock />}
-              value={addThousandSeparator(pendingTasks)}
-              color="#D97706"
-            />
-
-            <InfoCard
-              label="In Progress Tasks"
-              icon={<HiOutlineRefresh />}
-              value={addThousandSeparator(inProgressCount)}
-              color="#059669"
-            />
-            <InfoCard
-              label="Completed Tasks"
-              icon={<HiOutlineCheckCircle />}
-              value={addThousandSeparator(completedTasks)}
-              color="#2563EB"
-            />
+            {!dashboardData ? (
+              <>
+                <StatSkeleton /><StatSkeleton /><StatSkeleton /><StatSkeleton />
+              </>
+            ) : (
+              <>
+                <InfoCard
+                  label="Total Tasks"
+                  icon={<HiOutlineClipboardList />}
+                  value={addThousandSeparator(totalTasks)}
+                  color="#4F46E5"
+                />
+                <InfoCard
+                  label="Pending Tasks"
+                  icon={<HiOutlineClock />}
+                  value={addThousandSeparator(pendingTasks)}
+                  color="#D97706"
+                />
+                <InfoCard
+                  label="In Progress Tasks"
+                  icon={<HiOutlineRefresh />}
+                  value={addThousandSeparator(inProgressCount)}
+                  color="#059669"
+                />
+                <InfoCard
+                  label="Completed Tasks"
+                  icon={<HiOutlineCheckCircle />}
+                  value={addThousandSeparator(completedTasks)}
+                  color="#2563EB"
+                />
+              </>
+            )}
           </div>
+
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
-
 
           <div>
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
               <div className="flex items-center justify-between">
                 <h5 className="font-medium">Task Distribution</h5>
               </div>
-
-              <CustomPieChart
-                data={pieChartData}
-                colors={COLORS}
-              />
-
+              {!dashboardData ? (
+                <div className="h-[260px] animate-pulse flex items-center justify-center">
+                  <div className="w-40 h-40 rounded-full bg-[var(--bg-soft)]" />
+                </div>
+              ) : (
+                <CustomPieChart data={pieChartData} colors={COLORS} />
+              )}
             </div>
           </div>
 
@@ -671,22 +680,23 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <h5 className="font-medium">Task Priority Levels</h5>
               </div>
-
-              <CustomBarChart
-                data={barChartData}
-              />
+              {!dashboardData ? (
+                <div className="h-[300px] animate-pulse flex items-end gap-6 px-6 pb-4 pt-8">
+                  <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'60%'}} />
+                  <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'80%'}} />
+                  <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'40%'}} />
+                </div>
+              ) : (
+                <CustomBarChart data={barChartData} />
+              )}
             </div>
           </div>
 
           <div className="md:col-span-2">
-
             <div className="relative group rounded-2xl p-[1px] bg-gradient-to-br from-white/40 to-white/10">
-
               <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-md transition-all duration-300 p-5">
-
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-
                   <div>
                     <h5 className="text-lg font-semibold text-[var(--text)]">
                       Recent Tasks
@@ -695,7 +705,6 @@ const Dashboard = () => {
                       Track your latest activity
                     </p>
                   </div>
-
                   <button
                     className="flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition cursor-pointer"
                     onClick={onSeeMore}
@@ -703,18 +712,25 @@ const Dashboard = () => {
                     View All
                     <LuArrowRight className="text-base transition-transform duration-200 group-hover:translate-x-1" />
                   </button>
-
                 </div>
 
                 <div className="h-px bg-[var(--border)] mb-4"></div>
 
-                <TaskListTable tableData={dashboardData?.recentTasks || []} />
+                {!dashboardData ? (
+                  <div className="animate-pulse flex flex-col gap-3">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="h-12 rounded-xl bg-[var(--bg-soft)]" />
+                    ))}
+                  </div>
+                ) : (
+                  <TaskListTable tableData={dashboardData?.recentTasks || []} />
+                )}
 
               </div>
             </div>
-
           </div>
         </div>
+
 
         {/* AI Query Overlay Modal */}
         {isOverlayOpen && (() => {

@@ -1,4 +1,5 @@
 import React from "react";
+import { getImageUrl } from "../utils/apiPaths";
 
 const AvatarGroup = ({ avatars = [] }) => {
 
@@ -26,7 +27,7 @@ const AvatarGroup = ({ avatars = [] }) => {
 
           {user?.image ? (
             <img
-              src={user.image}
+              src={getImageUrl(user.image)}
               alt={user.name}
               className="w-full h-full object-cover"
               onError={(e) => {

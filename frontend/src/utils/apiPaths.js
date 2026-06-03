@@ -1,5 +1,19 @@
 export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+
+export const getImageUrl = (url) => {
+  if (!url) return null;
+  // Already a Cloudinary or other absolute HTTPS URL — return as-is
+  if (url.startsWith("https://")) return url;
+  // Rewrite any localhost origin to the configured production API base
+  if (url.includes("localhost") || url.includes("127.0.0.1")) {
+    return url.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, BASE_URL);
+  }
+  // Relative path — prepend BASE_URL
+  if (url.startsWith("/")) return `${BASE_URL}${url}`;
+  return url;
+};
+
 export const API_PATHS = {
   AUTH: {
     REGISTER: "/api/auth/register",

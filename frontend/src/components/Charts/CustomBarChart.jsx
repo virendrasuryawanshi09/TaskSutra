@@ -5,7 +5,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   Cell,
   CartesianGrid,
   LabelList,
@@ -47,7 +46,7 @@ const CustomBarChart = ({ data }) => {
     return null;
   };
 
-  // ✅ EMPTY STATE
+
   if (!data || data.every(item => item.count === 0)) {
     return (
       <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-muted)]">
@@ -57,88 +56,89 @@ const CustomBarChart = ({ data }) => {
   }
 
   return (
-    <div className="w-full h-[300px]">
-      <ResponsiveContainer>
-        <BarChart
-          data={data}
-          margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
+    // Fixed dimensions — avoids ResizeObserver / forced reflow from offsetWidth reads
+    <div className="w-full h-[300px] overflow-hidden">
+      <BarChart
+        width={500}
+        height={300}
+        data={data}
+        margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
+        style={{ width: "100%", height: "100%" }}
+      >
+        {/* GRADIENT DEFINITIONS */}
+        <defs>
+          {data.map((entry) => {
+            const [start, end] = getColors(entry.priority);
+            return (
+              <linearGradient
+                key={entry.priority}
+                id={getGradientId(entry.priority)}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop offset="0%" stopColor={start} />
+                <stop offset="100%" stopColor={end} />
+              </linearGradient>
+            );
+          })}
+        </defs>
+
+        {/* GRID */}
+        <CartesianGrid
+          stroke="var(--border)"
+          strokeDasharray="3 3"
+          vertical={false}
+        />
+
+        {/* AXIS */}
+        <XAxis
+          dataKey="priority"
+          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+        />
+
+        <YAxis
+          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+        />
+
+        {/* TOOLTIP */}
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
+
+        {/* BARS */}
+        <Bar
+          dataKey="count"
+          radius={[10, 10, 0, 0]}
+          animationDuration={800}
         >
-
-          {/* GRADIENT DEFINITIONS */}
-          <defs>
-            {data.map((entry) => {
-              const [start, end] = getColors(entry.priority);
-              return (
-                <linearGradient
-                  key={entry.priority}
-                  id={getGradientId(entry.priority)}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop offset="0%" stopColor={start} />
-                  <stop offset="100%" stopColor={end} />
-                </linearGradient>
-              );
-            })}
-          </defs>
-
-          {/* GRID */}
-          <CartesianGrid
-            stroke="var(--border)"
-            strokeDasharray="3 3"
-            vertical={false}
-          />
-
-          {/* AXIS */}
-          <XAxis
-            dataKey="priority"
-            tick={{ fill: "var(--text-muted)", fontSize: 12 }}
-            axisLine={false}
-            tickLine={false}
-          />
-
-          <YAxis
-            tick={{ fill: "var(--text-muted)", fontSize: 12 }}
-            axisLine={false}
-            tickLine={false}
-          />
-
-          {/* TOOLTIP */}
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
-
-          {/* BARS */}
-          <Bar
+          {/* VALUE LABELS */}
+          <LabelList
             dataKey="count"
-            radius={[10, 10, 0, 0]}
-            animationDuration={800}
-          >
-            {/* VALUE LABELS */}
-            <LabelList
-              dataKey="count"
-              position="top"
+            position="top"
+            style={{
+              fill: "var(--text)",
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          />
+
+          {data.map((entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={`url(#${getGradientId(entry.priority)})`}
               style={{
-                fill: "var(--text)",
-                fontSize: 12,
-                fontWeight: 500,
+                transition: "all 0.3s ease",
+                cursor: "pointer",
               }}
             />
+          ))}
+        </Bar>
 
-            {data.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={`url(#${getGradientId(entry.priority)})`}
-                style={{
-                  transition: "all 0.3s ease",
-                  cursor: "pointer",
-                }}
-              />
-            ))}
-          </Bar>
-
-        </BarChart>
-      </ResponsiveContainer>
+      </BarChart>
     </div>
   );
 };

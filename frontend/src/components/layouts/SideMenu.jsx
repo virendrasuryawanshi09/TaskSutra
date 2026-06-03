@@ -4,6 +4,7 @@ import { UserContext } from "../../context/UserContextState";
 import { useNavigate, useLocation } from "react-router-dom";
 import { SIDE_MENU_DATA, SIDE_MENU_USER_DATA } from "../../utils/data";
 import { HiOutlineX } from "react-icons/hi";
+import { getImageUrl } from "../../utils/apiPaths";
 
 const SideMenu = () => {
   const { user, clearUser } = useContext(UserContext);
@@ -79,7 +80,7 @@ const SideMenu = () => {
         {/* IMAGE */}
         {user?.profileImageUrl && !imageError ? (
           <img
-            src={user.profileImageUrl}
+            src={getImageUrl(user.profileImageUrl)}
             alt={user?.name || "User"}
             onError={() => setImageError(true)}
             className="

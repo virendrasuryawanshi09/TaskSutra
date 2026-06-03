@@ -309,6 +309,20 @@ const Dashboard = () => {
   const [pieChartData, setPieChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
 
+  // Defer chart rendering until after first paint to avoid forced reflow
+  // on the critical path. Charts are below the fold anyway.
+  const [chartsReady, setChartsReady] = useState(false);
+  useEffect(() => {
+    const cb = () => setChartsReady(true);
+    if ('requestIdleCallback' in window) {
+      const id = requestIdleCallback(cb, { timeout: 300 });
+      return () => cancelIdleCallback(id);
+    } else {
+      const t = setTimeout(cb, 300);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   // CEO Search states
   const [query, setQuery] = useState("");
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
@@ -665,7 +679,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <h5 className="font-medium">Task Distribution</h5>
               </div>
-              {!dashboardData ? (
+              {(!dashboardData || !chartsReady) ? (
                 <div className="h-[260px] animate-pulse flex items-center justify-center">
                   <div className="w-40 h-40 rounded-full bg-[var(--bg-soft)]" />
                 </div>
@@ -680,7 +694,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <h5 className="font-medium">Task Priority Levels</h5>
               </div>
-              {!dashboardData ? (
+              {(!dashboardData || !chartsReady) ? (
                 <div className="h-[300px] animate-pulse flex items-end gap-6 px-6 pb-4 pt-8">
                   <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'60%'}} />
                   <div className="flex-1 bg-[var(--bg-soft)] rounded-t-lg" style={{height:'80%'}} />

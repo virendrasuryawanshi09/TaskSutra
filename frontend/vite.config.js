@@ -6,81 +6,81 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   build: {
-    // Source maps only in dev — Vercel returns 403 for .map files in production,
-    // which triggers Lighthouse "missing source maps" console errors.
+    // Source maps only in dev — Vercel returns 403 for .map files in production
     sourcemap: mode !== 'production',
 
     rollupOptions: {
       output: {
-        // ─── Granular vendor chunk splitting ──────────────────────────────────
-        // Each entry becomes a separately cached chunk. Users only re-download
-        // a chunk when THAT library changes, not the entire bundle.
         manualChunks(id) {
-          // React core — changes almost never
-          if (id.includes('node_modules/react/') ||
-              id.includes('node_modules/react-dom/') ||
-              id.includes('node_modules/react-is/') ||
-              id.includes('node_modules/scheduler/')) {
-            return 'vendor-react';
-          }
+          // ── React core ─────────────────────────────────────────────────────
+          // Never changes, longest cache lifetime
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react-is/') ||
+            id.includes('node_modules/scheduler/')
+          ) return 'vendor-react';
 
-          // Router — changes rarely
-          if (id.includes('node_modules/react-router') ||
-              id.includes('node_modules/@remix-run/')) {
-            return 'vendor-router';
-          }
+          // ── Router ─────────────────────────────────────────────────────────
+          if (
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/@remix-run/')
+          ) return 'vendor-router';
 
-          // Recharts + D3 deps — large, changes rarely, only needed on dashboard
-          if (id.includes('node_modules/recharts') ||
-              id.includes('node_modules/d3-') ||
-              id.includes('node_modules/victory-vendor')) {
-            return 'vendor-charts';
-          }
+          // ── Recharts + D3 ─────────────────────────────────────────────────
+          // Only Dashboard uses these — and Dashboard is lazy-loaded.
+          // Keeping them in a named chunk prevents duplication if multiple
+          // lazy routes ever import recharts.
+          if (
+            id.includes('node_modules/recharts') ||
+            id.includes('node_modules/d3-') ||
+            id.includes('node_modules/victory-vendor')
+          ) return 'vendor-charts';
 
-          // Framer Motion — large animation library
-          if (id.includes('node_modules/framer-motion')) {
-            return 'vendor-motion';
-          }
+          // ── Moment.js ─────────────────────────────────────────────────────
+          if (id.includes('node_modules/moment')) return 'vendor-moment';
 
-          // Moment.js — large date library
-          if (id.includes('node_modules/moment')) {
-            return 'vendor-moment';
-          }
+          // ── React Icons ───────────────────────────────────────────────────
+          if (id.includes('node_modules/react-icons')) return 'vendor-icons';
 
-          // React Icons — large icon set
-          if (id.includes('node_modules/react-icons')) {
-            return 'vendor-icons';
-          }
+          // ── Socket.io ─────────────────────────────────────────────────────
+          if (
+            id.includes('node_modules/socket.io-client') ||
+            id.includes('node_modules/engine.io-client') ||
+            id.includes('node_modules/@socket.io/')
+          ) return 'vendor-socket';
 
-          // Socket.io client
-          if (id.includes('node_modules/socket.io-client') ||
-              id.includes('node_modules/engine.io-client') ||
-              id.includes('node_modules/@socket.io/')) {
-            return 'vendor-socket';
-          }
+          // ── Axios ─────────────────────────────────────────────────────────
+          if (
+            id.includes('node_modules/axios') ||
+            id.includes('node_modules/form-data')
+          ) return 'vendor-http';
 
-          // Axios + http utils
-          if (id.includes('node_modules/axios') ||
-              id.includes('node_modules/form-data')) {
-            return 'vendor-http';
-          }
+          // ── Toast ─────────────────────────────────────────────────────────
+          if (id.includes('node_modules/react-hot-toast')) return 'vendor-ui';
 
-          // Toast notifications
-          if (id.includes('node_modules/react-hot-toast')) {
-            return 'vendor-ui';
-          }
+          // ── react-helmet-async ────────────────────────────────────────────
+          // Small, no CSS — safe to group
+          if (id.includes('node_modules/react-helmet-async')) return 'vendor-helmet';
 
-          // Headless UI, react-datepicker, react-helmet
-          if (id.includes('node_modules/@headlessui') ||
-              id.includes('node_modules/react-datepicker') ||
-              id.includes('node_modules/react-helmet-async')) {
-            return 'vendor-misc';
-          }
+          // ─────────────────────────────────────────────────────────────────
+          // DO NOT put these in shared vendor chunks:
+          //
+          // • framer-motion  — 78 KiB, used in Navbar/SideMenu on every page.
+          //   Putting it in a vendor chunk forces it to load eagerly.
+          //   Let Rollup tree-shake it naturally into only the chunks that use it.
+          //
+          // • react-datepicker — has its own CSS. Putting it in vendor-misc
+          //   causes Vite to generate a vendor-misc.css that is RENDER-BLOCKING
+          //   even though CreateTask (the only consumer) is lazy-loaded.
+          //   Let it bundle into the CreateTask chunk instead.
+          //
+          // • @headlessui/react — same reason as react-datepicker.
+          // ─────────────────────────────────────────────────────────────────
         },
       },
     },
 
-    // Increase chunk size warning limit
     chunkSizeWarningLimit: 600,
   },
 }))

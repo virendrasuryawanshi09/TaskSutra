@@ -5,7 +5,7 @@ Allow: /login
 Allow: /signup
 
 # Block private/internal routes
-Disallow: /admin/
+Allow: /admin/
 Disallow: /user/
 Disallow: /ceo/
 Disallow: /api/

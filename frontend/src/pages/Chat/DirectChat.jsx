@@ -623,10 +623,11 @@ const DirectChat = ({ defaultCommunity = false }) => {
         await axiosInstance.delete(`/api/direct-chats/message/${messageId}`);
         setMessages(prev => prev.filter(m => m._id !== messageId));
         if (socketRef.current) {
+          const activeDirectChat = directChats.find(c => c.participants.some(p => String(p._id || p) === String(activeChat.data._id)));
           socketRef.current.emit('delete_direct_message', {
              receiverId: activeChat.data._id,
              messageId,
-             chatId: activeChat.data.chatId
+             chatId: activeDirectChat ? activeDirectChat._id : undefined
           });
         }
       } else if (activeChat.type === 'task') {

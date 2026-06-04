@@ -47,6 +47,10 @@ const getUserById = async (req, res) => {
          const user = await User.findById(req.params.id).select("-password");
          if(!user) return res.status(404).json({message: "User not found"});
 
+         if (String(user.companyId || '') !== String(req.user.companyId || '')) {
+             return res.status(403).json({message: "Not authorized to view this user profile"});
+         }
+
          res.json(user);
     }catch(error) {
         res.status(500).json({message: "Server error", error: error.message});
@@ -58,6 +62,15 @@ const reorderTasks = async (req, res) => {
         const { taskOrder } = req.body;
         if (!Array.isArray(taskOrder)) {
             return res.status(400).json({ success: false, message: "taskOrder must be an array of task IDs" });
+        }
+
+        // Verify all tasks in the reorder request belong to the user's company
+        const validTasksCount = await Task.countDocuments({
+            _id: { $in: taskOrder },
+            companyId: req.user.companyId
+        });
+        if (validTasksCount !== taskOrder.length) {
+            return res.status(400).json({ success: false, message: "All tasks in taskOrder must belong to your company" });
         }
 
         const user = await User.findById(req.user._id);

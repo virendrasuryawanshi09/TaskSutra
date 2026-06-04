@@ -41,6 +41,12 @@ export const SIDE_MENU_DATA = [
         path: "/admin/direct-chat",
     },
     {
+        id: "profile-admin",
+        label: "Edit Profile",
+        icon: LuUser,
+        path: "/user/profile",
+    },
+    {
         id: "05",
         label: "Logout",
         icon: LuLogOut,
@@ -108,5 +114,5 @@ export const PRIORITY_DATA = [
 export const STATUS_DATA = [
     { label: "Pending", value: "Pending" },
     { label: "In Progress", value: "In Progress" },
-    { label: "Competed", value: "Completed" }
+    { label: "Completed", value: "Completed" }
 ]

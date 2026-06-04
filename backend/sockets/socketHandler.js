@@ -1,5 +1,6 @@
 const { addUser, removeUserBySocketId, getSocketId, getAllUsers } = require("./userSocketMap");
 const socketAuth = require("../middlewares/socketAuth");
+const Task = require("../models/Task");
 
 module.exports = (io) => {
     // Apply authentication middleware
@@ -30,24 +31,40 @@ module.exports = (io) => {
         if (socket.user.companyId) {
             socket.join(`company_${socket.user.companyId.toString()}`);
             console.log(`User ${userIdStr} joined company room: company_${socket.user.companyId}`);
-            // Broadcast only to their company that they are online
             io.to(`company_${socket.user.companyId.toString()}`).emit("userOnline", { userId: userIdStr, onlineUsers: getAllUsers() });
         } else {
             io.emit("userOnline", { userId: userIdStr, onlineUsers: getAllUsers() });
         }
 
+        // Helper to verify if receiver belongs to the same company
+        const checkCompanyBoundary = (receiverSocketId) => {
+            if (!receiverSocketId) return false;
+            const receiverSocket = io.sockets.sockets.get(receiverSocketId);
+            if (!receiverSocket || !receiverSocket.user) return false;
+            return String(receiverSocket.user.companyId || '') === String(socket.user.companyId || '');
+        };
+
         // --- Room based architecture ---
-        socket.on("joinTaskRoom", (taskId) => {
-            if (taskId) {
+        socket.on("joinTaskRoom", async (taskId) => {
+            if (!taskId) return;
+            try {
+                const task = await Task.findById(taskId).select('companyId');
+                if (!task) return;
+                if (String(task.companyId || '') !== String(socket.user.companyId || '')) {
+                    console.warn(`User ${userIdStr} attempted unauthorized join to task room ${taskId}`);
+                    return;
+                }
                 socket.join(`task_${taskId}`);
-                console.log(`User ${userId} joined room: task_${taskId}`);
+                console.log(`User ${userIdStr} joined room: task_${taskId}`);
+            } catch (err) {
+                console.error("Error joining task room:", err.message);
             }
         });
 
         socket.on("leaveTaskRoom", (taskId) => {
             if (taskId) {
                 socket.leave(`task_${taskId}`);
-                console.log(`User ${userId} left room: task_${taskId}`);
+                console.log(`User ${userIdStr} left room: task_${taskId}`);
             }
         });
 
@@ -57,7 +74,6 @@ module.exports = (io) => {
             
             if (disconnectedUserId) {
                 console.log(`User ${disconnectedUserId} went offline`);
-                // Broadcast only to their company that they are offline
                 if (socket.user && socket.user.companyId) {
                     io.to(`company_${socket.user.companyId.toString()}`).emit("userOffline", { userId: disconnectedUserId, onlineUsers: getAllUsers() });
                 } else {
@@ -66,10 +82,9 @@ module.exports = (io) => {
             }
         });
         
-        // Handle explicit reconnection requests if needed
         socket.on("reconnect_user", () => {
-             console.log(`User ${userId} requested reconnect for socket ${socket.id}`);
-             addUser(userId.toString(), socket.id);
+             console.log(`User ${userIdStr} requested reconnect for socket ${socket.id}`);
+             addUser(userIdStr, socket.id);
         });
         
         // --- Global Chat Events ---
@@ -78,7 +93,6 @@ module.exports = (io) => {
                 return;
             }
 
-            // Rebuild payload from validated database user context to prevent spoofing
             const verifiedMessage = {
                 _id: messageData._id,
                 content: String(messageData.content).trim(),
@@ -94,7 +108,6 @@ module.exports = (io) => {
                 companyId: socket.user.companyId ? socket.user.companyId.toString() : null
             };
 
-            // Restrict message payload length to prevent DDoS/crash attempts
             if (verifiedMessage.content.length > 5000) {
                 verifiedMessage.content = verifiedMessage.content.substring(0, 5000);
             }
@@ -124,54 +137,69 @@ module.exports = (io) => {
 
         // --- Direct Messaging Events ---
         socket.on("send_direct_message", (data) => {
-            // data should contain { receiverId, messageData }
             const { receiverId, messageData } = data;
             const receiverSocketId = getSocketId(String(receiverId));
-            if (receiverSocketId) {
+            if (receiverSocketId && checkCompanyBoundary(receiverSocketId)) {
                 io.to(receiverSocketId).emit("receive_direct_message", messageData);
             }
         });
 
         socket.on("dm_typing", (data) => {
-             // data should contain { receiverId, senderId, name }
              const receiverSocketId = getSocketId(String(data.receiverId));
-             if (receiverSocketId) {
+             if (receiverSocketId && checkCompanyBoundary(receiverSocketId)) {
                  io.to(receiverSocketId).emit("dm_typing", data);
              }
         });
 
         socket.on("dm_stop_typing", (data) => {
-             // data should contain { receiverId, senderId }
              const receiverSocketId = getSocketId(String(data.receiverId));
-             if (receiverSocketId) {
+             if (receiverSocketId && checkCompanyBoundary(receiverSocketId)) {
                  io.to(receiverSocketId).emit("dm_stop_typing", data);
              }
         });
 
         socket.on("mark_messages_seen", (data) => {
-             // data should contain { chatId, readerId, senderId }
              const senderSocketId = getSocketId(String(data.senderId));
-             if (senderSocketId) {
+             if (senderSocketId && checkCompanyBoundary(senderSocketId)) {
                  io.to(senderSocketId).emit("messages_seen", data);
              }
         });
 
         // --- Task Discussion Events ---
-        socket.on("send_task_message", (data) => {
-             // data should contain { taskId, messageData }
+        socket.on("send_task_message", async (data) => {
              const { taskId, messageData } = data;
-             // Broadcast to everyone in the task room
-             io.to(`task_${taskId}`).emit("receive_task_message", messageData);
+             if (!taskId) return;
+             try {
+                 const task = await Task.findById(taskId).select('companyId');
+                 if (!task || String(task.companyId || '') !== String(socket.user.companyId || '')) return;
+                 io.to(`task_${taskId}`).emit("receive_task_message", messageData);
+             } catch (err) {
+                 console.error("Error sending task message:", err.message);
+             }
         });
 
-        socket.on("task_typing", (data) => {
-             // data should contain { taskId, userId, name }
-             socket.to(`task_${data.taskId}`).emit("task_typing", data);
+        socket.on("task_typing", async (data) => {
+             const { taskId } = data;
+             if (!taskId) return;
+             try {
+                 const task = await Task.findById(taskId).select('companyId');
+                 if (!task || String(task.companyId || '') !== String(socket.user.companyId || '')) return;
+                 socket.to(`task_${taskId}`).emit("task_typing", data);
+             } catch (err) {
+                 console.error("Error broadcasting task typing:", err.message);
+             }
         });
 
-        socket.on("task_stop_typing", (data) => {
-             // data should contain { taskId, userId }
-             socket.to(`task_${data.taskId}`).emit("task_stop_typing", data);
+        socket.on("task_stop_typing", async (data) => {
+             const { taskId } = data;
+             if (!taskId) return;
+             try {
+                 const task = await Task.findById(taskId).select('companyId');
+                 if (!task || String(task.companyId || '') !== String(socket.user.companyId || '')) return;
+                 socket.to(`task_${taskId}`).emit("task_stop_typing", data);
+             } catch (err) {
+                 console.error("Error broadcasting task stop typing:", err.message);
+             }
         });
 
         // --- Edit/Delete Message Events ---
@@ -194,7 +222,7 @@ module.exports = (io) => {
         socket.on("edit_direct_message", (data) => {
             const { receiverId, messageData } = data;
             const receiverSocketId = getSocketId(String(receiverId));
-            if (receiverSocketId) {
+            if (receiverSocketId && checkCompanyBoundary(receiverSocketId)) {
                 io.to(receiverSocketId).emit("receive_edit_direct_message", messageData);
             }
         });
@@ -202,19 +230,33 @@ module.exports = (io) => {
         socket.on("delete_direct_message", (data) => {
             const { receiverId, messageId, chatId } = data;
             const receiverSocketId = getSocketId(String(receiverId));
-            if (receiverSocketId) {
+            if (receiverSocketId && checkCompanyBoundary(receiverSocketId)) {
                 io.to(receiverSocketId).emit("receive_delete_direct_message", { messageId, chatId });
             }
         });
 
-        socket.on("edit_task_message", (data) => {
+        socket.on("edit_task_message", async (data) => {
              const { taskId, messageData } = data;
-             io.to(`task_${taskId}`).emit("receive_edit_task_message", messageData);
+             if (!taskId) return;
+             try {
+                 const task = await Task.findById(taskId).select('companyId');
+                 if (!task || String(task.companyId || '') !== String(socket.user.companyId || '')) return;
+                 io.to(`task_${taskId}`).emit("receive_edit_task_message", messageData);
+             } catch (err) {
+                 console.error("Error editing task message:", err.message);
+             }
         });
 
-        socket.on("delete_task_message", (data) => {
+        socket.on("delete_task_message", async (data) => {
              const { taskId, messageId } = data;
-             io.to(`task_${taskId}`).emit("receive_delete_task_message", { messageId });
+             if (!taskId) return;
+             try {
+                 const task = await Task.findById(taskId).select('companyId');
+                 if (!task || String(task.companyId || '') !== String(socket.user.companyId || '')) return;
+                 io.to(`task_${taskId}`).emit("receive_delete_task_message", { messageId });
+             } catch (err) {
+                 console.error("Error deleting task message:", err.message);
+             }
         });
 
         // --- Task Synchronization Events ---

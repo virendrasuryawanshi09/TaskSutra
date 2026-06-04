@@ -1,6 +1,7 @@
 const express = require('express');
 const {protect, adminOrCeo} = require('../middlewares/authMiddleware');
-const {getUserDashboardData , updateTaskStatus, getDashboardData, getTasks, getTaskById, createTask, updateTask, deleteTask, updateTaskChecklist} = require('../controllers/taskController');
+const { updateTaskStatus, getTasks, getTaskById, createTask, updateTask, deleteTask, updateTaskChecklist} = require('../controllers/taskController');
+const { getDashboardData, getUserDashboardData } = require('../controllers/dashboardController');
 const validateObjectId = require('../middlewares/validateObjectId');
 
 const router = express.Router();

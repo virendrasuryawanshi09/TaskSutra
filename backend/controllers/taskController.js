@@ -1,7 +1,9 @@
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
 const { createAndSendNotification } = require('../services/notificationService');
-const MAX_RECENT_TASKS = 8;
+const User = require('../models/User');
+const cacheService = require('../services/cacheService');
+
 
 const normalizeTaskStatus = (status = '') => {
     const normalizedValue = String(status).trim().toLowerCase();
@@ -28,7 +30,6 @@ const getTodoChecklist = (task) => {
 
 const getTasks = async (req, res) => {
     try {
-
         const { status } = req.query;
         let filter = {};
 
@@ -41,7 +42,6 @@ const getTasks = async (req, res) => {
         filter.companyId = companyId;
 
         let tasks;
-
         const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
 
         // Admin/CEO can see all tasks
@@ -158,6 +158,16 @@ const createTask = async (req, res) => {
             return res.status(400).json({ message: 'Assigned users must be an array of user IDs' });
         }
 
+        if (assignedTo && assignedTo.length > 0) {
+            const assignedUsersCount = await User.countDocuments({
+                _id: { $in: assignedTo },
+                companyId: req.user.companyId
+            });
+            if (assignedUsersCount !== assignedTo.length) {
+                return res.status(400).json({ message: "All assigned users must belong to your company" });
+            }
+        }
+
         const task = await Task.create({
             title,
             description,
@@ -184,6 +194,9 @@ const createTask = async (req, res) => {
             })
         );
         await Promise.all(notificationPromises);
+
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         res.status(201).json({ message: 'Task created successfully', task });
 
@@ -236,6 +249,13 @@ const updateTask = async (req, res) => {
         if (req.body.assignedTo) {
             if (!Array.isArray(req.body.assignedTo)) {
                 return res.status(400).json({ message: 'Assigned users must be an array of user IDs' });
+            }
+            const assignedUsersCount = await User.countDocuments({
+                _id: { $in: req.body.assignedTo },
+                companyId: req.user.companyId
+            });
+            if (assignedUsersCount !== req.body.assignedTo.length) {
+                return res.status(400).json({ message: "All assigned users must belong to your company" });
             }
             const newAssigned = req.body.assignedTo.map(id => id.toString());
             newlyAssigned = newAssigned.filter(id => !oldAssigned.includes(id));
@@ -293,6 +313,9 @@ const updateTask = async (req, res) => {
 
         await Promise.all(notificationPromises);
 
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
+
         res.json({ message: 'Task updated successfully', task: updatedTask });
 
     } catch (error) {
@@ -330,6 +353,9 @@ const deleteTask = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
+
         res.json({ message: 'Task deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -365,7 +391,6 @@ const updateTaskChecklist = async (req, res) => {
         ).length;
 
         const totalItems = getTodoChecklist(task).length;
-
         task.progress = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
 
         if (task.progress === 100) {
@@ -400,170 +425,15 @@ const updateTaskChecklist = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
+
         const populatedTask = await Task.findById(req.params.id).populate(
             'assignedTo',
             'name email profileImageUrl'
         );
         res.json({ message: 'Task checklist updated successfully', task: populatedTask });
 
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-};
-
-const getDashboardData = async (req, res) => {
-    try {
-        const companyId = req.user.companyId;
-        if (!companyId) {
-            return res.status(400).json({ message: "No company associated with user" });
-        }
-        const companyObjectId = new mongoose.Types.ObjectId(companyId.toString());
-
-        const totalTasks = await Task.countDocuments({ companyId: companyObjectId });
-        const pendingTasks = await Task.countDocuments({ companyId: companyObjectId, status: "Pending" });
-        const completedTasks = await Task.countDocuments({ companyId: companyObjectId, status: "Completed" });
-        const overdueTasks = await Task.countDocuments({
-            companyId: companyObjectId,
-            status: { $ne: "Completed" },
-            dueDate: { $lt: new Date() }
-        });
-
-        const taskStatuses = ["Pending", "In-progress", "Completed"];
-        const taskDistributionRaw = await Task.aggregate([
-            { $match: { companyId: companyObjectId } },
-            {
-                $group: {
-                    _id: "$status",
-                    count: { $sum: 1 },
-                },
-            },
-        ]);
-
-        const taskDistribution = taskStatuses.reduce((acc, status) => {
-            const formattedKey = status.replace(/\+/g, "");
-            acc[formattedKey] =
-                taskDistributionRaw.find((item) => item._id === status)?.count || 0;
-            return acc;
-        }, {});
-        taskDistribution["All"] = totalTasks;
-
-        const taskPriorities = ["Low", "Medium", "High"];
-        const taskPriorityLevelsRaw = await Task.aggregate([
-            { $match: { companyId: companyObjectId } },
-            {
-                $group: {
-                    _id: "$priority",
-                    count: { $sum: 1 },
-                },
-            },
-        ]);
-
-        const taskPriorityLevels = taskPriorities.reduce((acc, priority) => {
-            acc[priority] = 
-                taskPriorityLevelsRaw.find((item) => item._id === priority)?.count || 0;
-                return acc;
-        }, {});
-
-        const recentTasks = await Task.find({ companyId })
-        .sort({ createdAt: -1 })
-        .limit(MAX_RECENT_TASKS)
-        .select("title status priority dueDate createdAt");
-
-        res.status(200).json({
-            statistics: {
-                totalTasks,
-                pendingTasks,
-                completedTasks,
-                overdueTasks,
-            },
-
-            charts: {
-                taskDistribution,
-                taskPriorityLevels,
-            },
-            
-            recentTasks,
-        });
-
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-};
-
-const getUserDashboardData = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        const companyId = req.user.companyId;
-        if (!companyId) {
-            return res.status(400).json({ message: "No company associated with user" });
-        }
-
-        const userObjectId = new mongoose.Types.ObjectId(userId.toString());
-        const companyObjectId = new mongoose.Types.ObjectId(companyId.toString());
-
-        const totalTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId });
-        const pendingTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId, status: "Pending" });
-        const completedTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId, status: "Completed" });
-        const overdueTasks = await Task.countDocuments({
-            companyId: companyObjectId,
-            assignedTo: userObjectId,
-            status: { $ne: "Completed" },
-            dueDate: { $lt: new Date() }
-        });
-
-        const taskStatuses = ["Pending", "In-progress", "Completed"];
-        const taskDistributionRaw = await Task.aggregate([
-            { $match: { companyId: companyObjectId, assignedTo: userObjectId } },
-            {
-                $group: {
-                    _id: "$status",
-                    count: { $sum: 1 },
-                },
-            },
-        ]);
-        const taskDistribution = taskStatuses.reduce((acc, status) => {
-            const formattedKey = status.replace(/\+/g, "");
-            acc[formattedKey] =
-                taskDistributionRaw.find((item) => item._id === status)?.count || 0;
-            return acc;
-        }, {});
-        taskDistribution["All"] = totalTasks;
-
-        const taskPriorities = ["Low", "Medium", "High"];
-        const taskPriorityLevelsRaw = await Task.aggregate([
-            { $match: { companyId: companyObjectId, assignedTo: userObjectId } },
-            {
-                $group: {
-                    _id: "$priority",
-                    count: { $sum: 1 },
-                },
-            },
-        ]);
-
-        const taskPriorityLevels = taskPriorities.reduce((acc, priority) => {
-            acc[priority] = 
-                taskPriorityLevelsRaw.find((item) => item._id === priority)?.count || 0;
-                return acc;
-        }, {});
-
-        const recentTasks = await Task.find({ companyId, assignedTo: userId })
-        .sort({ createdAt: -1 })
-        .limit(MAX_RECENT_TASKS)
-        .select("title status priority dueDate createdAt");
-        
-        res.status(200).json({
-            statistics: {
-                totalTasks,
-                pendingTasks,
-                completedTasks,
-                overdueTasks,
-            },
-            charts: {
-                taskDistribution,
-                taskPriorityLevels,
-            },
-            recentTasks,
-        });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -600,6 +470,11 @@ const updateTaskStatus = async (req, res) => {
             }));
             task.progress = 100;
         } else if (task.status === 'Pending') {
+            task.todoChecklist = getTodoChecklist(task).map((item) => ({
+                ...item.toObject?.(),
+                ...item,
+                completed: false,
+            }));
             task.progress = 0;
         }
 
@@ -627,10 +502,12 @@ const updateTaskStatus = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
+
         res.json({ message: 'Task status updated successfully', task });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
-
     }
 };
 
@@ -645,8 +522,6 @@ module.exports = {
     updateTask,
     deleteTask,
     updateTaskChecklist,
-    getDashboardData,
-    getUserDashboardData,
     updateTaskStatus,
     updateTaskTodos
 };

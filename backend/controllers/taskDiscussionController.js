@@ -12,8 +12,8 @@ exports.getTaskDiscussion = async (req, res) => {
     const { taskId } = req.params;
     const userId = req.user.id || req.user._id;
 
-    // Verify task exists and user is authorized
-    const task = await Task.findById(taskId);
+    // Verify task exists and user belongs to the same company
+    const task = await Task.findOne({ _id: taskId, companyId: req.user.companyId });
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     // Authorization: Admin or assigned to task
@@ -42,7 +42,7 @@ exports.getTaskDiscussion = async (req, res) => {
     }
 
     const messages = await TaskMessage.find({ discussionId: discussion._id })
-      .populate("sender", "name profilePicture email")
+      .populate("sender", "name profileImageUrl email")
       .sort({ createdAt: 1 });
 
     res.status(200).json({ discussion, messages });
@@ -64,7 +64,7 @@ exports.sendTaskMessage = async (req, res) => {
     if (!content) return res.status(400).json({ message: "Message content is required" });
 
     // Authorization: Admin or assigned to task
-    const task = await Task.findById(taskId);
+    const task = await Task.findOne({ _id: taskId, companyId: req.user.companyId });
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     const isAssigned = task.assignedTo && task.assignedTo.some(id => id.toString() === senderId.toString());
@@ -93,7 +93,7 @@ exports.sendTaskMessage = async (req, res) => {
 
     const populatedMessage = await TaskMessage.findById(newMessage._id).populate(
       "sender",
-      "name profilePicture email"
+      "name profileImageUrl email"
     );
 
     // Send notifications to all participants (assigned users + creator) except sender
@@ -158,7 +158,7 @@ exports.editTaskMessage = async (req, res) => {
 
     const populatedMessage = await TaskMessage.findById(message._id).populate(
       "sender",
-      "name profilePicture email"
+      "name profileImageUrl email"
     );
 
     res.status(200).json({ message: populatedMessage });
@@ -179,6 +179,14 @@ exports.deleteTaskMessage = async (req, res) => {
     const message = await TaskMessage.findById(messageId);
     if (!message) return res.status(404).json({ message: "Message not found" });
 
+    const discussion = await TaskDiscussion.findById(message.discussionId);
+    if (!discussion) return res.status(404).json({ message: "Discussion not found" });
+
+    const task = await Task.findById(discussion.task);
+    if (!task || task.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this message" });
+    }
+
     // Sender or admin can delete
     if (message.sender.toString() !== userId.toString() && !["admin", "ceo"].includes(req.user.role)) {
       return res.status(403).json({ message: "Not authorized to delete this message" });
@@ -186,7 +194,6 @@ exports.deleteTaskMessage = async (req, res) => {
 
     await TaskMessage.findByIdAndDelete(messageId);
 
-    const discussion = await TaskDiscussion.findById(message.discussionId);
     if (discussion && discussion.lastMessage && discussion.lastMessage.toString() === messageId) {
       const prevMessage = await TaskMessage.findOne({ discussionId: discussion._id }).sort({ createdAt: -1 });
       discussion.lastMessage = prevMessage ? prevMessage._id : null;

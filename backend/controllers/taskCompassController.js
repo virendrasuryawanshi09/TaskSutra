@@ -1,10 +1,7 @@
 const Task = require('../models/Task');
 const crypto = require('crypto');
 
-/**
- * Decode Task Briefing (TaskCompass)
- * Endpoint: POST /api/ai/tasks/:taskId/decode
- */
+
 exports.decodeTaskBriefing = async (req, res) => {
     try {
         const { taskId } = req.params;
@@ -12,6 +9,10 @@ exports.decodeTaskBriefing = async (req, res) => {
         const task = await Task.findById(taskId);
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
+        }
+
+        if (String(task.companyId || '') !== String(req.user.companyId || '')) {
+            return res.status(403).json({ success: false, message: "Not authorized to access this task." });
         }
 
         const title = task.title || "";

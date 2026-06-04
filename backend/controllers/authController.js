@@ -17,7 +17,7 @@ const generateToken = (userId) => {
 };
 
 const registerUser = async (req, res) => {
-    try{
+    try {
         const { name, email, password, profileImageUrl, inviteToken } = req.body;
 
         const userExists = await User.findOne({ email });
@@ -38,24 +38,15 @@ const registerUser = async (req, res) => {
             if (invitation.email.toLowerCase() !== email.toLowerCase()) {
                 return res.status(400).json({ message: "Invitation email does not match registering email" });
             }
-            
+
             companyId = invitation.companyId?._id || null;
             companyName = invitation.companyId?.name || "";
-            
+
             // Mark invitation as accepted
             invitation.status = "accepted";
             await invitation.save();
         } else {
-            // Auto-join via domain check fallback
-            const emailDomain = email.split('@')[1]?.toLowerCase();
-            const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'zoho.com', 'protonmail.com', 'mail.com'];
-            if (emailDomain && !publicDomains.includes(emailDomain)) {
-                const matchingCompany = await Company.findOne({ domain: emailDomain, isVerified: true });
-                if (matchingCompany) {
-                    companyId = matchingCompany._id;
-                    companyName = matchingCompany.name;
-                }
-            }
+
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -83,24 +74,24 @@ const registerUser = async (req, res) => {
             company: user.company || "",
             createdAt: user.createdAt,
             token: generateToken(user._id),
-        }); 
-    }catch(error){
+        });
+    } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
 const loginUser = async (req, res) => {
-    try{
+    try {
         const { email, password } = req.body;
 
         const user = await User.findOne({ email });
 
-        if(!user){
+        if (!user) {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch){
+        if (!isMatch) {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
 
@@ -117,28 +108,28 @@ const loginUser = async (req, res) => {
             createdAt: user.createdAt,
             token: generateToken(user._id),
         });
-    }catch(error){
+    } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
 const getUserProfile = async (req, res) => {
-    try{
+    try {
         const user = await User.findById(req.user._id).select('-password');
-        if(user){
+        if (user) {
             res.json(user);
-        }else{
+        } else {
             res.status(404).json({ message: 'User not found' });
         }
-    }catch(error){
+    } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
 const updateUserProfile = async (req, res) => {
-    try{
-        const user = await User.findById(req.user._id); 
-        if(!user) {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         user.name = req.body.name || user.name;
@@ -155,7 +146,7 @@ const updateUserProfile = async (req, res) => {
         user.title = req.body.title !== undefined ? req.body.title : user.title;
         user.company = req.body.company !== undefined ? req.body.company : user.company;
 
-        if(req.body.password){
+        if (req.body.password) {
             const salt = await bcrypt.genSalt(10);
             user.password = await bcrypt.hash(req.body.password, salt);
         }
@@ -175,7 +166,7 @@ const updateUserProfile = async (req, res) => {
             createdAt: updatedUser.createdAt,
             token: generateToken(updatedUser._id),
         });
-    }catch(error){
+    } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
@@ -185,6 +176,33 @@ const deleteAccount = async (req, res) => {
         const userId = req.user._id;
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // If the user is a CEO, clean up the entire company workspace to prevent orphan data
+        if (user.role === 'ceo' && user.companyId) {
+            const companyId = user.companyId;
+
+            // Find all tasks of this company to clean up discussions
+            const companyTasks = await Task.find({ companyId }).select('_id');
+            const companyTaskIds = companyTasks.map(t => t._id);
+            if (companyTaskIds.length > 0) {
+                const discussions = await TaskDiscussion.find({ task: { $in: companyTaskIds } });
+                const discussionIds = discussions.map(d => d._id);
+                if (discussionIds.length > 0) {
+                    await TaskMessage.deleteMany({ discussionId: { $in: discussionIds } });
+                    await TaskDiscussion.deleteMany({ _id: { $in: discussionIds } });
+                }
+            }
+
+            // Delete Company, Tasks, Invitations, Notifications, and general chat Messages
+            await Company.findByIdAndDelete(companyId);
+            await Task.deleteMany({ companyId });
+            await Invitation.deleteMany({ companyId });
+            await Notification.deleteMany({ companyId });
+            await Message.deleteMany({ companyId });
+
+            // Dissociate remaining workspace members (reset them to independent state)
+            await User.updateMany({ companyId }, { $set: { companyId: null, company: "" } });
+        }
 
         // 1. Clean up Direct Chats & Direct Messages
         const directChats = await DirectChat.find({ participants: userId });

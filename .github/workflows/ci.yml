@@ -2,12 +2,37 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, feature/dockerization]
+    branches: [main, feature/dockerization, bug-fixing]
   pull_request:
     branches: [main]
 
 jobs:
-  test-builds:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Verify Backend Compilation (Syntax Check)
+        run: |
+          cd backend
+          node -c $(find . -name "*.js" -not -path "*/node_modules/*")
+
+  build-containers:
+    needs: lint-and-test
     runs-on: ubuntu-latest
 
     steps:

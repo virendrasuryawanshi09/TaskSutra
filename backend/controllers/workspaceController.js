@@ -255,6 +255,9 @@ const removeWorkspaceMember = async (req, res) => {
     if (!targetUser) {
       return res.status(404).json({ success: false, message: "Workspace member not found" });
     }
+    if (String(targetUser.companyId || '') !== String(req.user.companyId || '')) {
+      return res.status(403).json({ success: false, message: "Not authorized to modify this user" });
+    }
     if (targetUser.role === "ceo") {
       return res.status(400).json({
         success: false,
@@ -281,6 +284,9 @@ const updateWorkspaceMember = async (req, res) => {
     const targetUser = await User.findById(id);
     if (!targetUser) {
       return res.status(404).json({ success: false, message: "Workspace member not found" });
+    }
+    if (String(targetUser.companyId || '') !== String(req.user.companyId || '')) {
+      return res.status(403).json({ success: false, message: "Not authorized to modify this user" });
     }
 
     // Administrators can only modify their own info and standard members

@@ -120,6 +120,11 @@ exports.deleteMessage = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to delete this message" });
     }
 
+    // Verify company boundary
+    if (message.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete messages from other companies" });
+    }
+
     await Message.findByIdAndDelete(messageId);
 
     res.status(200).json({ message: "Message deleted successfully", messageId });

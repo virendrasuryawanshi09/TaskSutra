@@ -2,6 +2,7 @@ const DirectChat = require("../models/DirectChat");
 const DirectMessage = require("../models/DirectMessage");
 const notificationService = require("../services/notificationService");
 const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 // @desc    Get all direct chats for the current user
 // @route   GET /api/direct-chats
@@ -29,6 +30,12 @@ exports.getDirectMessages = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const { otherUserId } = req.params;
+
+    // Validate that the other user belongs to the same company
+    const otherUser = await User.findOne({ _id: otherUserId, companyId: req.user.companyId });
+    if (!otherUser) {
+      return res.status(403).json({ message: "Not authorized to chat with this user" });
+    }
 
     let chat = await DirectChat.findOne({
       participants: { $all: [userId, otherUserId] },
@@ -59,6 +66,12 @@ exports.sendDirectMessage = async (req, res) => {
 
     if (!receiverId || !content) {
       return res.status(400).json({ message: "Receiver and content are required" });
+    }
+
+    // Validate that the receiver belongs to the same company
+    const receiver = await User.findOne({ _id: receiverId, companyId: req.user.companyId });
+    if (!receiver) {
+      return res.status(400).json({ message: "Recipient must belong to your company" });
     }
 
     let chat = await DirectChat.findOne({
@@ -211,6 +224,12 @@ exports.deleteDirectMessage = async (req, res) => {
     const message = await DirectMessage.findById(messageId);
     if (!message) {
       return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Verify company boundary: the message sender must belong to the caller's company
+    const sender = await User.findById(message.sender);
+    if (!sender || sender.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this message" });
     }
 
     // Sender or admin/ceo can delete

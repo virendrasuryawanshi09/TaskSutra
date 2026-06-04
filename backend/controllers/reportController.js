@@ -1,6 +1,7 @@
 const Task = require("../models/Task");
 const User = require("../models/User");
 const excelJS = require("exceljs");
+const mongoose = require("mongoose");
 
 const BRAND = {
     accent: "1368EC",
@@ -808,10 +809,11 @@ const exportTasksReport = async (req, res) => {
 
 const exportUsersReport = async (req, res) => {
     try {
-        const users = await User.find({ role: "member" })
+        const companyId = req.user.companyId || new mongoose.Types.ObjectId();
+        const users = await User.find({ role: "member", companyId })
             .select("name email skills _id")
             .lean();
-        const userTasks = await Task.find()
+        const userTasks = await Task.find({ companyId })
             .populate("assignedTo", "name email _id")
             .lean();
 

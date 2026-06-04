@@ -1,6 +1,7 @@
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
 const { createAndSendNotification } = require('../services/notificationService');
+const User = require('../models/User');
 const MAX_RECENT_TASKS = 8;
 
 const normalizeTaskStatus = (status = '') => {
@@ -158,6 +159,16 @@ const createTask = async (req, res) => {
             return res.status(400).json({ message: 'Assigned users must be an array of user IDs' });
         }
 
+        if (assignedTo && assignedTo.length > 0) {
+            const assignedUsersCount = await User.countDocuments({
+                _id: { $in: assignedTo },
+                companyId: req.user.companyId
+            });
+            if (assignedUsersCount !== assignedTo.length) {
+                return res.status(400).json({ message: "All assigned users must belong to your company" });
+            }
+        }
+
         const task = await Task.create({
             title,
             description,
@@ -236,6 +247,13 @@ const updateTask = async (req, res) => {
         if (req.body.assignedTo) {
             if (!Array.isArray(req.body.assignedTo)) {
                 return res.status(400).json({ message: 'Assigned users must be an array of user IDs' });
+            }
+            const assignedUsersCount = await User.countDocuments({
+                _id: { $in: req.body.assignedTo },
+                companyId: req.user.companyId
+            });
+            if (assignedUsersCount !== req.body.assignedTo.length) {
+                return res.status(400).json({ message: "All assigned users must belong to your company" });
             }
             const newAssigned = req.body.assignedTo.map(id => id.toString());
             newlyAssigned = newAssigned.filter(id => !oldAssigned.includes(id));

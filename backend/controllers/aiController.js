@@ -1,177 +1,19 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
-const fs = require('fs');
 const { getTeamWorkloads } = require('./userController');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { validatePipeline } = require('../services/queryValidator');
-
-
-const queryGroq = async (prompt) => {
-    if (!process.env.GROQ_API_KEY) {
-        throw new Error("GROQ_API_KEY is not configured.");
-    }
-
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.1
-            // Note: response_format json_object removed — causes 501 on some Groq versions
-        })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Groq API returned status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const raw = data.choices[0].message.content || "";
-    return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-};
-
-
-const calculateLocalRecommendations = (teamWorkloads, title, description) => {
-    const textToMatch = `${title} ${description || ""}`.toLowerCase();
-
-    return teamWorkloads.map(w => {
-        const matchingSkills = [];
-        if (Array.isArray(w.skills)) {
-            w.skills.forEach(skill => {
-                if (skill && textToMatch.includes(skill.toLowerCase())) {
-                    matchingSkills.push(skill);
-                }
-            });
-        }
-
-        // Base score starts at 60
-        let score = 60;
-        // Add 15 points per matched skill, capped at +30
-        score += Math.min(30, matchingSkills.length * 15);
-        // Deduct 10 points per active task, capped at -40
-        const activeCount = w.activeTasks || 0;
-        score -= Math.min(40, activeCount * 10);
-        // Clamp between 15 and 95
-        score = Math.max(15, Math.min(95, score));
-
-        const reasoning = matchingSkills.length > 0
-            ? `Matched skill(s) [${matchingSkills.join(", ")}] with ${activeCount} active task(s).`
-            : `Matched on active workload of ${activeCount} task(s).`;
-
-        return {
-            developerId: w._id.toString(),
-            score,
-            matchingSkills,
-            reasoning
-        };
-    });
-};
-
-
-const calculateLocalCognitiveLoad = (user, activeTasks, deadlinesTimeline) => {
-    const now = new Date();
-    let deliveryProbability = 100;
-    let cognitiveLoadScore = 0;
-    const warnings = [];
-    const schedulingOverlaps = [];
-
-    // 1. Analyze domains for context-switching
-    const domains = new Set();
-    activeTasks.forEach(t => {
-        if (t.domain) {
-            domains.add(t.domain);
-        } else {
-            domains.add("Frontend");
-        }
-    });
-
-    const detectedDomains = Array.from(domains);
-    const domainCount = detectedDomains.length;
-    const contextSwitchPenalty = Math.max(0, (domainCount - 1) * 10);
-    deliveryProbability -= contextSwitchPenalty;
-
-    if (contextSwitchPenalty > 0) {
-        warnings.push(`Context-switching penalty applied for working across ${domainCount} domains.`);
-    }
-
-
-    activeTasks.forEach(task => {
-        let taskPenalty = 0;
-        const complexity = task.taskDna?.estimatedComplexityScore || 5;
-
-
-        cognitiveLoadScore += complexity * 6;
-
-        if (task.priority === 'High') {
-            cognitiveLoadScore += 15;
-            taskPenalty += 12;
-        } else if (task.priority === 'Medium') {
-            cognitiveLoadScore += 8;
-            taskPenalty += 6;
-        } else {
-            cognitiveLoadScore += 3;
-            taskPenalty += 2;
-        }
-
-        if (task.dueDate && new Date(task.dueDate) < now) {
-            taskPenalty += 15;
-            warnings.push(`Task "${task.title}" is overdue.`);
-        }
-
-        deliveryProbability -= taskPenalty;
-    });
-
-
-    for (let i = 0; i < deadlinesTimeline.length; i++) {
-        for (let j = i + 1; j < deadlinesTimeline.length; j++) {
-            if (!deadlinesTimeline[i].dueDate || !deadlinesTimeline[j].dueDate) continue;
-            const date1 = new Date(deadlinesTimeline[i].dueDate);
-            const date2 = new Date(deadlinesTimeline[j].dueDate);
-            const diffTime = Math.abs(date2 - date1);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays <= 2) {
-                const overlapDesc = `Deadline collision: "${deadlinesTimeline[i].title}" and "${deadlinesTimeline[j].title}" are due within ${diffDays} day(s) of each other.`;
-                schedulingOverlaps.push({ description: overlapDesc });
-                deliveryProbability -= 10;
-                cognitiveLoadScore += 8;
-                warnings.push(`Timeline collision on tasks due near ${new Date(deadlinesTimeline[i].dueDate).toLocaleDateString()}.`);
-            }
-        }
-    }
-
-
-    const lateRate = user.behavioralProfile?.performanceMetrics?.lateSubmissionRate || 0;
-    deliveryProbability -= Math.round(lateRate * 0.4);
-
-    deliveryProbability = Math.max(10, Math.min(98, deliveryProbability));
-    cognitiveLoadScore = Math.max(5, Math.min(95, cognitiveLoadScore));
-
-    let assessment = "";
-    if (cognitiveLoadScore > 75) {
-        assessment = `Critical cognitive load with high risk of delivery delays. Needs workload rebalancing immediately.`;
-    } else if (cognitiveLoadScore > 40) {
-        assessment = `Moderate load. Multi-tasking across ${domainCount} domains requires careful deadline monitoring.`;
-    } else {
-        assessment = `Optimal capacity. Workload is well-distributed and deadlines are clear.`;
-    }
-
-    return {
-        deliveryProbability,
-        cognitiveLoadScore,
-        detectedDomains,
-        contextSwitchPenalty,
-        deadlinesTimeline,
-        schedulingOverlaps,
-        warnings,
-        assessment
-    };
-};
+const {
+    queryGroq,
+    queryGroqEngine,
+    extractJSON,
+    convertToObjectId,
+    buildNLQueryPrompt
+} = require('../services/aiService');
+const {
+    calculateLocalRecommendations,
+    calculateLocalCognitiveLoad
+} = require('../utils/localMetricsHelper');
 
 exports.generateOrgHealthReport = async (req, res) => {
     try {
@@ -487,7 +329,6 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
     }
 };
 
-
 exports.getCognitiveLoadAnalysis = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -651,145 +492,6 @@ Ensure your output has NO markdown wrapping. Output ONLY the JSON block.`;
     }
 };
 
-
-const queryGroqEngine = async (prompt) => {
-    if (!process.env.GROQ_API_KEY_ENGINE) {
-        throw new Error("GROQ_API_KEY_ENGINE is not configured.");
-    }
-
-    const body = {
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1
-        // Note: response_format json_object is NOT used as it causes 501 on some Groq model versions
-    };
-
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.GROQ_API_KEY_ENGINE}`
-        },
-        body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Groq Engine API returned status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const raw = data.choices[0].message.content || "";
-    // Strip markdown code fences if model wrapped JSON in ```json ... ```
-    return raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-};
-
-
-// Extracts first valid JSON object from a string, handles markdown fences and preamble text
-const extractJSON = (text) => {
-    if (!text) return null;
-    // Strip markdown code fences
-    let cleaned = text.trim()
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim();
-    // Try direct parse first
-    try { return JSON.parse(cleaned); } catch (_) {}
-    // Try to find the first {...} block
-    const start = cleaned.indexOf('{');
-    if (start === -1) return null;
-    let depth = 0;
-    for (let i = start; i < cleaned.length; i++) {
-        if (cleaned[i] === '{') depth++;
-        else if (cleaned[i] === '}') {
-            depth--;
-            if (depth === 0) {
-                try { return JSON.parse(cleaned.slice(start, i + 1)); } catch (_) { return null; }
-            }
-        }
-    }
-    return null;
-};
-
-const convertToObjectId = (obj) => {
-    if (!obj || typeof obj !== 'object') return obj;
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => convertToObjectId(item));
-    }
-
-    const mongoose = require('mongoose');
-    const newObj = {};
-    for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            const val = obj[key];
-            if (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)) {
-                newObj[key] = new mongoose.Types.ObjectId(val);
-            } else if (typeof val === 'object' && val !== null) {
-                newObj[key] = convertToObjectId(val);
-            } else {
-                newObj[key] = val;
-            }
-        }
-    }
-    return newObj;
-};
-
-const buildNLQueryPrompt = (question, userContext) => {
-    return `You are a MongoDB aggregation pipeline generator for a task management system.
-Your ONLY output must be a single JSON object with "collection" and "pipeline" keys. No explanation, no markdown, no extra text.
-
-Output format:
-{
-  "collection": "tasks" or "users",
-  "pipeline": [ <stages here> ]
-}
-
-Target Collection Rule:
-- Use "users" if the question asks about users, developers, team members, staff, assignees, or workspace people (e.g. counting users, listing skills of developers, finding roles).
-- Use "tasks" for all other queries (e.g. listing tasks, counting tasks, task status, due dates).
-
-Task collection fields:
-- title: String
-- priority: String ("Low", "Medium", "High")
-- status: String ("Pending", "In-progress", "Completed")
-- dueDate: Date
-- assignedTo: Array of ObjectIds (ref: users)
-- createdBy: ObjectId (ref: users)
-- todoChecklist: [{text: String, completed: Boolean}]
-- progress: Number (0-100)
-- domain: String ("Frontend","Backend","Database","DevOps","QA","Design","Management","Other")
-- taskDna: {attributes:[String], estimatedComplexityScore: Number}
-- createdAt: Date
-
-Users collection fields:
-- name: String
-- role: String ("ceo","admin","member")
-- skills: [String] (e.g. ["React", "Node.js"])
-- title: String
-
-User Context:
-- The logged-in user who is asking the question:
-  - Name: "${userContext.name}"
-  - User ID: "${userContext.id}"
-  - Role: "${userContext.role}"
-
-Rules:
-- DO NOT include companyId in your pipeline. It is injected automatically.
-- DO NOT use $out, $merge, $function, $accumulator.
-- Return read-only stages only.
-- When querying "users" for developers/staff/team, include both "member" and "admin" roles (do not restrict only to "member" unless specifically asked).
-- DO NOT unwind simple arrays of strings like "skills" or "attributes". Match them natively (e.g. {"skills": "React"}). Unwinding simple arrays or performing lookup/unwind on tasks for user queries causes duplicates and is strictly forbidden.
-- When the user asks for "my tasks", "tasks assigned to me", or "tasks I created", filter by assignedTo containing "${userContext.id}" or createdBy equal to "${userContext.id}". Use the 24-character hexadecimal string format for user IDs.
-- If you use a $project stage, you MUST include/preserve the following display fields so the UI can render cards properly:
-  - For "users": "name", "role", "title", "skills"
-  - For "tasks": "title", "description", "status", "priority", "dueDate", "progress", "assignedTo"
-  - Ensure any lookup or computed field is added/retained along with these display fields.
-
-User question: "${question}"`;
-};
-
-
 exports.executeNLQuery = async (req, res) => {
     try {
         const { question } = req.body;
@@ -817,7 +519,6 @@ exports.executeNLQuery = async (req, res) => {
 
         let parsed = extractJSON(groqResponse);
         if (!parsed) {
-            // Retry once with a stricter prompt
             const retryPrompt = `Return ONLY this JSON object with no explanation: {"collection": "tasks" or "users", "pipeline": [ <your MongoDB aggregation stages here> ]}. The question is: "${question}"`;
             const retryResponse = await queryGroqEngine(retryPrompt);
             parsed = extractJSON(retryResponse);
@@ -827,10 +528,8 @@ exports.executeNLQuery = async (req, res) => {
             return res.status(422).json({ success: false, message: "AI failed to generate a valid database query pipeline." });
         }
 
-        // Convert any 24-character hex strings (IDs) to real mongoose.Types.ObjectId
         const convertedPipeline = convertToObjectId(parsed.pipeline);
 
-        // Validate the pipeline for security and read-only constraints
         const validation = validatePipeline(convertedPipeline);
         if (!validation.valid) {
             return res.status(400).json({
@@ -839,7 +538,6 @@ exports.executeNLQuery = async (req, res) => {
             });
         }
 
-        // Ensure the query is strictly scoped to the CEO's company
         const mongoose = require('mongoose');
         const companyMatch = {
             $match: {
@@ -847,20 +545,16 @@ exports.executeNLQuery = async (req, res) => {
             }
         };
         
-        // Inject company matching stage at the very beginning of the pipeline
         const safePipeline = [companyMatch, ...convertedPipeline];
 
-        // Choose the model to query based on parsed collection
         const targetCollection = parsed.collection || "tasks";
         const Model = targetCollection === "users" ? User : Task;
 
-        // Execute validated pipeline with a 5-second timeout safeguard
         const startTime = process.hrtime();
         const rawData = await Model.aggregate(safePipeline, { maxTimeMS: 5000 });
         const diff = process.hrtime(startTime);
         const executionTimeMs = Math.round((diff[0] * 1000) + (diff[1] / 1000000));
 
-        // Enforce maximum aggregation result limit
         const limitedData = rawData.slice(0, 100);
 
         return res.json({
@@ -881,10 +575,6 @@ exports.executeNLQuery = async (req, res) => {
     }
 };
 
-/**
- * Stream Natural Language Query Answer (Phase 2)
- * Endpoint: POST /api/ai/ceo/nl-query/stream
- */
 exports.streamNLAnswer = async (req, res) => {
     try {
         const { question, rawData } = req.body;
@@ -896,7 +586,6 @@ exports.streamNLAnswer = async (req, res) => {
             return res.status(500).json({ success: false, message: "GROQ_API_KEY_ENGINE is not configured." });
         }
 
-        // Set response headers for Server-Sent Events (SSE)
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
@@ -952,7 +641,7 @@ exports.streamNLAnswer = async (req, res) => {
                             res.write(`data: ${JSON.stringify({ token })}\n\n`);
                         }
                     } catch (err) {
-                        // ignore parsing error for incomplete chunks
+                        // ignore
                     }
                 }
             }
@@ -988,7 +677,7 @@ exports.streamNLAnswer = async (req, res) => {
             res.write("data: [DONE]\n\n");
             res.end();
         } catch (e) {
-            // response might already be closed
+            // ignore
         }
     }
 };

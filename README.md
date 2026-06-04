@@ -294,6 +294,7 @@ React + Vite
 - [x] Dashboard analytics (Recharts visualizations)
 - [x] Completion velocity tracking
 - [x] Overdue task monitoring
+- [x] Redis caching layer for hot dashboard statistics (with active invalidation triggers)
 
 ### User Experience
 - [x] Profile image upload via Cloudinary (cloud storage)
@@ -308,6 +309,8 @@ React + Vite
 - [x] Nginx reverse proxy for frontend container
 - [x] Vercel deployment config (`vercel.json`) for frontend
 - [x] `.dockerignore` for lean container images
+- [x] Automated CI/CD workflow pipeline with dependency caching and recursive compilation verification
+- [x] Static SEO metadata prerendering built into the production build lifecycle
 
 ---
 
@@ -354,6 +357,10 @@ MAIL_PASS=your_app_password
 # AI (at least one required for AI features)
 GROQ_API_KEY=your_groq_api_key
 GEMINI_API_KEY=your_gemini_api_key
+
+# Redis Caching (optional, falls back gracefully if unconfigured)
+USE_REDIS=true
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
 **Frontend** — Create `frontend/.env`:
@@ -624,6 +631,8 @@ TaskSutra/
 - **ObjectId validation middleware** — prevents injection via malformed IDs
 - **Global error handler** — sanitized error responses in production
 - **MongoDB Aggregation Pipeline Security Sandbox** — Whitelists safe read-only operators, blocks modification stages (`$out`/`$merge`), restricts `$lookup` targets to `users` and `tasks` collections, and prevents cross-tenant data leaks by auto-injecting `companyId` matching blocks
+- **CI/CD compiler validation** — executes recursive syntax analysis on push events to catch logical errors before building containers
+- **Static SEO Metadata Prerendering** — automatically compiles static index entry points for public login/signup pages during client build time
 
 ---
 
@@ -642,10 +651,11 @@ TaskSutra/
 - [ ] Sprint-based planning mode
 
 ### **Phase 4: Production Scaling**
+- [x] Redis caching for hot dashboard queries (with active cache invalidation)
+- [x] Automated CI/CD pipeline (GitHub Actions setup)
+- [ ] Deploy Docker images to Docker Hub
 - [ ] AWS/GCP deployment templates
 - [ ] Public demo instance
-- [ ] CI/CD pipeline (GitHub Actions → Docker Hub → Cloud)
-- [ ] Redis caching for hot dashboard queries
 
 ---
 

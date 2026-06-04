@@ -25,9 +25,9 @@ const AvatarGroup = ({ avatars = [] }) => {
           "
         >
 
-          {user?.image ? (
+          {user?.profileImageUrl || user?.image ? (
             <img
-              src={getImageUrl(user.image)}
+              src={getImageUrl(user.profileImageUrl || user.image)}
               alt={user.name}
               className="w-full h-full object-cover"
               onError={(e) => {

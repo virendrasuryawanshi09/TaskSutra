@@ -186,6 +186,33 @@ const deleteAccount = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
+        // If the user is a CEO, clean up the entire company workspace to prevent orphan data
+        if (user.role === 'ceo' && user.companyId) {
+            const companyId = user.companyId;
+
+            // Find all tasks of this company to clean up discussions
+            const companyTasks = await Task.find({ companyId }).select('_id');
+            const companyTaskIds = companyTasks.map(t => t._id);
+            if (companyTaskIds.length > 0) {
+                const discussions = await TaskDiscussion.find({ task: { $in: companyTaskIds } });
+                const discussionIds = discussions.map(d => d._id);
+                if (discussionIds.length > 0) {
+                    await TaskMessage.deleteMany({ discussionId: { $in: discussionIds } });
+                    await TaskDiscussion.deleteMany({ _id: { $in: discussionIds } });
+                }
+            }
+
+            // Delete Company, Tasks, Invitations, Notifications, and general chat Messages
+            await Company.findByIdAndDelete(companyId);
+            await Task.deleteMany({ companyId });
+            await Invitation.deleteMany({ companyId });
+            await Notification.deleteMany({ companyId });
+            await Message.deleteMany({ companyId });
+
+            // Dissociate remaining workspace members (reset them to independent state)
+            await User.updateMany({ companyId }, { $set: { companyId: null, company: "" } });
+        }
+
         // 1. Clean up Direct Chats & Direct Messages
         const directChats = await DirectChat.find({ participants: userId });
         const directChatIds = directChats.map(chat => chat._id);

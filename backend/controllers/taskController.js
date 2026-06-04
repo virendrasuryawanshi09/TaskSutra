@@ -456,6 +456,11 @@ const updateTaskStatus = async (req, res) => {
             }));
             task.progress = 100;
         } else if (task.status === 'Pending') {
+            task.todoChecklist = getTodoChecklist(task).map((item) => ({
+                ...item.toObject?.(),
+                ...item,
+                completed: false,
+            }));
             task.progress = 0;
         }
 

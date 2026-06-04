@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const mongoose = require('mongoose');
+const redisClient = require('../config/redis');
 const MAX_RECENT_TASKS = 8;
 
 const getDashboardData = async (req, res) => {
@@ -9,6 +10,19 @@ const getDashboardData = async (req, res) => {
             return res.status(400).json({ message: "No company associated with user" });
         }
         const companyObjectId = new mongoose.Types.ObjectId(companyId.toString());
+
+        // Cache Key pattern: dashboard:<companyId>:admin
+        const cacheKey = `dashboard:${companyObjectId.toString()}:admin`;
+        
+        // Try to fetch from Redis cache
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            try {
+                return res.status(200).json(JSON.parse(cachedData));
+            } catch (parseError) {
+                console.warn("Failed to parse cached admin dashboard data, falling back to db query:", parseError.message);
+            }
+        }
 
         const totalTasks = await Task.countDocuments({ companyId: companyObjectId });
         const pendingTasks = await Task.countDocuments({ companyId: companyObjectId, status: "Pending" });
@@ -60,7 +74,7 @@ const getDashboardData = async (req, res) => {
         .limit(MAX_RECENT_TASKS)
         .select("title status priority dueDate createdAt");
 
-        res.status(200).json({
+        const responseData = {
             statistics: {
                 totalTasks,
                 pendingTasks,
@@ -72,7 +86,12 @@ const getDashboardData = async (req, res) => {
                 taskPriorityLevels,
             },
             recentTasks,
-        });
+        };
+
+        // Cache response for 5 minutes (300 seconds)
+        await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 300 });
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -89,6 +108,19 @@ const getUserDashboardData = async (req, res) => {
 
         const userObjectId = new mongoose.Types.ObjectId(userId.toString());
         const companyObjectId = new mongoose.Types.ObjectId(companyId.toString());
+
+        // Cache Key pattern: dashboard:<companyId>:user:<userId>
+        const cacheKey = `dashboard:${companyObjectId.toString()}:user:${userObjectId.toString()}`;
+        
+        // Try to fetch from Redis cache
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            try {
+                return res.status(200).json(JSON.parse(cachedData));
+            } catch (parseError) {
+                console.warn("Failed to parse cached user dashboard data, falling back to db query:", parseError.message);
+            }
+        }
 
         const totalTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId });
         const pendingTasks = await Task.countDocuments({ companyId: companyObjectId, assignedTo: userObjectId, status: "Pending" });
@@ -140,7 +172,7 @@ const getUserDashboardData = async (req, res) => {
         .limit(MAX_RECENT_TASKS)
         .select("title status priority dueDate createdAt");
         
-        res.status(200).json({
+        const responseData = {
             statistics: {
                 totalTasks,
                 pendingTasks,
@@ -152,7 +184,12 @@ const getUserDashboardData = async (req, res) => {
                 taskPriorityLevels,
             },
             recentTasks,
-        });
+        };
+
+        // Cache response for 5 minutes (300 seconds)
+        await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 300 });
+
+        res.status(200).json(responseData);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

@@ -2,6 +2,8 @@ const Task = require('../models/Task');
 const mongoose = require('mongoose');
 const { createAndSendNotification } = require('../services/notificationService');
 const User = require('../models/User');
+const cacheService = require('../services/cacheService');
+
 
 const normalizeTaskStatus = (status = '') => {
     const normalizedValue = String(status).trim().toLowerCase();
@@ -193,6 +195,9 @@ const createTask = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
+
         res.status(201).json({ message: 'Task created successfully', task });
 
     } catch (error) {
@@ -308,6 +313,9 @@ const updateTask = async (req, res) => {
 
         await Promise.all(notificationPromises);
 
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
+
         res.json({ message: 'Task updated successfully', task: updatedTask });
 
     } catch (error) {
@@ -344,6 +352,9 @@ const deleteTask = async (req, res) => {
             })
         );
         await Promise.all(notificationPromises);
+
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         res.json({ message: 'Task deleted successfully' });
     } catch (error) {
@@ -413,6 +424,9 @@ const updateTaskChecklist = async (req, res) => {
             })
         );
         await Promise.all(notificationPromises);
+
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         const populatedTask = await Task.findById(req.params.id).populate(
             'assignedTo',
@@ -487,6 +501,9 @@ const updateTaskStatus = async (req, res) => {
             })
         );
         await Promise.all(notificationPromises);
+
+        // Invalidate dashboard caches for this company
+        await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         res.json({ message: 'Task status updated successfully', task });
     } catch (error) {

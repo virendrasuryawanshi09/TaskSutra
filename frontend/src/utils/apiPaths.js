@@ -58,5 +58,6 @@ export const API_PATHS = {
     GET_COGNITIVE_LOAD: (userId) => `/api/ai/cognitive-load/${userId}`,
     CEO_NL_QUERY: "/api/ai/ceo/nl-query",
     CEO_NL_STREAM: "/api/ai/ceo/nl-query/stream",
+    DECODE_TASK: (taskId) => `/api/ai/tasks/${taskId}/decode`,
   },
 };

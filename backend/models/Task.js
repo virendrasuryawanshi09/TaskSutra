@@ -31,6 +31,15 @@ const taskSchema = new mongoose.Schema({
         type: String,
         enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'QA', 'Design', 'Management', 'Other'],
         default: 'Frontend'
+    },
+    // AI Task Briefing Cache
+    compassBrief: {
+        simplifiedExplanation: { type: String, default: "" },
+        businessGoal: { type: String, default: "" },
+        receiverExpectations: { type: [String], default: [] },
+        difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced', ''], default: "" },
+        estimatedHours: { type: String, default: "" },
+        cachedHash: { type: String, default: "" }
     }
 }, {timestamps: true});
 

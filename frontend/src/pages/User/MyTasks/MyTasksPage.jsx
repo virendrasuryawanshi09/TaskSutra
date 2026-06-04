@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import MyTasksWorkspace from "./components/MyTasksWorkspace";
 import TaskQuickViewPanel from "./components/TaskQuickViewPanel";
 import TaskDiscussionPanel from "../Tasks/TaskDiscussionPanel";
+import TaskCompassBrief from "../../../components/TaskCompassBrief";
 import { useSocket } from "../../../context/SocketContext";
 import { Helmet } from "react-helmet-async";
 import {
@@ -36,6 +37,9 @@ const MyTasksPage = () => {
   const [draggedTaskId, setDraggedTaskId] = useState("");
   const [discussionMessages, setDiscussionMessages] = useState([]);
   const [discussionInput, setDiscussionInput] = useState("");
+  const [isDecoding, setIsDecoding] = useState(false);
+  const [compassBrief, setCompassBrief] = useState(null);
+  const [isCompassOpen, setIsCompassOpen] = useState(false);
   const socket = useSocket();
 
   const loadTasks = useCallback(async () => {
@@ -321,6 +325,49 @@ const MyTasksPage = () => {
     }
   };
 
+  const handleDecodeTask = async (taskToDecode) => {
+    const taskId = taskToDecode?._id || taskToDecode?.id;
+    if (!taskId) return;
+    try {
+      setIsDecoding(true);
+      const res = await axiosInstance.post(API_PATHS.AI.DECODE_TASK(taskId));
+      if (res.data && res.data.success) {
+        setCompassBrief(res.data.data);
+        setIsCompassOpen(true);
+      }
+    } catch (err) {
+      console.error("Error decoding task:", err);
+      toast.error(err.response?.data?.message || "Failed to decode task.");
+    } finally {
+      setIsDecoding(false);
+    }
+  };
+
+  const handleStartTask = async () => {
+    const taskId = selectedTask?._id || selectedTask?.id;
+    if (!taskId) return;
+    try {
+      const statusResponse = await axiosInstance.put(
+        API_PATHS.TASKS.UPDATE_TASK_STATUS(taskId),
+        { status: "In Progress" }
+      );
+      if (statusResponse.data) {
+        setTasks((prev) =>
+          prev.map((t) => ((t._id || t.id) === taskId ? { ...t, status: "In Progress" } : t))
+        );
+        // Sync selected task status too so quick view reflects it
+        if (selectedTask) {
+          setSelectedTask(prev => prev ? { ...prev, status: "In Progress" } : null);
+        }
+        toast.success("Task status updated to In Progress.");
+      }
+      setIsCompassOpen(false);
+    } catch (err) {
+      console.error("Error starting task:", err);
+      toast.error(err.response?.data?.message || "Failed to update task status.");
+    }
+  };
+
   const handleOpenFullTask = (task) => {
     if (!task?.id) return;
     navigate(`/user/task-details/${task.id}`, {
@@ -536,6 +583,8 @@ const MyTasksPage = () => {
         open={Boolean(selectedTask)}
         onClose={() => setSelectedTask(null)}
         onOpenTask={handleOpenFullTask}
+        onDecodeTask={handleDecodeTask}
+        isDecoding={isDecoding}
       />
       <TaskDiscussionPanel
         task={discussionTask}
@@ -548,6 +597,14 @@ const MyTasksPage = () => {
         onEditMessage={handleEditDiscussionMessage}
         onDeleteMessage={handleDeleteDiscussionMessage}
         currentUser={user}
+      />
+      <TaskCompassBrief
+        isOpen={isCompassOpen}
+        onClose={() => setIsCompassOpen(false)}
+        brief={compassBrief}
+        taskTitle={selectedTask?.title}
+        onStart={handleStartTask}
+        taskStatus={selectedTask?.status}
       />
     </DashboardLayout>
     </>

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -8,6 +7,7 @@ import {
   HiOutlineClipboardDocumentCheck,
   HiOutlineXMark,
 } from "react-icons/hi2";
+import { HiOutlineSparkles } from "react-icons/hi";
 import AvatarGroup from "../../../../components/AvatarGroup";
 import { formatTaskDate } from "../myTasks.utils";
 
@@ -17,7 +17,7 @@ const statusStyles = {
   Completed: "bg-[rgba(76,127,106,0.14)] text-[#4C7F6A]",
 };
 
-const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
+const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask, onDecodeTask, isDecoding }) => {
   return (
     <AnimatePresence>
       {open && task ? (
@@ -37,7 +37,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed inset-y-0 left-0 z-[90] flex w-[70vw] sm:w-full flex-col border-r border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[420px]"
+            className="fixed inset-y-0 left-0 z-[90] flex w-[85vw] sm:w-full flex-col border-r border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-lg shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:max-w-[460px]"
           >
             <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-soft)]/35 px-5 py-4">
               <div className="flex items-center gap-3">
@@ -64,13 +64,33 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-5">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full">
                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${statusStyles[task.status] || "bg-[var(--bg-soft)] text-[var(--text-muted)]"}`}>
                   {task.status}
                 </span>
                 <span className="rounded-full border border-[var(--border)] bg-[var(--bg-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">
                   {task.priority}
                 </span>
+                
+                {/* Small Decode button */}
+                <button
+                  type="button"
+                  onClick={() => onDecodeTask?.(task)}
+                  disabled={isDecoding}
+                  className="ml-auto inline-flex items-center gap-1 px-3 py-1 text-[11px] font-bold rounded-full bg-gradient-to-r from-[var(--accent)] to-[#4C7F6A] hover:from-[#195A62] hover:to-[#3e6857] text-white transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-wait cursor-pointer"
+                >
+                  {isDecoding ? (
+                    <>
+                      <span className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                      <span>Decoding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <HiOutlineSparkles className="text-[10px]" />
+                      <span>Decode</span>
+                    </>
+                  )}
+                </button>
               </div>
 
               <h2 className="mt-4 text-2xl font-semibold leading-8 text-[var(--text)]">
@@ -149,7 +169,7 @@ const TaskQuickViewPanel = ({ task, open, onClose, onOpenTask }) => {
               <button
                 type="button"
                 onClick={() => onOpenTask?.(task)}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-white transition-all duration-200 hover:bg-[var(--accent-hover)] active:scale-[0.99]"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-white transition-all duration-200 hover:bg-[var(--accent-hover)] active:scale-[0.99] cursor-pointer"
               >
                 Open Full Task
                 <HiOutlineArrowTopRightOnSquare className="text-base" />

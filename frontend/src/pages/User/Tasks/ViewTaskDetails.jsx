@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useContext } from "react";
-import { HiOutlineArrowLeft } from "react-icons/hi";
+import { HiOutlineArrowLeft, HiOutlineSparkles } from "react-icons/hi";
 import { HiOutlineArrowDownTray, HiOutlinePaperClip } from "react-icons/hi2";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -8,6 +8,7 @@ import { Helmet } from "react-helmet-async";
 import AvatarGroup from "../../../components/AvatarGroup";
 import SelectDropdown from "../../../components/input/SelectDropdown";
 import TaskDiscussionPanel from "./TaskDiscussionPanel";
+import TaskCompassBrief from "../../../components/TaskCompassBrief";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import { useSocket } from "../../../context/SocketContext";
@@ -147,6 +148,9 @@ const ViewTaskDetails = () => {
   const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [isDecoding, setIsDecoding] = useState(false);
+  const [compassBrief, setCompassBrief] = useState(null);
+  const [isCompassOpen, setIsCompassOpen] = useState(false);
   const socketRef = React.useRef(null);
   const socket = useSocket();
 
@@ -414,6 +418,40 @@ const ViewTaskDetails = () => {
     }
   };
 
+  const handleDecodeTask = async () => {
+    try {
+      setIsDecoding(true);
+      const res = await axiosInstance.post(API_PATHS.AI.DECODE_TASK(taskId));
+      if (res.data && res.data.success) {
+        setCompassBrief(res.data.data);
+        setIsCompassOpen(true);
+      }
+    } catch (err) {
+      console.error("Error decoding task:", err);
+      toast.error(err.response?.data?.message || "Failed to decode task.");
+    } finally {
+      setIsDecoding(false);
+    }
+  };
+
+  const handleStartTask = async () => {
+    try {
+      const statusResponse = await axiosInstance.put(
+        API_PATHS.TASKS.UPDATE_TASK_STATUS(taskId),
+        { status: "In Progress" }
+      );
+      if (statusResponse.data) {
+        setCurrentStatus("In Progress");
+        setTask(prev => ({ ...prev, status: "In Progress" }));
+        toast.success("Task status updated to In Progress.");
+      }
+      setIsCompassOpen(false);
+    } catch (err) {
+      console.error("Error starting task:", err);
+      toast.error(err.response?.data?.message || "Failed to update task status.");
+    }
+  };
+
   const handleCancelChanges = () => {
     setCurrentStatus(task?.status || "Pending");
     setChecklistItems(savedChecklistItems);
@@ -623,7 +661,7 @@ const ViewTaskDetails = () => {
                 onChange={setCurrentStatus}
               />
 
-              <button
+               <button
                 type="button"
                 onClick={() => setIsDiscussionOpen(true)}
                 className="
@@ -636,9 +674,46 @@ const ViewTaskDetails = () => {
                   text-sm font-medium text-[var(--text)]
                   transition-colors duration-200
                   hover:bg-[var(--bg-soft)]
+                  cursor-pointer
                 "
               >
                 Open Discussion
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDecodeTask}
+                disabled={isDecoding}
+                className="
+                  mt-3
+                  w-full
+                  rounded-lg
+                  bg-gradient-to-r from-[var(--accent)] to-[#4C7F6A]
+                  hover:from-[#195A62] hover:to-[#3e6857]
+                  text-white
+                  font-semibold
+                  px-4 py-2.5
+                  text-sm
+                  transition-all duration-200
+                  shadow-sm
+                  hover:shadow-md
+                  active:scale-[0.98]
+                  disabled:opacity-70 disabled:cursor-wait
+                  cursor-pointer
+                  flex items-center justify-center gap-2
+                "
+              >
+                {isDecoding ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Decoding...</span>
+                  </>
+                ) : (
+                  <>
+                    <HiOutlineSparkles className="text-base" />
+                    <span>Decode</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -899,6 +974,14 @@ const ViewTaskDetails = () => {
         onEditMessage={handleEditDiscussionMessage}
         onDeleteMessage={handleDeleteDiscussionMessage}
         currentUser={user}
+      />
+      <TaskCompassBrief
+        isOpen={isCompassOpen}
+        onClose={() => setIsCompassOpen(false)}
+        brief={compassBrief}
+        taskTitle={task?.title}
+        onStart={handleStartTask}
+        taskStatus={currentStatus}
       />
     </DashboardLayout>
     </>

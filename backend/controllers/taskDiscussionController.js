@@ -194,7 +194,6 @@ exports.deleteTaskMessage = async (req, res) => {
 
     await TaskMessage.findByIdAndDelete(messageId);
 
-    const discussion = await TaskDiscussion.findById(message.discussionId);
     if (discussion && discussion.lastMessage && discussion.lastMessage.toString() === messageId) {
       const prevMessage = await TaskMessage.findOne({ discussionId: discussion._id }).sort({ createdAt: -1 });
       discussion.lastMessage = prevMessage ? prevMessage._id : null;

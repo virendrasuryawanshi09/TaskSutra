@@ -214,6 +214,15 @@ const addWorkspaceMember = async (req, res) => {
   try {
     const { name, email, password, role, title, company, skills } = req.body;
 
+    // Enforce role constraints: only CEO can assign admin or CEO roles
+    const targetRole = role || "member";
+    if (["admin", "ceo"].includes(targetRole) && req.user.role !== "ceo") {
+      return res.status(403).json({
+        success: false,
+        message: "Operation Denied: Only the CEO/Workspace Owner can assign admin or CEO roles during creation",
+      });
+    }
+
     const newMember = await workspaceService.addMember({
       name,
       email,

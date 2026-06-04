@@ -64,6 +64,15 @@ const reorderTasks = async (req, res) => {
             return res.status(400).json({ success: false, message: "taskOrder must be an array of task IDs" });
         }
 
+        // Verify all tasks in the reorder request belong to the user's company
+        const validTasksCount = await Task.countDocuments({
+            _id: { $in: taskOrder },
+            companyId: req.user.companyId
+        });
+        if (validTasksCount !== taskOrder.length) {
+            return res.status(400).json({ success: false, message: "All tasks in taskOrder must belong to your company" });
+        }
+
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });

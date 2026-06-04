@@ -215,6 +215,32 @@ const EditProfile = () => {
             </div>
           </div>
 
+          {/* Danger Zone: Account Deletion */}
+          <div className="mt-8 border border-red-500/20 rounded-2xl bg-red-500/[0.02] p-6 max-w-3xl">
+            <h3 className="text-red-500 font-semibold text-md mb-2">Danger Zone</h3>
+            <p className="text-[13px] text-[var(--text-muted)] mb-4">
+              Permanently delete your account and all associated data. This action is irreversible and will delete your active direct chat histories, messages, and unassign you from tasks. If you are a CEO, the company workspace itself will be deleted.
+            </p>
+            <button
+              onClick={async () => {
+                if (window.confirm("Are you absolutely sure you want to permanently delete your account? This action cannot be undone.")) {
+                  const tid = toast.loading("Deleting account…");
+                  try {
+                    await axiosInstance.delete('/api/auth/profile');
+                    toast.success("Account deleted successfully.", { id: tid });
+                    localStorage.clear();
+                    window.location.href = "/login";
+                  } catch (err) {
+                    toast.error(err?.response?.data?.message || "Failed to delete account.", { id: tid });
+                  }
+                }
+              }}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[12.5px] font-semibold transition-all duration-200 active:scale-[0.97] shadow-sm"
+            >
+              Delete Account
+            </button>
+          </div>
+
           {/* ── Mobile sticky save ────────────────────────── */}
           <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${dirty ? "translate-y-0" : "translate-y-full"}`}>
             <div className="flex items-center justify-between gap-3 bg-[var(--surface)]/95 backdrop-blur-xl border-t border-[var(--border)] px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">

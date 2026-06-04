@@ -4,28 +4,32 @@ const notificationService = require("../services/notificationService");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
 
-// @desc    Get all direct chats for the current user
-// @route   GET /api/direct-chats
-// @access  Private
+
 exports.getDirectChats = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
 
     const chats = await DirectChat.find({ participants: userId })
-      .populate("participants", "name profileImageUrl email role")
+      .populate("participants", "name profileImageUrl email role companyId")
       .populate("lastMessage")
       .sort({ updatedAt: -1 });
 
-    res.status(200).json(chats);
+
+    const companyIdStr = req.user.companyId ? req.user.companyId.toString() : "";
+    const filteredChats = chats.filter(chat => {
+      return chat.participants.every(p => {
+        return p._id.toString() === userId.toString() || String(p.companyId || '') === companyIdStr;
+      });
+    });
+
+    res.status(200).json(filteredChats);
   } catch (error) {
     console.error("Error fetching direct chats:", error);
     res.status(500).json({ message: "Server error fetching direct chats" });
   }
 };
 
-// @desc    Get messages between current user and another user
-// @route   GET /api/direct-chats/:otherUserId
-// @access  Private
+
 exports.getDirectMessages = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
@@ -56,9 +60,7 @@ exports.getDirectMessages = async (req, res) => {
   }
 };
 
-// @desc    Send a direct message
-// @route   POST /api/direct-chats
-// @access  Private
+
 exports.sendDirectMessage = async (req, res) => {
   try {
     const senderId = req.user.id || req.user._id;
@@ -95,12 +97,12 @@ exports.sendDirectMessage = async (req, res) => {
 
     // Update chat last message and unread count
     chat.lastMessage = newMessage._id;
-    
+
     // Increment unread count for receiver
     const currentUnread = chat.unreadCounts?.get(receiverId.toString()) || 0;
     if (!chat.unreadCounts) chat.unreadCounts = new Map();
     chat.unreadCounts.set(receiverId.toString(), currentUnread + 1);
-    
+
     await chat.save();
 
     const populatedMessage = await DirectMessage.findById(newMessage._id).populate(
@@ -132,9 +134,6 @@ exports.sendDirectMessage = async (req, res) => {
   }
 };
 
-// @desc    Mark chat as read
-// @route   PUT /api/direct-chats/:chatId/read
-// @access  Private
 exports.markAsRead = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
@@ -174,9 +173,7 @@ exports.markAsRead = async (req, res) => {
   }
 };
 
-// @desc    Edit a direct message
-// @route   PUT /api/direct-chats/message/:messageId
-// @access  Private
+
 exports.editDirectMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -213,9 +210,7 @@ exports.editDirectMessage = async (req, res) => {
   }
 };
 
-// @desc    Delete a direct message
-// @route   DELETE /api/direct-chats/message/:messageId
-// @access  Private
+
 exports.deleteDirectMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -228,7 +223,7 @@ exports.deleteDirectMessage = async (req, res) => {
 
     // Verify company boundary: the message sender must belong to the caller's company
     const sender = await User.findById(message.sender);
-    if (!sender || sender.companyId.toString() !== req.user.companyId.toString()) {
+    if (!sender || String(sender.companyId || '') !== String(req.user.companyId || '')) {
       return res.status(403).json({ message: "Not authorized to delete this message" });
     }
 

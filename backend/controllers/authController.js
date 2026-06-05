@@ -171,67 +171,95 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+const mongoose = require('mongoose');
+
+const executeDeleteOperations = async (user, session) => {
+    const userId = user._id;
+    const sessionOpt = session ? { session } : {};
+
+    
+    if (user.role === 'ceo' && user.companyId) {
+        const companyId = user.companyId;
+
+        const companyTasks = await Task.find({ companyId }, null, sessionOpt).select('_id');
+        const companyTaskIds = companyTasks.map(t => t._id);
+        if (companyTaskIds.length > 0) {
+            const discussions = await TaskDiscussion.find({ task: { $in: companyTaskIds } }, null, sessionOpt);
+            const discussionIds = discussions.map(d => d._id);
+            if (discussionIds.length > 0) {
+                await TaskMessage.deleteMany({ discussionId: { $in: discussionIds } }, sessionOpt);
+                await TaskDiscussion.deleteMany({ _id: { $in: discussionIds } }, sessionOpt);
+            }
+        }
+
+       
+        await Company.findByIdAndDelete(companyId, sessionOpt);
+        await Task.deleteMany({ companyId }, sessionOpt);
+        await Invitation.deleteMany({ companyId }, sessionOpt);
+        await Notification.deleteMany({ companyId }, sessionOpt);
+        await Message.deleteMany({ companyId }, sessionOpt);
+
+        
+        await User.updateMany({ companyId }, { $set: { companyId: null, company: "" } }, sessionOpt);
+    }
+
+
+    const directChats = await DirectChat.find({ participants: userId }, null, sessionOpt);
+    const directChatIds = directChats.map(chat => chat._id);
+    if (directChatIds.length > 0) {
+        await DirectMessage.deleteMany({ chatId: { $in: directChatIds } }, sessionOpt);
+        await DirectChat.deleteMany({ _id: { $in: directChatIds } }, sessionOpt);
+    }
+
+
+    await Message.deleteMany({ sender: userId }, sessionOpt);
+
+   
+    await Task.updateMany({ assignedTo: userId }, { $pull: { assignedTo: userId } }, sessionOpt);
+    await Task.updateMany({ createdBy: userId }, { $set: { createdBy: null } }, sessionOpt);
+
+   
+    await TaskMessage.deleteMany({ sender: userId }, sessionOpt);
+    await TaskDiscussion.updateMany({ participants: userId }, { $pull: { participants: userId } }, sessionOpt);
+
+
+    await Notification.deleteMany({ $or: [{ recipient: userId }, { sender: userId }] }, sessionOpt);
+
+  
+    await User.findByIdAndDelete(userId, sessionOpt);
+};
+
 const deleteAccount = async (req, res) => {
     try {
         const userId = req.user._id;
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // If the user is a CEO, clean up the entire company workspace to prevent orphan data
-        if (user.role === 'ceo' && user.companyId) {
-            const companyId = user.companyId;
+        const session = await mongoose.startSession();
+        try {
+            await session.withTransaction(async () => {
+                await executeDeleteOperations(user, session);
+            });
+            res.json({ message: 'Account and all associated data deleted successfully (transactional)' });
+        } catch (txError) {
+           
+            const isStandaloneErr = txError.message.includes("Transaction numbers are only allowed on a replica set") ||
+                                    txError.code === 251 ||
+                                    txError.codeName === "TransactionSystemFailed";
 
-            // Find all tasks of this company to clean up discussions
-            const companyTasks = await Task.find({ companyId }).select('_id');
-            const companyTaskIds = companyTasks.map(t => t._id);
-            if (companyTaskIds.length > 0) {
-                const discussions = await TaskDiscussion.find({ task: { $in: companyTaskIds } });
-                const discussionIds = discussions.map(d => d._id);
-                if (discussionIds.length > 0) {
-                    await TaskMessage.deleteMany({ discussionId: { $in: discussionIds } });
-                    await TaskDiscussion.deleteMany({ _id: { $in: discussionIds } });
-                }
+            if (isStandaloneErr) {
+                console.warn("MongoDB replica set not detected. Running deleteAccount non-transactionally as fallback.");
+                await executeDeleteOperations(user, null);
+                res.json({ message: 'Account and all associated data deleted successfully' });
+            } else {
+                throw txError;
             }
-
-            // Delete Company, Tasks, Invitations, Notifications, and general chat Messages
-            await Company.findByIdAndDelete(companyId);
-            await Task.deleteMany({ companyId });
-            await Invitation.deleteMany({ companyId });
-            await Notification.deleteMany({ companyId });
-            await Message.deleteMany({ companyId });
-
-            // Dissociate remaining workspace members (reset them to independent state)
-            await User.updateMany({ companyId }, { $set: { companyId: null, company: "" } });
+        } finally {
+            session.endSession();
         }
-
-        // 1. Clean up Direct Chats & Direct Messages
-        const directChats = await DirectChat.find({ participants: userId });
-        const directChatIds = directChats.map(chat => chat._id);
-        if (directChatIds.length > 0) {
-            await DirectMessage.deleteMany({ chatId: { $in: directChatIds } });
-            await DirectChat.deleteMany({ _id: { $in: directChatIds } });
-        }
-
-        // 2. Clean up General/Company Messages
-        await Message.deleteMany({ sender: userId });
-
-        // 3. Clean up Tasks (pull from assignedTo, set createdBy to null)
-        await Task.updateMany({ assignedTo: userId }, { $pull: { assignedTo: userId } });
-        await Task.updateMany({ createdBy: userId }, { $set: { createdBy: null } });
-
-        // 4. Clean up Task Discussion Messages and pull user from discussion participants
-        await TaskMessage.deleteMany({ sender: userId });
-        await TaskDiscussion.updateMany({ participants: userId }, { $pull: { participants: userId } });
-
-        // 5. Clean up Notifications
-        await Notification.deleteMany({ $or: [{ recipient: userId }, { sender: userId }] });
-
-        // 6. Finally, delete the User document
-        await User.findByIdAndDelete(userId);
-
-        res.json({ message: 'Account and all associated data deleted successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error("Delete Account Error:", error);
+        res.status(500).json({ message: 'Server error during account deletion', error: error.message });
     }
 };
 

@@ -13,6 +13,7 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import { useSocket } from "../../../context/SocketContext";
 import { UserContext } from "../../../context/UserContextState";
+import { saveTasks, getCachedTasks, queueSyncRequest } from "../../../utils/indexedDB";
 
 const statusOptions = [
   { label: "Pending" },
@@ -219,6 +220,37 @@ const ViewTaskDetails = () => {
     };
 
     fetchTaskDetails();
+  }, [taskId]);
+
+  useEffect(() => {
+    const handleSyncUpdate = (event) => {
+      const updatedTask = event.detail.task;
+      const id = updatedTask._id || updatedTask.id;
+      if (id === taskId) {
+        setTask({
+          ...updatedTask,
+          title: updatedTask.title || "Untitled Task",
+          description: updatedTask.description || "No description added yet.",
+          priority: getPriorityLabel(updatedTask.priority),
+          status: normalizeStatus(updatedTask.status),
+        });
+        setCurrentStatus(normalizeStatus(updatedTask.status));
+        const normalizedChecklist = normalizeChecklist(updatedTask.todoChecklist || []);
+        setChecklistItems(normalizedChecklist);
+        setSavedChecklistItems(normalizedChecklist);
+        if (event.detail.reconciled) {
+          toast.success("Task updated (reconciled in background)");
+        }
+      }
+    };
+
+    window.addEventListener('sync_task_update', handleSyncUpdate);
+    window.addEventListener('sync_task_conflict', handleSyncUpdate);
+
+    return () => {
+      window.removeEventListener('sync_task_update', handleSyncUpdate);
+      window.removeEventListener('sync_task_conflict', handleSyncUpdate);
+    };
   }, [taskId]);
 
   useEffect(() => {
@@ -462,6 +494,67 @@ const ViewTaskDetails = () => {
       return;
     }
 
+    // Compute next logical clock version
+    const myId = user?._id || user?.id;
+    const currentClock = task?.vectorClock || {};
+    const nextClock = { ...currentClock };
+    if (myId) {
+      nextClock[myId] = (nextClock[myId] || 0) + 1;
+    }
+
+    const updatedChecklistForDB = checklistItems.map((item) => ({
+      text: item.text,
+      completed: item.completed,
+      _id: item.id && item.id.length === 24 ? item.id : undefined // keep real mongodb ids
+    }));
+
+    const progressValue = deriveProgressValue(currentStatus, checklistItems, task?.progress);
+
+    // 1. Offline Mode handling
+    if (!navigator.onLine) {
+      try {
+        setIsSaving(true);
+        const optimisticallyUpdatedTask = {
+          ...task,
+          status: currentStatus,
+          todoChecklist: updatedChecklistForDB,
+          progress: progressValue,
+          vectorClock: nextClock
+        };
+
+        if (hasChecklistChanges) {
+          await queueSyncRequest(
+            API_PATHS.TASKS.UPDATE_TODO_CHECKLIST(taskId),
+            "PUT",
+            { todoCheckList: updatedChecklistForDB, vectorClock: nextClock },
+            taskId
+          );
+        }
+
+        if (hasStatusChanges) {
+          await queueSyncRequest(
+            API_PATHS.TASKS.UPDATE_TASK_STATUS(taskId),
+            "PUT",
+            { status: currentStatus, vectorClock: nextClock },
+            taskId
+          );
+        }
+
+        const cached = await getCachedTasks();
+        const nextCached = cached.map(t => ((t._id || t.id) === taskId ? optimisticallyUpdatedTask : t));
+        await saveTasks(nextCached);
+
+        toast.success("Offline: Changes saved locally. Will sync when back online.");
+        navigate(returnPath);
+      } catch (err) {
+        console.error("Offline queue failed:", err);
+        toast.error("Failed to save offline request.");
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     try {
       setIsSaving(true);
 
@@ -472,10 +565,8 @@ const ViewTaskDetails = () => {
         const checklistResponse = await axiosInstance.put(
           API_PATHS.TASKS.UPDATE_TODO_CHECKLIST(taskId),
           {
-            todoCheckList: checklistItems.map((item) => ({
-              text: item.text,
-              completed: item.completed,
-            })),
+            todoCheckList: updatedChecklistForDB,
+            vectorClock: nextClock
           }
         );
 
@@ -504,7 +595,10 @@ const ViewTaskDetails = () => {
       if (hasStatusChanges || (!hasChecklistChanges && hasStatusChanges)) {
         const statusResponse = await axiosInstance.put(
           API_PATHS.TASKS.UPDATE_TASK_STATUS(taskId),
-          { status: currentStatus }
+          { 
+            status: currentStatus,
+            vectorClock: nextClock
+          }
         );
 
         const updatedStatusTask = statusResponse.data?.task || {};
@@ -534,12 +628,38 @@ const ViewTaskDetails = () => {
         priority: getPriorityLabel(nextTask.priority),
       });
 
+
+      const cached = await getCachedTasks();
+      const nextCached = cached.map(t => ((t._id || t.id) === taskId ? nextTask : t));
+      await saveTasks(nextCached);
+
       toast.success("Task updated successfully.");
       navigate(returnPath);
     } catch (requestError) {
-      toast.error(
-        requestError?.response?.data?.message || "Unable to update task."
-      );
+      if (requestError.response && requestError.response.status === 409) {
+        const conflictTask = requestError.response.data?.task;
+        if (conflictTask) {
+          setTask({
+            ...conflictTask,
+            title: conflictTask.title || "Untitled Task",
+            description: conflictTask.description || "No description added yet.",
+            priority: getPriorityLabel(conflictTask.priority),
+            status: normalizeStatus(conflictTask.status),
+          });
+          setCurrentStatus(normalizeStatus(conflictTask.status));
+          const normalizedChecklist = normalizeChecklist(conflictTask.todoChecklist || []);
+          setChecklistItems(normalizedChecklist);
+          setSavedChecklistItems(normalizedChecklist);
+          const cached = await getCachedTasks();
+          const nextCached = cached.map(t => ((t._id || t.id) === taskId ? conflictTask : t));
+          await saveTasks(nextCached);
+        }
+        toast.error(requestError.response.data?.message || "Conflict: Stale version detected. Rolled back.");
+      } else {
+        toast.error(
+          requestError?.response?.data?.message || "Unable to update task."
+        );
+      }
     } finally {
       setIsSaving(false);
     }

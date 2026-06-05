@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { createAndSendNotification } = require('../services/notificationService');
 const User = require('../models/User');
 const cacheService = require('../services/cacheService');
+const { reconcileTask } = require('../services/vectorClockReconciler');
 
 
 const normalizeTaskStatus = (status = '') => {
@@ -37,21 +38,20 @@ const getTasks = async (req, res) => {
             filter.status = status;
         }
 
-        // Enforce company boundary isolation
+       
         const companyId = req.user.companyId;
         filter.companyId = companyId;
 
         let tasks;
         const hasFullAccess = ['admin', 'ceo'].includes(req.user.role);
 
-        // Admin/CEO can see all tasks
         if (hasFullAccess) {
             tasks = await Task.find(filter).populate(
                 'assignedTo',
                 'name email profileImageUrl'
             );
         }
-        // Normal user sees only assigned tasks
+        
         else {
             tasks = await Task.find({
                 ...filter,
@@ -62,7 +62,7 @@ const getTasks = async (req, res) => {
             );
         }
 
-        // Add completed checklist count
+    
         tasks = await Promise.all(
             tasks.map(async (task) => {
                 const completedCount = getTodoChecklist(task).filter(
@@ -76,28 +76,27 @@ const getTasks = async (req, res) => {
             })
         );
 
-        // Count all tasks
+       
         const allTasks = await Task.countDocuments(
             hasFullAccess
                 ? { companyId }
                 : { companyId, assignedTo: req.user._id }
         );
 
-        // Pending tasks
+  
         const pendingTasks = await Task.countDocuments({
             status: 'Pending',
             companyId,
             ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
-        // In-progress tasks
         const inProgressTasks = await Task.countDocuments({
             status: 'In-progress',
             companyId,
             ...(!hasFullAccess && { assignedTo: req.user._id })
         });
 
-        // Completed tasks
+ 
         const completedTasks = await Task.countDocuments({
             status: 'Completed',
             companyId,
@@ -132,7 +131,7 @@ const getTaskById = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Enforce company boundary isolation
+
         if (String(task.companyId || '') !== String(req.user.companyId || '')) {
             return res.status(403).json({ message: 'You are not authorized to view this task' });
         }
@@ -180,7 +179,7 @@ const createTask = async (req, res) => {
             attachments,
         });
 
-        // Trigger notifications
+  
         const io = req.app.get("io");
         const notificationPromises = assignedTo.map(userId => 
             createAndSendNotification({
@@ -195,7 +194,7 @@ const createTask = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
-        // Invalidate dashboard caches for this company
+    
         await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         res.status(201).json({ message: 'Task created successfully', task });
@@ -215,7 +214,7 @@ const updateTask = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Enforce company boundary isolation
+   
         if (String(task.companyId || '') !== String(req.user.companyId || '')) {
             return res.status(403).json({ message: 'You are not authorized to update this task' });
         }
@@ -266,7 +265,7 @@ const updateTask = async (req, res) => {
 
         const updatedTask = await task.save();
 
-        // Trigger notifications
+
         const notificationPromises = [];
         
         newlyAssigned.forEach(userId => {
@@ -313,7 +312,7 @@ const updateTask = async (req, res) => {
 
         await Promise.all(notificationPromises);
 
-        // Invalidate dashboard caches for this company
+
         await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         res.json({ message: 'Task updated successfully', task: updatedTask });
@@ -330,7 +329,7 @@ const deleteTask = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Enforce company boundary isolation
+
         if (String(task.companyId || '') !== String(req.user.companyId || '')) {
             return res.status(403).json({ message: 'You are not authorized to delete this task' });
         }
@@ -353,7 +352,7 @@ const deleteTask = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
-        // Invalidate dashboard caches for this company
+  
         await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         res.json({ message: 'Task deleted successfully' });
@@ -371,7 +370,7 @@ const updateTaskChecklist = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Enforce company boundary isolation
+
         if (String(task.companyId || '') !== String(req.user.companyId || '')) {
             return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
         }
@@ -384,26 +383,42 @@ const updateTaskChecklist = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to update this task checklist' });
         }
 
-        task.todoChecklist = Array.isArray(todoCheckList) ? todoCheckList : [];
-
-        const completedCount = getTodoChecklist(task).filter(
-            (item) => item.completed
-        ).length;
-
-        const totalItems = getTodoChecklist(task).length;
-        task.progress = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
-
-        if (task.progress === 100) {
-            task.status = 'Completed';
-        } else if (task.progress > 0) {
-            task.status = 'In-progress';
+        let isReconciled = false;
+        if (req.body.vectorClock) {
+            const reconciliation = reconcileTask(task, req.body);
+            if (reconciliation.conflict && !reconciliation.reconciled) {
+                return res.status(409).json({
+                    message: 'Conflict: Stale task version detected. Local state rolled back.',
+                    conflict: true,
+                    reconciled: false,
+                    task
+                });
+            }
+            isReconciled = reconciliation.reconciled;
+            await task.save();
         } else {
-            task.status = 'Pending';
+            task.todoChecklist = Array.isArray(todoCheckList) ? todoCheckList : [];
+
+            const completedCount = getTodoChecklist(task).filter(
+                (item) => item.completed
+            ).length;
+
+            const totalItems = getTodoChecklist(task).length;
+            task.progress = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
+
+            if (task.progress === 100) {
+                task.status = 'Completed';
+            } else if (task.progress > 0) {
+                task.status = 'In-progress';
+            } else {
+                task.status = 'Pending';
+            }
+
+            await task.save();
         }
 
         const updatedTask = await task.save();
 
-        // Trigger notifications
         const io = req.app.get("io");
         const notifyRecipients = new Set();
         task.assignedTo.forEach(id => notifyRecipients.add(id.toString()));
@@ -425,14 +440,18 @@ const updateTaskChecklist = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
-        // Invalidate dashboard caches for this company
+
         await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
         const populatedTask = await Task.findById(req.params.id).populate(
             'assignedTo',
             'name email profileImageUrl'
         );
-        res.json({ message: 'Task checklist updated successfully', task: populatedTask });
+        res.json({ 
+            message: isReconciled ? 'Task checklist reconciled successfully' : 'Task checklist updated successfully', 
+            task: populatedTask,
+            reconciled: isReconciled 
+        });
 
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -446,7 +465,7 @@ const updateTaskStatus = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        // Enforce company boundary isolation
+
         if (String(task.companyId || '') !== String(req.user.companyId || '')) {
             return res.status(403).json({ message: 'You are not authorized to update this task status' });
         }
@@ -460,27 +479,42 @@ const updateTaskStatus = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to update this task status' });
         }
 
-        task.status = normalizeTaskStatus(req.body.status || task.status);
+        let isReconciled = false;
+        if (req.body.vectorClock) {
+            const reconciliation = reconcileTask(task, req.body);
+            if (reconciliation.conflict && !reconciliation.reconciled) {
+                return res.status(409).json({
+                    message: 'Conflict: Stale task version detected. Local state rolled back.',
+                    conflict: true,
+                    reconciled: false,
+                    task
+                });
+            }
+            isReconciled = reconciliation.reconciled;
+            await task.save();
+        } else {
+            task.status = normalizeTaskStatus(req.body.status || task.status);
 
-        if (task.status === 'Completed') {
-            task.todoChecklist = getTodoChecklist(task).map((item) => ({
-                ...item.toObject?.(),
-                ...item,
-                completed: true,
-            }));
-            task.progress = 100;
-        } else if (task.status === 'Pending') {
-            task.todoChecklist = getTodoChecklist(task).map((item) => ({
-                ...item.toObject?.(),
-                ...item,
-                completed: false,
-            }));
-            task.progress = 0;
+            if (task.status === 'Completed') {
+                task.todoChecklist = getTodoChecklist(task).map((item) => ({
+                    ...item.toObject?.(),
+                    ...item,
+                    completed: true,
+                }));
+                task.progress = 100;
+            } else if (task.status === 'Pending') {
+                task.todoChecklist = getTodoChecklist(task).map((item) => ({
+                    ...item.toObject?.(),
+                    ...item,
+                    completed: false,
+                }));
+                task.progress = 0;
+            }
+
+            await task.save();
         }
 
-        await task.save();
-
-        // Trigger notifications
+     
         const io = req.app.get("io");
         const notifyRecipients = new Set();
         task.assignedTo.forEach(id => notifyRecipients.add(id.toString()));
@@ -502,10 +536,14 @@ const updateTaskStatus = async (req, res) => {
         );
         await Promise.all(notificationPromises);
 
-        // Invalidate dashboard caches for this company
+
         await cacheService.invalidateCompanyDashboards(req.user.companyId);
 
-        res.json({ message: 'Task status updated successfully', task });
+        res.json({ 
+            message: isReconciled ? 'Task status reconciled successfully' : 'Task status updated successfully', 
+            task,
+            reconciled: isReconciled 
+        });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

@@ -17,22 +17,21 @@ const taskSchema = new mongoose.Schema({
     attachments: [{type: String}],
     todoChecklist: [todoSchema],
     progress: {type: Number, default: 0},
-    // AI Pillar 4: Task DNA Attributes
     taskDna: {
         attributes: {
             type: [String],
             enum: ['Deep-Focus', 'High-Interruption', 'Rapid-Bug-Fix', 'Documentation-Heavy', 'Cross-Functional'],
             default: ['Deep-Focus']
         },
-        estimatedComplexityScore: { type: Number, default: 5 } // 1-10 scale
+        estimatedComplexityScore: { type: Number, default: 5 } 
     },
-    // AI Feature 2: Task Technical Domain classification
+  
     domain: {
         type: String,
         enum: ['Frontend', 'Backend', 'Database', 'DevOps', 'QA', 'Design', 'Management', 'Other'],
         default: 'Frontend'
     },
-    // AI Task Briefing Cache
+
     compassBrief: {
         simplifiedExplanation: { type: String, default: "" },
         businessGoal: { type: String, default: "" },
@@ -40,6 +39,12 @@ const taskSchema = new mongoose.Schema({
         difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced', ''], default: "" },
         estimatedHours: { type: String, default: "" },
         cachedHash: { type: String, default: "" }
+    },
+    
+    vectorClock: {
+        type: Map,
+        of: Number,
+        default: {}
     }
 }, {timestamps: true});
 

@@ -66,6 +66,56 @@ const containsDangerousContent = (obj) => {
 };
 
 
+const FORBIDDEN_FIELDS = new Set([
+    'password',
+    'passwords',
+    'salt',
+    'salts',
+    'token',
+    'tokens',
+    'secret',
+    'secrets',
+    'jwt',
+    'jwts'
+]);
+
+const containsForbiddenFields = (obj) => {
+    if (obj === null || obj === undefined) return false;
+
+    if (typeof obj === 'string') {
+        const words = obj.toLowerCase().split(/[^a-z0-9]+/);
+        for (const word of words) {
+            if (FORBIDDEN_FIELDS.has(word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    if (Array.isArray(obj)) {
+        for (const item of obj) {
+            if (containsForbiddenFields(item)) return true;
+        }
+        return false;
+    }
+
+    if (typeof obj === 'object') {
+        for (const key of Object.keys(obj)) {
+            const words = key.toLowerCase().split(/[^a-z0-9]+/);
+            for (const word of words) {
+                if (FORBIDDEN_FIELDS.has(word)) {
+                    return true;
+                }
+            }
+            if (containsForbiddenFields(obj[key])) return true;
+        }
+        return false;
+    }
+
+    return false;
+};
+
+
 const validatePipeline = (pipeline) => {
     if (!Array.isArray(pipeline)) {
         return { valid: false, error: "Pipeline must be an array." };
@@ -110,6 +160,10 @@ const validatePipeline = (pipeline) => {
 
         if (containsDangerousContent(stage)) {
             return { valid: false, error: `Dangerous operators or strings detected in stage at index ${i}.` };
+        }
+
+        if (containsForbiddenFields(stage)) {
+            return { valid: false, error: `Sensitive field reference (password, salt, token, secret, or jwt) detected in stage at index ${i}. Access to authentication fields is prohibited.` };
         }
     }
 

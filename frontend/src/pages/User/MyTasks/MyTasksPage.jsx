@@ -11,6 +11,7 @@ import TaskDiscussionPanel from "../Tasks/TaskDiscussionPanel";
 import TaskCompassBrief from "../../../components/TaskCompassBrief";
 import { useSocket } from "../../../context/SocketContext";
 import { Helmet } from "react-helmet-async";
+import { saveTasks, getCachedTasks, queueSyncRequest } from "../../../utils/indexedDB";
 import {
   buildTaskViewModel,
   filterTasksBySearch,
@@ -49,9 +50,12 @@ const MyTasksPage = () => {
       const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
       const nextTasks = Array.isArray(response?.data?.tasks) ? response.data.tasks : [];
       setTasks(nextTasks);
+      await saveTasks(nextTasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      setTasks([]);
+      const cached = await getCachedTasks();
+      setTasks(cached);
+      toast.error("Offline: Showing cached task data.");
     } finally {
       setLoading(false);
     }
@@ -72,12 +76,14 @@ const MyTasksPage = () => {
         if (isMounted) {
           const nextTasks = Array.isArray(response?.data?.tasks) ? response.data.tasks : [];
           setTasks(nextTasks);
+          await saveTasks(nextTasks);
         }
       } catch (error) {
         console.error("Error fetching tasks:", error);
-
+        const cached = await getCachedTasks();
         if (isMounted) {
-          setTasks([]);
+          setTasks(cached);
+          toast.error("Offline: Loaded cached task data.");
         }
       } finally {
         if (isMounted) {
@@ -90,6 +96,32 @@ const MyTasksPage = () => {
 
     return () => {
       isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleSyncUpdate = (event) => {
+      const updatedTask = event.detail.task;
+      const id = updatedTask._id || updatedTask.id;
+      setTasks(prev => prev.map(t => (t._id || t.id) === id ? updatedTask : t));
+      if (event.detail.reconciled) {
+        toast.success(`Task checklist auto-reconciled with server.`);
+      }
+    };
+
+    const handleSyncConflict = (event) => {
+      const conflictTask = event.detail.task;
+      const id = conflictTask._id || conflictTask.id;
+      setTasks(prev => prev.map(t => (t._id || t.id) === id ? conflictTask : t));
+      toast.error(`Conflict resolved on "${conflictTask.title}" using database state.`);
+    };
+
+    window.addEventListener('sync_task_update', handleSyncUpdate);
+    window.addEventListener('sync_task_conflict', handleSyncConflict);
+
+    return () => {
+      window.removeEventListener('sync_task_update', handleSyncUpdate);
+      window.removeEventListener('sync_task_conflict', handleSyncConflict);
     };
   }, []);
 
@@ -385,18 +417,56 @@ const MyTasksPage = () => {
     }
 
     setUpdatingTaskId(task.id);
+
+    const myId = user?._id || user?.id;
+    const currentClock = task.vectorClock || {};
+    const nextClock = { ...currentClock };
+    if (myId) {
+      nextClock[myId] = (nextClock[myId] || 0) + 1;
+    }
+
+    const originalTask = tasks.find(t => (t._id || t.id) === task.id);
+    const optimisticallyUpdatedTask = { 
+      ...originalTask,
+      status: normalizedStatus,
+      vectorClock: nextClock
+    };
+
     setTasks((currentTasks) =>
       currentTasks.map((currentTask) =>
         (currentTask._id || currentTask.id) === task.id
-          ? { ...currentTask, status: normalizedStatus }
+          ? optimisticallyUpdatedTask
           : currentTask
       )
     );
 
+    if (!navigator.onLine) {
+      try {
+        await queueSyncRequest(
+          API_PATHS.TASKS.UPDATE_TASK_STATUS(task.id),
+          "PUT",
+          { status: normalizedStatus, vectorClock: nextClock },
+          task.id
+        );
+  
+        const cached = await getCachedTasks();
+        const nextCached = cached.map(t => ((t._id || t.id) === task.id ? optimisticallyUpdatedTask : t));
+        await saveTasks(nextCached);
+
+        toast.success("Offline: Change saved locally. Will sync when back online.");
+      } catch (err) {
+        console.error("Offline queue failed:", err);
+        toast.error("Failed to save offline request.");
+      } finally {
+        setUpdatingTaskId("");
+      }
+      return;
+    }
+
     try {
       const response = await axiosInstance.put(
         API_PATHS.TASKS.UPDATE_TASK_STATUS(task.id),
-        { status: normalizedStatus }
+        { status: normalizedStatus, vectorClock: nextClock }
       );
       const updatedTask = response.data?.task;
 
@@ -406,6 +476,11 @@ const MyTasksPage = () => {
             (currentTask._id || currentTask.id) === task.id ? updatedTask : currentTask
           )
         );
+  
+        const cached = await getCachedTasks();
+        const nextCached = cached.map(t => ((t._id || t.id) === task.id ? updatedTask : t));
+        await saveTasks(nextCached);
+
         if (socket) {
           socket.emit("task_updated", updatedTask);
         }
@@ -413,8 +488,23 @@ const MyTasksPage = () => {
 
       toast.success("Status updated.");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update status.");
-      loadTasks();
+      if (error.response && error.response.status === 409) {
+        const conflictTask = error.response.data?.task;
+        if (conflictTask) {
+          setTasks((currentTasks) =>
+            currentTasks.map((currentTask) =>
+              (currentTask._id || currentTask.id) === task.id ? conflictTask : currentTask
+            )
+          );
+          const cached = await getCachedTasks();
+          const nextCached = cached.map(t => ((t._id || t.id) === task.id ? conflictTask : t));
+          await saveTasks(nextCached);
+        }
+        toast.error(error.response.data?.message || "Conflict: Stale clock detected. Rolled back.");
+      } else {
+        toast.error(error?.response?.data?.message || "Unable to update status.");
+        loadTasks();
+      }
     } finally {
       setUpdatingTaskId("");
     }

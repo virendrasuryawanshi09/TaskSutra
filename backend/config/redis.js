@@ -3,8 +3,7 @@ const { createClient } = require('redis');
 let client = null;
 let isCacheAvailable = false;
 
-// We connect only if REDIS_URL is configured or USE_REDIS is enabled.
-// This prevents crashing the server if Redis is not installed locally.
+
 const shouldConnect = process.env.REDIS_URL || process.env.USE_REDIS === 'true';
 
 if (shouldConnect) {

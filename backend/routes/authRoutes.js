@@ -9,6 +9,7 @@ const {
 } = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
 const { upload, uploadToCloudinary } = require('../middlewares/uploadMiddleware');
+const { validateBody, registerSchema, loginSchema } = require('../middlewares/validationMiddleware');
 
 const router = express.Router();
 
@@ -22,8 +23,8 @@ const authLimiter = rateLimit({
 
 //Auth Routes
 
-router.post('/register', authLimiter, registerUser);
-router.post('/login', authLimiter, loginUser);
+router.post('/register', authLimiter, validateBody(registerSchema), registerUser);
+router.post('/login', authLimiter, validateBody(loginSchema), loginUser);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 router.delete('/profile', protect, deleteAccount);
